@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>P for Pizza Online</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for Cartoon Style -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- PeerJS for WebRTC Multiplayer -->
+    <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
+
+    <style>
+        body {
+            background-color: #fffaf0; 
+            touch-action: manipulation; 
+            font-family: 'Fredoka', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Animations */
+        @keyframes shrink {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+        .timer-bar {
+            /* Changed to 10 seconds */
+            animation: shrink 10s linear forwards; 
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .toast-enter {
+            animation: slideIn 0.3s ease-out forwards;
+        }
+
+        @keyframes popup {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+        .animate-popup {
+            animation: popup 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes wobble {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-3deg); }
+            75% { transform: rotate(3deg); }
+        }
+        .hover-wobble:hover {
+            animation: wobble 0.4s ease-in-out infinite;
+        }
+
+        /* Hide Scrollbar */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="text-slate-800 h-screen flex flex-col overflow-hidden">
+    <div id="root" class="flex-grow flex flex-col h-full w-full max-w-4xl mx-auto relative shadow-2xl bg-white border-x border-slate-100"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- GAME DATA ---
+        const LETTERS = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','R','S','T','W'];
+        const CATEGORIES = [
+            "Pizza Toppings", "Things that are green", "Countries", "Musical Instruments", "Sports", 
+            "Capital Cities", "Animals", "Things in a kitchen", "Fruits", "Vegetables", 
+            "Movies", "Fictional Characters", "Brands", "Things that are loud", "Things that are soft", 
+            "Things you wear", "Things with wheels", "Things you plug in", "Things at the beach", "Things you read", 
+            "Things you throw", "Things with screens", "Jobs", "Hobbies", "Languages", 
+            "Famous People", "Video Games", "Board Games", "Insects", "Birds", 
+            "Reptiles", "Candy", "Snacks", "Drinks", "Desserts", 
+            "Things in space", "Things underground", "Things in the ocean", "Tools", "Vehicles", 
+            "Toys", "Colors", "Spices", "Flowers", "Trees", 
+            "Rivers", "Mountains", "Things that are hot", "Things that are cold", "Things with buttons", 
+            "Things in a hospital", "Things at a party", "Things in a forest", "Things in the sky", "Things you open", 
+            "Things you close", "Things you write with", "Things you cut with", "Things that smell", "Things you fold", 
+            "Things you wash", "Things you lock", "Things with batteries", "Things that fly", "Things that swim", 
+            "Things that jump", "Things that crawl", "Things with tails", "Things with stripes", "Things with spots", 
+            "Things made of wood", "Things made of metal", "Things made of plastic", "Things made of glass", "Things made of paper", 
+            "Things you paint", "Things you build", "Things you climb", "Things you ride", "Things you drive", 
+            "Things you fly", "Things you push", "Things you pull", "Things you lift", "Things you drop", 
+            "Things you catch", "Things you kick", "Things you hit", "Things you bounce", "Things you spin", 
+            "Things you roll", "Things you stretch", "Things you squeeze", "Things you break", "Things you fix", 
+            "Things you lose", "Things you find", "Things you hide", "Things you seek", "Superheroes", "Villains",
+            "Has seeds", "Spicy food", "Fast food"
+        ];
+
+        // Helper to draw random cards for the Triangle Layout
+        const drawNewCards = (state) => {
+            const shuffledLetters = [...LETTERS].sort(() => 0.5 - Math.random());
+            const shuffledCategories = [...CATEGORIES].sort(() => 0.5 - Math.random());
+            
+            state.categories = shuffledCategories.slice(0, 3); // [Top, Left, Right]
+            const drawn = shuffledLetters.slice(0, 9);
+            
+            state.letters = {
+                topCard: { active: drawn[0], l1: drawn[1], l2: drawn[2] },
+                leftCard: { active: drawn[3], l1: drawn[4], l2: drawn[5] },
+                rightCard: { active: drawn[6], l1: drawn[7], l2: drawn[8] },
+            };
+        };
+
+        const App = () => {
+            const [appState, setAppState] = useState('home'); 
+            const [role, setRole] = useState(null); 
+            const [name, setName] = useState('');
+            const [roomCode, setRoomCode] = useState('');
+            const [myId, setMyId] = useState('');
+            const [toast, setToast] = useState(null);
+
+            const [gameState, setGameState] = useState({
+                players: [], 
+                status: 'waiting', 
+                letters: null,
+                categories: [],
+                activePlayerId: null,
+                answerData: null,
+                votes: { yes: 0, no: 0, votedIds: [] },
+                winner: null
+            });
+
+            const peerRef = useRef(null);
+            const connsRef = useRef([]); 
+            const connRef = useRef(null); 
+            const hostStateRef = useRef(gameState);
+            const hostTimerRef = useRef(null);
+
+            const showToast = (msg) => {
+                setToast(msg);
+                setTimeout(() => setToast(null), 3500);
+            };
+
+            const updateHostState = (modifier) => {
+                modifier(hostStateRef.current);
+                const newState = JSON.parse(JSON.stringify(hostStateRef.current));
+                setGameState(newState);
+                connsRef.current.forEach(c => c.send({ type: 'SYNC', payload: newState }));
+            };
+
+            const broadcastToast = (msg) => {
+                showToast(msg);
+                connsRef.current.forEach(c => c.send({ type: 'TOAST', payload: msg }));
+            };
+
+            // Safely reset game without forcing a browser refresh 
+            const resetGame = () => {
+                if (peerRef.current) {
+                    peerRef.current.destroy();
+                    peerRef.current = null;
+                }
+                connRef.current = null;
+                connsRef.current = [];
+                
+                setAppState('home');
+                setRole(null);
+                setRoomCode('');
+                setMyId('');
+                setToast(null);
+
+                const defaultState = {
+                    players: [], status: 'waiting', letters: null, categories: [],
+                    activePlayerId: null, answerData: null, votes: { yes: 0, no: 0, votedIds: [] }, winner: null
+                };
+                
+                setGameState(defaultState);
+                hostStateRef.current = JSON.parse(JSON.stringify(defaultState));
+                if (hostTimerRef.current) clearTimeout(hostTimerRef.current);
+            };
+
+            const handlePeerData = (senderId, data) => {
+                const s = hostStateRef.current;
+                switch (data.type) {
+                    case 'JOIN':
+                        updateHostState(draft => {
+                            if (!draft.players.find(p => p.id === senderId)) {
+                                draft.players.push({ id: senderId, name: data.payload.name, score: 0 });
+                            }
+                        });
+                        break;
+                    case 'BUZZ':
+                        if (s.status !== 'playing') return;
+                        updateHostState(draft => {
+                            draft.status = 'answering';
+                            draft.activePlayerId = senderId;
+                        });
+                        // Allow 11.5s on server side to account for 10s CSS animation + 1.5s network latency grace period
+                        hostTimerRef.current = setTimeout(() => {
+                            broadcastToast("Time's up! No answer submitted.");
+                            updateHostState(draft => {
+                                draft.status = 'playing';
+                                draft.activePlayerId = null;
+                                drawNewCards(draft);
+                            });
+                        }, 11500);
+                        break;
+                    case 'SUBMIT_ANSWER':
+                        if (s.status !== 'answering' || s.activePlayerId !== senderId) return;
+                        clearTimeout(hostTimerRef.current);
+                        
+                        if (!data.payload.text || data.payload.text.trim() === '' || !data.payload.category) {
+                            broadcastToast("Blank answer rejected!");
+                            updateHostState(draft => { draft.status = 'playing'; drawNewCards(draft); });
+                            return;
+                        }
+
+                        updateHostState(draft => {
+                            draft.status = 'voting';
+                            draft.answerData = data.payload;
+                            draft.votes = { yes: 0, no: 0, votedIds: [] };
+                        });
+                        break;
+                    case 'VOTE':
+                        if (s.status !== 'voting' || s.votes.votedIds.includes(senderId)) return;
+                        
+                        let pass = false;
+                        let fail = false;
+
+                        updateHostState(draft => {
+                            draft.votes.votedIds.push(senderId);
+                            if (data.payload === 'yes') draft.votes.yes++;
+                            else draft.votes.no++;
+
+                            const votersRequired = draft.players.length > 1 ? draft.players.length - 1 : 1;
+
+                            if (draft.votes.no > 0) {
+                                fail = true;
+                            } else if (draft.votes.yes >= votersRequired) {
+                                pass = true;
+                            }
+                        });
+
+                        if (fail) {
+                            broadcastToast("The lobby rejected the answer! ❌");
+                            setTimeout(() => {
+                                updateHostState(draft => { draft.status = 'playing'; drawNewCards(draft); });
+                            }, 3000);
+                        } else if (pass) {
+                            const p = s.players.find(x => x.id === s.activePlayerId);
+                            broadcastToast(`Unanimous! ${p.name} earned a slice! 🍕`);
+                            setTimeout(() => {
+                                updateHostState(draft => {
+                                    const playerToUpdate = draft.players.find(x => x.id === s.activePlayerId);
+                                    playerToUpdate.score++;
+                                    if (playerToUpdate.score >= 9) {
+                                        draft.status = 'gameover';
+                                        draft.winner = playerToUpdate;
+                                    } else {
+                                        draft.status = 'playing';
+                                        drawNewCards(draft);
+                                    }
+                                });
+                            }, 3000);
+                        }
+                        break;
+                }
+            };
+
+            const createRoom = () => {
+                if (!name.trim()) return alert("Enter your name!");
+                setAppState('loading');
+                const code = Math.random().toString(36).substring(2, 6).toUpperCase();
+                const hostId = `P4P-${code}`;
+                
+                const peer = new Peer(hostId);
+                peer.on('open', (id) => {
+                    setMyId(id);
+                    setRoomCode(code);
+                    setRole('host');
+                    setAppState('lobby');
+                    
+                    updateHostState(draft => {
+                        draft.players = [{ id, name, score: 0 }];
+                        drawNewCards(draft);
+                    });
+                });
+
+                peer.on('connection', (conn) => {
+                    conn.on('data', (data) => handlePeerData(conn.peer, data));
+                    conn.on('open', () => { connsRef.current.push(conn); });
+                    conn.on('close', () => {
+                        connsRef.current = connsRef.current.filter(c => c.peer !== conn.peer);
+                        updateHostState(draft => {
+                            draft.players = draft.players.filter(p => p.id !== conn.peer);
+                            if (draft.status === 'voting' && draft.players.length <= 1) {
+                                draft.status = 'playing';
+                                drawNewCards(draft);
+                            }
+                        });
+                    });
+                });
+                
+                peer.on('error', (err) => {
+                    alert("Error: " + err.type);
+                    resetGame(); // Safely reset instead of refreshing
+                });
+                peerRef.current = peer;
+            };
+
+            const joinRoom = (codeToJoin) => {
+                if (!name.trim()) return alert("Enter your name!");
+                if (!codeToJoin.trim()) return alert("Enter a room code!");
+                
+                setAppState('loading');
+                const hostId = `P4P-${codeToJoin.toUpperCase()}`;
+                
+                const peer = new Peer();
+                peer.on('open', (id) => {
+                    setMyId(id);
+                    const conn = peer.connect(hostId);
+                    
+                    conn.on('open', () => {
+                        connRef.current = conn;
+                        setRole('peer');
+                        setRoomCode(codeToJoin.toUpperCase());
+                        setAppState('lobby');
+                        conn.send({ type: 'JOIN', payload: { name } });
+                    });
+                                        
+                    conn.on('data', (data) => {
+                        if (data.type === 'SYNC') {
+                            setGameState(data.payload);
+                    
+                            // Move into game whenever the host starts
+                            if (
+                                data.payload.status === 'playing' ||
+                                data.payload.status === 'answering' ||
+                                data.payload.status === 'voting' ||
+                                data.payload.status === 'gameover'
+                            ) {
+                                setAppState('game');
+                            }
+                        }
+                        else if (data.type === 'TOAST') {
+                            showToast(data.payload);
+                        }
+                    });
+                    
+                    conn.on('close', () => {
+                        alert("Host disconnected.");
+                        resetGame(); // Safely reset instead of hard reloading page
+                    });
+                });
+
+                peer.on('error', (err) => {
+                    alert("Could not connect. Is the room code correct?");
+                    resetGame(); // Safely reset instead of refreshing
+                });
+                peerRef.current = peer;
+            };
+
+            const sendAction = (type, payload) => {
+                if (role === 'host') {
+                    handlePeerData(myId, { type, payload });
+                } else if (connRef.current) {
+                    connRef.current.send({ type, payload });
+                }
+            };
+
+            const startGame = () => {
+                if (role !== 'host') return;
+                setAppState('game'); 
+                updateHostState(draft => {
+                    draft.status = 'playing';
+                    draft.players.forEach(p => p.score = 0);
+                    draft.winner = null;
+                });
+            };
+
+            // --- SVG HELPERS ---
+            const SvgText = ({ x, y, angle, text, fontSize, isBold }) => {
+                const words = text.split(' ');
+                let line1 = text, line2 = '';
+                if (text.length > 11 && words.length > 1) {
+                    const mid = Math.ceil(words.length / 2);
+                    line1 = words.slice(0, mid).join(' ');
+                    line2 = words.slice(mid).join(' ');
+                }
+                return (
+                    <text x={x} y={y} transform={`rotate(${angle} ${x} ${y})`} textAnchor="middle" dominantBaseline="central" fontSize={fontSize} fontWeight={isBold ? '900' : '700'} fill="#1e293b">
+                        {line2 ? (
+                            <>
+                                <tspan x={x} dy="-0.6em">{line1}</tspan>
+                                <tspan x={x} dy="1.2em">{line2}</tspan>
+                            </>
+                        ) : text}
+                    </text>
+                );
+            };
+
+            const PizzaBoard = () => {
+                const { categories, letters } = gameState;
+                if (!letters || !letters.topCard) return null;
+
+                return (
+                    // Increased max-w from 500px to 650px to make the triangle cards render bigger on screen
+                    <div className="w-full max-w-[650px] mx-auto animate-popup drop-shadow-2xl p-2 select-none pointer-events-none">
+                        <svg viewBox="0 0 500 450" className="w-full h-auto overflow-visible">
+                            <defs>
+                                <filter id="shadow">
+                                    <feDropShadow dx="0" dy="8" stdDeviation="6" floodOpacity="0.2"/>
+                                </filter>
+                            </defs>
+                            
+                            <g filter="url(#shadow)">
+                                {/* Top Card (Yellow) */}
+                                <polygon points="150,230 350,230 250,56.8" fill="#ffcc00" stroke="#1e293b" strokeWidth="12" strokeLinejoin="round" />
+                                <SvgText x={250} y={202} angle={0} text={letters.topCard.active} fontSize="42" isBold={true} />
+                                <SvgText x={219} y={154} angle={-60} text={letters.topCard.l1} fontSize="28" isBold={true} />
+                                <SvgText x={281} y={154} angle={60} text={letters.topCard.l2} fontSize="28" isBold={true} />
+
+                                {/* Left Card (Yellow) */}
+                                <polygon points="150,230 250,403.2 50,403.2" fill="#ffcc00" stroke="#1e293b" strokeWidth="12" strokeLinejoin="round" />
+                                <SvgText x={176} y={331} angle={60} text={letters.leftCard.active} fontSize="42" isBold={true} />
+                                <SvgText x={150} y={381} angle={0} text={letters.leftCard.l1} fontSize="28" isBold={true} />
+                                <SvgText x={119} y={328} angle={-60} text={letters.leftCard.l2} fontSize="28" isBold={true} />
+
+                                {/* Right Card (Yellow) */}
+                                <polygon points="350,230 250,403.2 450,403.2" fill="#ffcc00" stroke="#1e293b" strokeWidth="12" strokeLinejoin="round" />
+                                <SvgText x={324} y={331} angle={-60} text={letters.rightCard.active} fontSize="42" isBold={true} />
+                                <SvgText x={350} y={381} angle={0} text={letters.rightCard.l1} fontSize="28" isBold={true} />
+                                <SvgText x={381} y={328} angle={60} text={letters.rightCard.l2} fontSize="28" isBold={true} />
+
+                                {/* Center Card Inner Colored Slices */}
+                                <polygon points="150,230 350,230 250,287.7" fill="#ffb3ba" />
+                                <polygon points="150,230 250,403.2 250,287.7" fill="#baffc9" />
+                                <polygon points="350,230 250,403.2 250,287.7" fill="#ffe680" />
+                                
+                                {/* Center Card Categories */}
+                                <SvgText x={250} y={249} angle={180} text={categories[0]} fontSize="13" isBold={false} />
+                                <SvgText x={217} y={307} angle={60} text={categories[1]} fontSize="13" isBold={false} />
+                                <SvgText x={283} y={307} angle={-60} text={categories[2]} fontSize="13" isBold={false} />
+
+                                {/* Center Card Outer Thick Outline + Dividers */}
+                                <polygon points="150,230 350,230 250,403.2" fill="none" stroke="#1e293b" strokeWidth="12" strokeLinejoin="round" />
+                                <line x1="150" y1="230" x2="250" y2="287.7" stroke="#1e293b" strokeWidth="5" strokeLinecap="round" />
+                                <line x1="350" y1="230" x2="250" y2="287.7" stroke="#1e293b" strokeWidth="5" strokeLinecap="round" />
+                                <line x1="250" y1="403.2" x2="250" y2="287.7" stroke="#1e293b" strokeWidth="5" strokeLinecap="round" />
+                            </g>
+                        </svg>
+                    </div>
+                );
+            };
+
+            // --- OVERLAYS ---
+            const AnsweringOverlay = () => {
+                const [text, setText] = useState('');
+                const { categories, letters } = gameState;
+                
+                useEffect(() => {
+                    // Strictly enforce 10 second timer client-side
+                    const t = setTimeout(() => {
+                        sendAction('SUBMIT_ANSWER', { text: '', category: null, letter: null });
+                    }, 10000);
+                    return () => clearTimeout(t);
+                }, []);
+
+                const handleSubmit = (catIndex, letterObj) => {
+                    sendAction('SUBMIT_ANSWER', { 
+                        text, 
+                        category: categories[catIndex], 
+                        letter: letterObj.active 
+                    });
+                };
+
+                return (
+                    <div className="absolute inset-0 z-50 bg-slate-900/90 flex flex-col items-center justify-center p-6 text-center animate-[slideIn_0.2s]">
+                        <h2 className="text-white text-3xl font-black mb-4 uppercase tracking-wider">Quick! 10 Seconds!</h2>
+                        
+                        {/* 10-Second Timer Bar */}
+                        <div className="w-full max-w-md bg-slate-700 h-6 rounded-full mb-6 overflow-hidden border-4 border-white shadow-xl">
+                            <div className="bg-red-500 h-full timer-bar"></div>
+                        </div>
+                        
+                        <div className="w-full max-w-md flex flex-col gap-4">
+                            <input
+                                autoFocus
+                                className="p-4 text-3xl font-bold rounded-2xl w-full text-center outline-none border-4 border-slate-300 shadow-[0_0_20px_rgba(255,255,255,0.2)] uppercase focus:border-yellow-400 focus:ring-0"
+                                value={text}
+                                onChange={e => setText(e.target.value.toUpperCase())}
+                                onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }}
+                                placeholder="TYPE WORD HERE..."
+                                autoComplete="off"
+                            />
+
+                            <h3 className="text-yellow-400 font-bold mt-2">THEN CLICK YOUR CATEGORY:</h3>
+                            
+                            {/* 3 Buttons corresponding to the 3 slices */}
+                            <div className="grid grid-cols-1 gap-3">
+                                <button onClick={() => handleSubmit(0, letters.topCard)} className="bg-[#ffb3ba] hover:bg-[#ff9aa3] border-4 border-[#1e293b] text-slate-900 p-4 rounded-2xl font-black text-xl shadow-lg transform active:scale-95 transition">
+                                    {categories[0]} ({letters.topCard.active})
+                                </button>
+                                <button onClick={() => handleSubmit(1, letters.leftCard)} className="bg-[#baffc9] hover:bg-[#9bf2b0] border-4 border-[#1e293b] text-slate-900 p-4 rounded-2xl font-black text-xl shadow-lg transform active:scale-95 transition">
+                                    {categories[1]} ({letters.leftCard.active})
+                                </button>
+                                <button onClick={() => handleSubmit(2, letters.rightCard)} className="bg-[#ffe680] hover:bg-[#ffd740] border-4 border-[#1e293b] text-slate-900 p-4 rounded-2xl font-black text-xl shadow-lg transform active:scale-95 transition">
+                                    {categories[2]} ({letters.rightCard.active})
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const VotingOverlay = () => {
+                const { answerData, activePlayerId, players } = gameState;
+                const activePlayer = players.find(p => p.id === activePlayerId);
+                const amIActive = myId === activePlayerId;
+                const haveIVoted = gameState.votes.votedIds.includes(myId);
+
+                return (
+                    <div className="absolute inset-0 z-40 bg-slate-900/95 flex flex-col items-center justify-center p-6 text-center animate-[slideIn_0.2s]">
+                        <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full relative border-4 border-slate-900">
+                            <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-slate-900 font-black px-6 py-2 rounded-full border-4 border-slate-900 shadow-md uppercase text-xl">
+                                Voting Time
+                            </div>
+                            
+                            <h3 className="text-xl font-bold text-slate-500 mb-4">{activePlayer?.name} answered:</h3>
+                            
+                            <div className="bg-slate-100 p-4 rounded-2xl border-4 border-slate-200 mb-6">
+                                <div className="text-4xl font-black text-blue-600 mb-2 break-words">
+                                    "{answerData?.text || '???'}"
+                                </div>
+                                <div className="text-lg font-bold text-slate-600">
+                                    For Category: <span className="text-slate-900">{answerData?.category}</span>
+                                </div>
+                                <div className="text-lg font-bold text-slate-600">
+                                    Starting Letter: <span className="text-slate-900">{answerData?.letter}</span>
+                                </div>
+                            </div>
+
+                            {!amIActive && !haveIVoted && (
+                                <div className="space-y-4 mt-2">
+                                    <p className="font-bold text-slate-800 text-lg">Is this answer acceptable?</p>
+                                    <div className="flex gap-4">
+                                        <button onClick={() => sendAction('VOTE', 'no')} className="flex-1 bg-red-500 hover:bg-red-600 text-white border-b-4 border-red-700 p-4 rounded-2xl font-black text-2xl transition transform active:scale-95 active:border-b-0 active:translate-y-1">
+                                            NO ❌
+                                        </button>
+                                        <button onClick={() => sendAction('VOTE', 'yes')} className="flex-1 bg-green-500 hover:bg-green-600 text-white border-b-4 border-green-700 p-4 rounded-2xl font-black text-2xl transition transform active:scale-95 active:border-b-0 active:translate-y-1">
+                                            YES ✅
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {(amIActive || haveIVoted) && (
+                                <div className="py-6">
+                                    <div className="w-12 h-12 border-8 border-yellow-400 border-t-slate-900 rounded-full animate-spin mx-auto mb-4"></div>
+                                    <p className="font-bold text-slate-500 text-xl">Waiting for the lobby...</p>
+                                    <p className="text-lg mt-2 font-black">
+                                        ✅ {gameState.votes.yes} &nbsp;|&nbsp; ❌ {gameState.votes.no}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            };
+
+            // --- VIEWS ---
+            if (appState === 'loading') return <div className="h-full flex items-center justify-center font-bold text-2xl text-slate-500 animate-pulse">Connecting to server...</div>;
+
+            if (appState === 'home') return (
+                <div className="flex flex-col items-center justify-center h-full p-6 bg-yellow-400 text-slate-900">
+                    <div className="bg-white p-8 rounded-[2rem] shadow-[0_10px_0_#1e293b] w-full max-w-md text-center border-4 border-slate-900 animate-popup">
+                        <div className="text-7xl mb-2 drop-shadow-md">🍕</div>
+                        <h1 className="text-5xl font-black mb-8 uppercase tracking-tighter transform -rotate-2 text-red-500" style={{ textShadow: '2px 2px 0 #1e293b' }}>P for Pizza</h1>
+                        
+                        <div className="space-y-6 text-left">
+                            <div>
+                                <label className="block font-bold mb-2 uppercase text-slate-500">Your Name</label>
+                                <input 
+                                    className="w-full border-4 border-slate-300 p-4 rounded-2xl font-bold text-xl focus:border-yellow-400 outline-none transition"
+                                    value={name} 
+                                    onChange={e => setName(e.target.value)} 
+                                    onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }}
+                                    placeholder="e.g. Mario" 
+                                    maxLength={12}
+                                />
+                            </div>
+                            
+                            <hr className="border-slate-200 border-2 rounded" />
+
+                            <div className="flex flex-col gap-3">
+                                <button onClick={createRoom} className="w-full bg-slate-900 text-white font-black uppercase text-xl p-4 rounded-2xl hover:bg-slate-800 transition transform hover:-translate-y-1 shadow-[0_6px_0_#475569] active:shadow-none active:translate-y-1">
+                                    Create New Game
+                                </button>
+                                
+                                <div className="relative flex items-center py-2">
+                                    <div className="flex-grow border-t-4 border-slate-100"></div>
+                                    <span className="flex-shrink-0 mx-4 text-slate-300 font-black uppercase">OR</span>
+                                    <div className="flex-grow border-t-4 border-slate-100"></div>
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <input 
+                                        className="w-full border-4 border-slate-300 p-4 rounded-2xl font-black text-xl text-center uppercase focus:border-yellow-400 outline-none transition placeholder-slate-300"
+                                        id="joinCode" 
+                                        placeholder="CODE" 
+                                        maxLength={4}
+                                        onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }}
+                                    />
+                                    <button onClick={() => joinRoom(document.getElementById('joinCode').value)} className="bg-orange-500 text-white font-black uppercase px-6 rounded-2xl hover:bg-orange-600 transition shadow-[0_6px_0_#c2410c] active:shadow-none active:translate-y-1 text-xl">
+                                        Join
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            if (appState === 'lobby') return (
+                <div className="flex flex-col items-center justify-center h-full p-6 bg-slate-50">
+                    <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md text-center border-4 border-slate-900 relative overflow-hidden animate-popup">
+                        
+                        <div className="bg-yellow-400 absolute top-0 left-0 right-0 py-4 border-b-4 border-slate-900">
+                            <p className="font-bold text-slate-800 uppercase text-sm tracking-widest">Room Code</p>
+                            <h2 className="text-5xl font-black tracking-widest text-slate-900 mt-1">{roomCode}</h2>
+                        </div>
+
+                        <div className="mt-32 mb-8">
+                            <h3 className="font-black text-xl text-slate-400 uppercase mb-4 text-left border-b-4 pb-2">Players Lobby ({gameState.players.length})</h3>
+                            <div className="flex flex-col gap-3">
+                                {gameState.players.map(p => (
+                                    <div key={p.id} className="flex items-center justify-between bg-slate-100 p-4 rounded-2xl border-2 border-slate-200">
+                                        <span className="font-bold text-xl">{p.name} {p.id === myId && <span className="text-slate-400">(You)</span>}</span>
+                                        {p.id === gameState.players[0].id && <span className="text-sm bg-yellow-400 px-3 py-1 rounded-xl font-black text-slate-900 uppercase">Host</span>}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {role === 'host' ? (
+                            <button onClick={startGame} className="w-full bg-green-500 text-white font-black text-2xl p-4 rounded-2xl hover:bg-green-600 transition transform hover:-translate-y-1 shadow-[0_6px_0_#15803d] active:shadow-none active:translate-y-1 uppercase">
+                                Start Game 🍕
+                            </button>
+                        ) : (
+                            <div className="p-4 bg-slate-100 rounded-2xl border-4 border-slate-200 font-bold text-slate-500 animate-pulse text-lg">
+                                Waiting for Host to start...
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+
+            // GAME VIEW
+            if (appState === 'game') return (
+                <div className="flex flex-col h-full bg-[#f8fafc] relative">
+                    {/* Header / Scores */}
+                    <header className="bg-white border-b-4 border-slate-900 p-3 shadow-md z-10 flex-shrink-0">
+                        <div className="flex overflow-x-auto gap-3 pb-1 hide-scrollbar">
+                            {gameState.players.map(p => (
+                                <div key={p.id} className={`flex flex-col border-4 rounded-2xl p-2 min-w-[130px] transition-colors ${p.id === gameState.activePlayerId ? 'border-yellow-400 bg-yellow-50' : 'border-slate-200 bg-slate-50'}`}>
+                                    <span className="font-black text-sm text-slate-700 truncate">{p.name}</span>
+                                    <div className="flex space-x-0.5 mt-1">
+                                        {[...Array(9)].map((_, i) => (
+                                            <span key={i} className={`text-lg ${i < p.score ? 'opacity-100' : 'opacity-20 grayscale'}`}>🍕</span>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </header>
+
+                    {/* Main Board Area */}
+                    <main className="flex-grow p-4 md:p-8 flex flex-col justify-center relative z-0 overflow-hidden">
+                        {gameState.status === 'gameover' ? (
+                            <div className="text-center bg-white p-8 rounded-[2rem] shadow-2xl border-8 border-yellow-400 max-w-lg mx-auto w-full animate-popup">
+                                <h1 className="text-7xl mb-4 animate-bounce">🏆🍕</h1>
+                                <h2 className="text-5xl font-black text-slate-800 mb-2">{gameState.winner.name} WINS!</h2>
+                                <p className="text-2xl text-slate-500 font-bold mb-8">A true Pizza Master.</p>
+                                {role === 'host' && (
+                                    <button onClick={() => updateHostState(d => { d.status='playing'; d.players.forEach(p=>p.score=0); drawNewCards(d); })} className="bg-slate-900 text-white font-black p-4 px-8 rounded-2xl text-2xl uppercase shadow-[0_6px_0_#475569] active:shadow-none active:translate-y-1 transition w-full">
+                                        Play Again
+                                    </button>
+                                )}
+                            </div>
+                        ) : (
+                            <PizzaBoard />
+                        )}
+                    </main>
+
+                    {/* Buzzer Area */}
+                    {gameState.status === 'playing' && (
+                        <div className="p-4 md:p-6 bg-white border-t-4 border-slate-900 z-10 flex-shrink-0 flex justify-center pb-8 md:pb-6 shadow-[0_-10px_20px_rgba(0,0,0,0.05)]">
+                            <button 
+                                onClick={() => sendAction('BUZZ')}
+                                className="hover-wobble bg-red-500 hover:bg-red-600 text-white font-black text-5xl uppercase py-6 px-12 rounded-[2rem] w-full max-w-sm border-4 border-[#7f1d1d] shadow-[0_10px_0_#991b1b] active:shadow-none active:translate-y-2 transition-all tracking-wider"
+                            >
+                                BUZZ!
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Overlays */}
+                    {gameState.status === 'answering' && gameState.activePlayerId === myId && <AnsweringOverlay />}
+                    {gameState.status === 'answering' && gameState.activePlayerId !== myId && (
+                        <div className="absolute inset-0 z-40 bg-slate-900/90 flex flex-col items-center justify-center p-6 text-center">
+                            <div className="w-20 h-20 border-8 border-yellow-400 border-t-transparent rounded-full animate-spin mb-6"></div>
+                            <h2 className="text-white text-4xl font-black uppercase">
+                                {gameState.players.find(p => p.id === gameState.activePlayerId)?.name} is typing...
+                            </h2>
+                        </div>
+                    )}
+
+                    {gameState.status === 'voting' && <VotingOverlay />}
+
+                    {/* Toast */}
+                    {toast && (
+                        <div className="absolute top-24 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none w-full max-w-sm px-4">
+                            <div className="bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl font-black text-xl text-center toast-enter border-4 border-slate-700">
+                                {toast}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+            
+            return null;
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

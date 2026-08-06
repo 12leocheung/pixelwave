@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS-7 Terminal — CTF Sandbox</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --crt-green: #33ff33;
+        --crt-green-dim: #1a7a1a;
+        --crt-green-faint: #0d3d0d;
+        --crt-amber: #ffb000;
+        --crt-red: #ff3333;
+        --crt-cyan: #00ffff;
+        --crt-white: #e8ffe8;
+        --crt-bg: #050a05;
+        --crt-surface: #070d07;
+        --font-mono: 'Share Tech Mono', 'Courier New', monospace;
+        --scanline-opacity: 0.04;
+        --glow-green: 0 0 8px #33ff33, 0 0 16px #1a7a1a40;
+        --glow-amber: 0 0 8px #ffb000, 0 0 16px #ffb00040;
+    }
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+    html,
+    body {
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+        font-family: var(--font-mono);
+    }
+    .monitor {
+        width: 100vw;
+        height: 100vh;
+        background: radial-gradient(ellipse at center, #1a1a1a 0%, #0a0a0a 60%, #050505 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+    .crt-screen {
+        width: min(98vw, 1200px);
+        height: min(96vh, 800px);
+        background: var(--crt-bg);
+        border-radius: 12px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 0 2px #1a2a1a, 0 0 0 4px #0d1a0d, 0 0 40px #33ff3330, inset 0 0 60px #000a;
+    }
+    .crt-screen::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse at center, transparent 60%, #00000080 100%);
+        pointer-events: none;
+        z-index: 10;
+        border-radius: inherit;
+    }
+    .crt-screen::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, var(--scanline-opacity)) 2px, rgba(0, 0, 0, var(--scanline-opacity)) 4px);
+        pointer-events: none;
+        z-index: 11;
+        border-radius: inherit;
+    }
+    .phosphor-overlay {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse at 50% 40%, #33ff3308 0%, transparent 70%);
+        pointer-events: none;
+        z-index: 9;
+        animation: flicker 8s ease-in-out infinite;
+    }
+    @keyframes flicker {
+        0%,
+        100% {
+            opacity: 1;
+        }
+        92% {
+            opacity: 1;
+        }
+        93% {
+            opacity: 0.85;
+        }
+        94% {
+            opacity: 1;
+        }
+        96% {
+            opacity: 0.9;
+        }
+        97% {
+            opacity: 1;
+        }
+    }
+    .titlebar {
+        background: linear-gradient(90deg, #0d1a0d, #0f200f, #0d1a0d);
+        border-bottom: 1px solid var(--crt-green-dim);
+        padding: 6px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 11px;
+        color: var(--crt-green-dim);
+        position: relative;
+        z-index: 5;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    .titlebar-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .titlebar-logo {
+        color: var(--crt-green);
+        font-size: 12px;
+        letter-spacing: 3px;
+        text-shadow: var(--glow-green);
+    }
+    .titlebar-status {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+    .status-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 10px;
+    }
+    .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--crt-green);
+        box-shadow: 0 0 4px var(--crt-green);
+        animation: blink-dot 2s ease-in-out infinite;
+    }
+    .status-dot.amber {
+        background: var(--crt-amber);
+        box-shadow: 0 0 4px var(--crt-amber);
+    }
+    .status-dot.red {
+        background: var(--crt-red);
+        box-shadow: 0 0 4px var(--crt-red);
+        animation: blink-dot 0.5s ease-in-out infinite;
+    }
+    @keyframes blink-dot {
+        0%,
+        100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.3;
+        }
+    }
+    .terminal-wrapper {
+        height: calc(100% - 35px);
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        z-index: 5;
+    }
+    .output-area {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px 16px 4px;
+        font-size: 13px;
+        line-height: 1.55;
+        color: var(--crt-green);
+        scrollbar-width: thin;
+        scrollbar-color: var(--crt-green-dim) transparent;
+    }
+    .output-area::-webkit-scrollbar {
+        width: 4px;
+    }
+    .output-area::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .output-area::-webkit-scrollbar-thumb {
+        background: var(--crt-green-dim);
+        border-radius: 2px;
+    }
+    .line {
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+    .line.prompt {
+        color: var(--crt-green);
+    }
+    .line.cmd {
+        color: var(--crt-white);
+    }
+    .line.output {
+        color: var(--crt-green);
+    }
+    .line.error {
+        color: var(--crt-red);
+        text-shadow: 0 0 6px var(--crt-red);
+    }
+    .line.warning {
+        color: var(--crt-amber);
+        text-shadow: 0 0 4px var(--crt-amber);
+    }
+    .line.info {
+        color: var(--crt-cyan);
+        text-shadow: 0 0 4px #00ffff60;
+    }
+    .line.success {
+        color: #00ff88;
+        text-shadow: 0 0 6px #00ff8860;
+    }
+    .line.dim {
+        color: var(--crt-green-dim);
+    }
+    .line.flag {
+        color: #ffff00;
+        text-shadow: 0 0 8px #ffff00, 0 0 16px #ffff0060;
+        font-weight: bold;
+        animation: flag-glow 1s ease-in-out infinite;
+    }
+    .line.ascii {
+        color: var(--crt-green);
+        text-shadow: 0 0 3px var(--crt-green-dim);
+        font-size: 11px;
+        line-height: 1.3;
+    }
+    .line.header {
+        color: var(--crt-green);
+        text-shadow: var(--glow-green);
+    }
+    @keyframes flag-glow {
+        0%,
+        100% {
+            text-shadow: 0 0 8px #ffff00, 0 0 16px #ffff0060;
+        }
+        50% {
+            text-shadow: 0 0 12px #ffff00, 0 0 24px #ffff00, 0 0 40px #ffff0040;
+        }
+    }
+    .input-line {
+        display: flex;
+        align-items: center;
+        padding: 8px 16px 10px;
+        border-top: 1px solid var(--crt-green-faint);
+        gap: 6px;
+        background: #00000060;
+    }
+    .prompt-label {
+        color: var(--crt-green);
+        text-shadow: var(--glow-green);
+        font-size: 13px;
+        white-space: nowrap;
+        flex-shrink: 0;
+        user-select: none;
+    }
+    .prompt-label span.user {
+        color: #00ff88;
+    }
+    .prompt-label span.host {
+        color: var(--crt-cyan);
+    }
+    .prompt-label span.path {
+        color: var(--crt-amber);
+    }
+    #cmd-input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--crt-white);
+        font-family: var(--font-mono);
+        font-size: 13px;
+        caret-color: var(--crt-green);
+        text-shadow: 0 0 4px var(--crt-white);
+    }
+    .cursor-blink {
+        display: inline-block;
+        width: 8px;
+        height: 14px;
+        background: var(--crt-green);
+        vertical-align: middle;
+        margin-left: 2px;
+        animation: cursor-blink 1s step-end infinite;
+        box-shadow: var(--glow-green);
+    }
+    @keyframes cursor-blink {
+        0%,
+        100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0;
+        }
+    }
+    @keyframes typewriter {
+        from {
+            width: 0;
+        }
+        to {
+            width: 100%;
+        }
+    }
+    .typing-line {
+        overflow: hidden;
+        white-space: nowrap;
+        animation: typewriter 0.5s steps(40) forwards;
+    }
+    #boot-screen {
+        position: absolute;
+        inset: 0;
+        background: var(--crt-bg);
+        z-index: 20;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        font-size: 12px;
+        color: var(--crt-green);
+        padding: 20px;
+    }
+    .boot-line {
+        opacity: 0;
+        animation: boot-appear 0.1s forwards;
+    }
+    @keyframes boot-appear {
+        to {
+            opacity: 1;
+        }
+    }
+    .progress-container {
+        width: 400px;
+        max-width: 90%;
+        margin-top: 8px;
+    }
+    .progress-bar-bg {
+        height: 8px;
+        background: var(--crt-green-faint);
+        border: 1px solid var(--crt-green-dim);
+        border-radius: 2px;
+        overflow: hidden;
+    }
+    .progress-bar-fill {
+        height: 100%;
+        width: 0%;
+        background: var(--crt-green);
+        box-shadow: var(--glow-green);
+        transition: width 0.1s;
+        border-radius: 1px;
+    }
+    .modal-overlay {
+        display: none;
+        position: absolute;
+        inset: 0;
+        background: #000000aa;
+        z-index: 30;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-overlay.active {
+        display: flex;
+    }
+    .modal-box {
+        background: #050f05;
+        border: 2px solid #ffff00;
+        box-shadow: 0 0 30px #ffff0040;
+        padding: 30px 40px;
+        text-align: center;
+        max-width: 500px;
+        border-radius: 4px;
+    }
+    .modal-box h2 {
+        color: #ffff00;
+        font-size: 20px;
+        margin-bottom: 16px;
+        letter-spacing: 4px;
+    }
+    .modal-box p {
+        color: var(--crt-green);
+        line-height: 1.8;
+        font-size: 13px;
+    }
+    .modal-close {
+        margin-top: 20px;
+        background: transparent;
+        border: 1px solid var(--crt-green);
+        color: var(--crt-green);
+        font-family: var(--font-mono);
+        padding: 8px 24px;
+        cursor: pointer;
+        font-size: 13px;
+        transition: all 0.2s;
+    }
+    .modal-close:hover {
+        background: var(--crt-green);
+        color: #000;
+    }
+</style>
+</head>
+<body>
+
+    <div class="monitor">
+        <div class="crt-screen">
+            <div class="phosphor-overlay"></div>
+
+            <div id="boot-screen"></div>
+
+            <div class="titlebar">
+                <div class="titlebar-left">
+                    <span class="titlebar-logo">NEXUS-7</span>
+                    <span style="opacity:0.5">|</span>
+                    <span id="titlebar-path">/home/guest</span>
+                </div>
+                <div class="titlebar-status">
+                    <div class="status-item"><div class="status-dot" id="conn-dot"></div><span id="conn-text">CONNECTED</span></div>
+                    <div class="status-item"><div class="status-dot amber"></div><span id="alert-text">INTRUSION DETECTED</span></div>
+                    <div class="status-item" id="flag-status" style="display:none"><div class="status-dot red"></div><span>FLAG CAPTURED</span></div>
+                    <div class="status-item" id="flag-counter" style="font-size:10px;color:#ffb000"></div>
+                </div>
+            </div>
+
+            <div class="terminal-wrapper">
+                <div class="output-area" id="output"></div>
+                <div class="input-line">
+                    <span class="prompt-label" id="prompt-label">
+                        <span class="user">guest</span>@<span class="host">nexus7</span>:<span class="path" id="prompt-path">/home/guest</span>$
+                    </span>
+                    <input type="text" id="cmd-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+                </div>
+            </div>
+
+            <div class="modal-overlay" id="flag-modal">
+                <div class="modal-box">
+                    <h2>⚑ FLAG CAPTURED ⚑</h2>
+                    <p id="modal-flag-text"></p>
+                    <button class="modal-close" onclick="document.getElementById('flag-modal').classList.remove('active')">[ DISMISS ]</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // ==================== FILESYSTEM ====================
+        const FS = {
+            '/': { type: 'dir', children: ['home', 'var', 'etc', 'tmp', 'proc', 'bin', 'opt', 'usr', 'docs', 'mnt',
+                    'srv', 'root'
+                ] },
+            // ── HOME ──────────────────────────────
+            '/home': { type: 'dir', children: ['guest', 'admin', 'r00t', 'operator'] },
+            '/home/guest': { type: 'dir', children: ['welcome.txt', 'notes.md', '.bash_history', '.ssh', '.config',
+                    '.hidden_clue'
+                ] },
+            '/home/guest/.ssh': { type: 'dir', children: ['known_hosts'] },
+            '/home/guest/.ssh/known_hosts': { type: 'file',
+                content: '# Known SSH Hosts\nnexus7-internal 192.168.1.10 ssh-rsa AAAAB3Nza...truncated\nbackup-srv 10.0.0.5 ssh-rsa AAAAB3Nza...truncated\ngitlab-internal 10.0.0.99 ssh-rsa AAAAB3Nza...truncated' },
+            '/home/guest/.config': { type: 'dir', children: ['settings.ini'] },
+            '/home/guest/.config/settings.ini': { type: 'file',
+                content: '[terminal]\nfont=monospace\ncolors=green\nopacity=0.95\n\n[shortcuts]\nctrl+c=interrupt\nctrl+d=logout\n' },
+            '/home/guest/.hidden_clue': { type: 'file',
+                content: '# Hey! You found a hidden clue!\n# Check /opt/.hidden for sensitive tools.\n# Also look at running processes with "ps -aux"\n# The backdoor process (PID 1337) has interesting environment vars.' },
+            '/home/guest/welcome.txt': { type: 'file',
+                content: 'Welcome to NEXUS-7 Research Terminal.\n\nThis is a restricted system. All activity is logged.\nUnauthorized access attempts will be reported.\n\n  - SysAdmin\n\nP.S. FLAG{w3lc0m3_t0_n3xu5_r3s34rch} — your first flag! Look around for more.\n\nTIP: The file system holds many clues. Start with "ls -la" and "cat notes.md"' },
+            '/home/guest/notes.md': { type: 'file',
+                content: '# My Notes\n\n## TODO\n- Find the admin password\n- Check /var/log for clues\n- Look at /etc/passwd\n- Something is hidden in /opt...\n- The web server config might have credentials\n\n## Useful commands\nls, cat, cd, grep, find, whoami, id, ps, netstat, strings, hexdump\n\n## Quick Tips\n- "ls -la" shows hidden files (starting with .)\n- "grep -r FLAG /" searches everywhere for flags\n- "find / -name \\"*.key\\"" locates key files\n- Check process info in /proc!\n- "strings" extracts text from binary files\n- The decoder.py tool in /opt/tools is useful' },
+            '/home/guest/.bash_history': { type: 'file',
+                content: 'ls -la\ncd /home/admin\ncat /etc/passwd\nsudo su\ncd /var/log\ncat auth.log\nfind / -name "*.key" 2>/dev/null\ncd /opt\nls -la\ncd /opt/.hidden\ncat README\nps -aux\ncat /proc/1337/environ\nstrings /opt/.hidden/backdoor\ncd /var/www/html/admin\ncat panel.php\nhexdump /tmp/core.dump\nbase64 -d RkxBR3twd3QzX2QzYzBkM3JffQ==' },
+
+            '/home/admin': { type: 'dir', children: ['.bashrc', 'backup.tar.gz', '.secret', 'todo.txt'] },
+            '/home/admin/.bashrc': { type: 'file',
+                content: 'export PATH=$PATH:/opt/tools\nalias ll="ls -la"\n# TODO: remove this before prod\nexport DB_PASS="c0rr3ct-h0rs3-b4tt3ry-st4pl3"\n# FLAG reminder: check /var/www/html/admin/panel.php' },
+            '/home/admin/.secret': { type: 'file', content: 'PERMISSION DENIED', perm: 'denied' },
+            '/home/admin/backup.tar.gz': { type: 'file', content: '[binary data: tar.gz archive — try strings or hexdump]',
+                binary: true },
+            '/home/admin/todo.txt': { type: 'file',
+                content: 'TODO:\n[x] Set up admin panel\n[x] Configure backups\n[ ] Remove hardcoded passwords from panel.php\n[ ] Rotate encryption keys in /opt/.hidden/\n[ ] Investigate suspicious process on port 31337\n[ ] Check /tmp for core dumps' },
+            '/home/r00t': { type: 'dir', children: [], perm: 'denied' },
+            '/home/operator': { type: 'dir', children: ['readme.txt'] },
+            '/home/operator/readme.txt': { type: 'file',
+                content: 'Operator notes:\n- Daily backup runs at 04:00 via cron\n- Master key is in /opt/.hidden/.key\n- If you need the decoder: /opt/tools/decoder.py\n- Contact admin for the panel password' },
+
+            // ── VAR ──────────────────────────────
+            '/var': { type: 'dir', children: ['log', 'www', 'backups', 'spool'] },
+            '/var/log': { type: 'dir', children: ['auth.log', 'syslog', 'nexus.log', 'access.log', 'audit.log'] },
+            '/var/log/auth.log': { type: 'file',
+                content: 'Jun 12 03:14:22 nexus7 sshd[1337]: Failed password for admin from 45.33.32.156\nJun 12 03:14:25 nexus7 sshd[1337]: Failed password for admin from 45.33.32.156\nJun 12 03:14:28 nexus7 sshd[1338]: Accepted password for admin from 192.168.1.42\nJun 12 04:01:11 nexus7 sudo[2001]: admin : TTY=pts/0 ; PWD=/home/admin ; COMMAND=/bin/bash\nJun 12 04:01:12 nexus7 sudo[2001]: pam_unix(sudo:session): session opened for user root\nJun 12 04:22:33 nexus7 sshd[2244]: Accepted publickey for r00t from 10.0.0.1\nJun 12 04:22:45 nexus7 sshd[2244]: Disconnected from user r00t 10.0.0.1\nJun 12 06:00:01 nexus7 cron[2500]: FLAG entry: FLAG{l0g_4n4lys1s_1s_k3y}\nJun 12 06:00:02 nexus7 cron[2500]: audit flag embedded in log rotation' },
+            '/var/log/syslog': { type: 'file',
+                content: 'Jun 12 00:00:01 nexus7 kernel: Linux nexus7 5.15.0-91-generic\nJun 12 00:00:01 nexus7 kernel: [    0.000000] BIOS-provided physical RAM map\nJun 12 00:00:02 nexus7 systemd[1]: Reached target Network\nJun 12 00:00:05 nexus7 cron[512]: (CRON) INFO (pidfile fd = 3)\nJun 12 04:00:00 nexus7 cron[512]: (root) CMD (/opt/.hidden/backup.sh)\nJun 12 04:00:01 nexus7 cron[1998]: backup.sh: running encrypted backup...\nJun 12 04:00:03 nexus7 cron[1998]: backup.sh: key stored at /opt/.hidden/.key' },
+            '/var/log/nexus.log': { type: 'file',
+                content: '[NEXUS-7 RESEARCH OS — SYSTEM LOG]\n\nINFO  12:00:00 — System boot complete\nINFO  12:00:01 — Research database initialized\nWARN  03:14:20 — Brute force attempt detected from 45.33.32.156\nALERT 03:14:28 — Admin login from unusual IP 192.168.1.42\nALERT 04:01:12 — Root shell spawned by admin user\nINFO  04:22:33 — r00t SSH connection established\nCRIT  04:22:44 — File exfiltration detected: /opt/.hidden/.key\nALERT 04:22:45 — Connection terminated\nINFO  06:00:01 — Audit log rotation: FLAG check embedded' },
+            '/var/log/access.log': { type: 'file',
+                content: '192.168.1.10 - - [12/Jun/2024:09:12:01] "GET /admin HTTP/1.1" 200 4521\n192.168.1.10 - - [12/Jun/2024:09:12:05] "POST /admin/login HTTP/1.1" 302 -\n45.33.32.156 - - [12/Jun/2024:03:14:15] "GET /admin HTTP/1.1" 401 -\n45.33.32.156 - - [12/Jun/2024:03:14:18] "POST /admin/login HTTP/1.1" 401 -\n10.0.0.1 - - [12/Jun/2024:04:22:33] "GET /api/keys HTTP/1.1" 200 892' },
+            '/var/log/audit.log': { type: 'file',
+                content: 'AUDIT LOG — NEXUS-7\n====================\n[INFO] File integrity check: /opt/.hidden/.key — MODIFIED (Jun 12 04:22)\n[INFO] User r00t accessed /var/backups/ (Jun 12 04:22)\n[INFO] Suspicious outbound connection to 10.0.0.1:443 (Jun 12 04:22)\n[INFO] Core dump detected in /tmp/core.dump (Jun 12 04:23)\n[FLAG] FLAG{4ud1t_l0gs_r3v34l_4ll}' },
+            '/var/www': { type: 'dir', children: ['html', 'config.php', 'robots.txt'] },
+            '/var/www/html': { type: 'dir', children: ['index.html', 'admin', 'uploads'] },
+            '/var/www/html/index.html': { type: 'file',
+            content: '<html><body><h1>NEXUS-7 Research Portal</h1><p>Internal use only.</p><p>Admin panel: <a href="/admin">/admin</a></p></body></html>' },
+            '/var/www/html/admin': { type: 'dir', children: ['panel.php', '.htpasswd', 'dashboard.php'] },
+            '/var/www/html/admin/panel.php': { type: 'file',
+                content: '<?php\n// Admin Panel — NEXUS-7\n// TODO: remove hardcoded credentials\n$admin_user = "admin";\n$admin_pass = md5("sup3r_s3cr3t_2024"); // hash: 5f4dcc3b5aa765d61d8327deb882cf99\n// FLAG{php_s0urc3_c0d3_4ud1t}\nif($_POST[\'pass\'] === $admin_pass) {\n  echo "Welcome, admin.";\n  include "dashboard.php";\n}\n?>' },
+            '/var/www/html/admin/.htpasswd': { type: 'file',
+                content: 'admin:$apr1$rp2XY1mo$Xn.x7lYj1kJOb4TGWV8gG.' },
+            '/var/www/html/admin/dashboard.php': { type: 'file',
+                content: '<?php\n// Dashboard — restricted\n$flag_hint = "Check /proc for running processes.";\necho "NEXUS-7 Admin Dashboard";\necho "System status: COMPROMISED";\n?>' },
+            '/var/www/html/uploads': { type: 'dir', children: ['.gitkeep'] },
+            '/var/www/html/uploads/.gitkeep': { type: 'file', content: '' },
+            '/var/www/config.php': { type: 'file',
+                content: '<?php\n$db_host = "localhost";\n$db_name = "nexus_research";\n$db_user = "nexus_app";\n$db_pass = "Nx7@prod!2024"; // CHANGE THIS\n// DB encryption key stored in /opt/.hidden/.key\n?>' },
+            '/var/www/robots.txt': { type: 'file',
+                content: 'User-agent: *\nDisallow: /admin\nDisallow: /config.php\nDisallow: /backups\n# Nothing to see here... or is there?' },
+            '/var/backups': { type: 'dir', children: ['db_dump.sql.enc', 'keys.tar.gz.enc', 'backup.log'] },
+            '/var/backups/db_dump.sql.enc': { type: 'file',
+                content: '[encrypted file — AES-256-CBC]\nHeader: Salted__ABCDEF1234567890\n[binary data...]\n\nHint: The key is in /opt/.hidden/.key',
+                binary: true },
+            '/var/backups/keys.tar.gz.enc': { type: 'file',
+                content: '[encrypted file — AES-256-CBC]\nHeader: Salted__FEDCBA0987654321\n[binary data...]', binary: true },
+            '/var/backups/backup.log': { type: 'file',
+                content: 'Backup log:\n2024-06-12 04:00 — Full backup completed (encrypted)\n2024-06-11 04:00 — Full backup completed (encrypted)\n2024-06-10 04:00 — Full backup completed (encrypted)\nKey location: /opt/.hidden/.key' },
+            '/var/spool': { type: 'dir', children: ['mail'] },
+            '/var/spool/mail': { type: 'dir', children: ['root', 'admin'] },
+            '/var/spool/mail/root': { type: 'file',
+                content: 'From: security@nexus7.int\nTo: root@nexus7\nSubject: URGENT — Intrusion detected\n\nRoot,\n\nWe detected unauthorized access from 45.33.32.156.\nPlease review /var/log/auth.log and rotate all keys.\nThe master key in /opt/.hidden/.key may be compromised.\n\n— Security Team' },
+            '/var/spool/mail/admin': { type: 'file',
+                content: 'From: root@nexus7\nTo: admin@nexus7\nSubject: Re: Panel credentials\n\nAdmin,\n\nThe password for the panel is in the PHP source.\nDo NOT store it in plaintext next time.\nAlso check the suspicious backdoor on port 31337.\n\n— Root' },
+
+            // ── ETC ──────────────────────────────
+            '/etc': { type: 'dir', children: ['passwd', 'shadow', 'hosts', 'crontab', 'ssh', 'nexus.conf',
+                'motd'] },
+            '/etc/passwd': { type: 'file',
+                content: 'root:x:0:0:root:/root:/bin/bash\ndaemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\nbin:x:2:2:bin:/bin:/usr/sbin/nologin\nsys:x:3:3:sys:/dev:/usr/sbin/nologin\nwww-data:x:33:33:www-data:/var/www:/usr/sbin/nologin\nadmin:x:1000:1000:NEXUS Admin,,,:/home/admin:/bin/bash\nguest:x:1001:1001:Guest User,,,:/home/guest:/bin/sh\nr00t:x:0:0:r00t backdoor:/home/r00t:/bin/bash\nnexus_svc:x:1002:1002:Nexus Service:/var/nexus:/usr/sbin/nologin\noperator:x:1003:1003:Operator:/home/operator:/bin/bash' },
+            '/etc/shadow': { type: 'file', content: 'PERMISSION DENIED — requires root', perm: 'denied' },
+            '/etc/hosts': { type: 'file',
+                content: '127.0.0.1       localhost\n127.0.1.1       nexus7\n192.168.1.1     gateway\n192.168.1.10    nexus7-internal\n10.0.0.1        ops-server\n10.0.0.5        backup-srv\n10.0.0.10       secret-db  # do not share\n10.0.0.99       gitlab-internal' },
+            '/etc/crontab': { type: 'file',
+                content: '# /etc/crontab\nSHELL=/bin/sh\nPATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin\n\n# m h dom mon dow user  command\n17 *  * * *   root  cd / && run-parts --report /etc/cron.hourly\n0 4  * * *   root  /opt/.hidden/backup.sh >> /var/log/syslog 2>&1\n30 2  * * 0  root  /opt/.hidden/cleanup.sh\n*/5 * * * *  root  /opt/.hidden/monitor.sh\n# Suspicious: backdoor persistence check every reboot\n@reboot        root  /opt/.hidden/backdoor --quiet' },
+            '/etc/ssh': { type: 'dir', children: ['sshd_config', 'ssh_host_rsa_key'] },
+            '/etc/ssh/sshd_config': { type: 'file',
+                content: 'Port 22\nPermitRootLogin yes\nPasswordAuthentication yes\nPubkeyAuthentication yes\nAuthorizedKeysFile .ssh/authorized_keys\nX11Forwarding no\n# Backdoor added by r00t\nMatch User r00t\n  AuthorizedKeysFile /opt/.hidden/.authorized_keys' },
+            '/etc/ssh/ssh_host_rsa_key': { type: 'file', content: 'PERMISSION DENIED', perm: 'denied' },
+            '/etc/nexus.conf': { type: 'file',
+                content: '[nexus]\nversion=7.3.1\ninstall_date=2024-01-15\nlicense=NEXUS-RESEARCH-7-AAAA-BBBB-CCCC\n\n[database]\nhost=10.0.0.10\nport=5432\nname=nexus_research\n\n[security]\nencryption=AES-256\nkey_path=/opt/.hidden/.key\naudit_log=/var/log/nexus.log\n\n[backdoor]\n# This section should not exist\nuser=r00t\npass_hash=5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8\n# FLAG{c0nf1g_f1l3s_4r3_tr34sur3}' },
+            '/etc/motd': { type: 'file',
+                content: '═══════════════════════════════════════\n  NEXUS-7 RESEARCH TERMINAL\n  Authorized users only.\n  All activity is monitored and logged.\n═══════════════════════════════════════\n' },
+
+            // ── TMP ──────────────────────────────
+            '/tmp': { type: 'dir', children: ['sess_a3f8b', '.pipe', 'core.dump', '.x11_unix'] },
+            '/tmp/sess_a3f8b': { type: 'file',
+                content: 'SESSION DATA\nuser=admin\ntoken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYWRtaW4iLCJyb2xlIjoic3VwZXJhZG1pbiIsImV4cCI6OTk5OTk5OTk5OX0.AAAA\nip=192.168.1.42\nlast_seen=Jun 12 04:01:11' },
+            '/tmp/.pipe': { type: 'file', content: '[named pipe — used by backup.sh]', binary: true },
+            '/tmp/core.dump': { type: 'file',
+                content: '[core dump from process 2244 — r00t]\n\nRegisters at time of crash:\nRIP: 0x00007f8b4c6d2a41\nRSP: 0x00007fff5fbff3e0\nRAX: 0x0000000000000000\n\nStack trace:\n#0  0x00007f8b4c6d2a41 in exfiltrate_key ()\n#1  0x00007f8b4c6d2b12 in main ()\n\nString at 0x4040a0: "FLAG{c0r3_dump_f0r3ns1cs_w1ns}"' },
+            '/tmp/.x11_unix': { type: 'dir', children: [] },
+
+            // ── PROC ──────────────────────────────
+            '/proc': { type: 'dir', children: ['1', '512', '1337', 'version', 'cpuinfo', 'net', 'self'] },
+            '/proc/version': { type: 'file',
+                content: 'Linux version 5.15.0-91-generic (buildd@nexus) (gcc (Ubuntu 11.4.0) 11.4.0, GNU ld (GNU Binutils for Ubuntu) 2.38) #101-Ubuntu SMP Tue Nov 14 13:30:08 UTC 2023' },
+            '/proc/cpuinfo': { type: 'file',
+                content: 'processor\t: 0\nvendor_id\t: GenuineIntel\ncpu family\t: 6\nmodel name\t: Intel(R) Xeon(R) CPU E5-2670 v3 @ 2.30GHz\ncpu MHz\t\t: 2299.998\ncache size\t: 30720 KB\nflags\t\t: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr' },
+            '/proc/net': { type: 'dir', children: ['tcp', 'arp'] },
+            '/proc/net/tcp': { type: 'file',
+                content: 'sl  local_address rem_address   st\n 0: 00000000:0016 00000000:0000 0A   (0.0.0.0:22 LISTEN)\n 1: 0100007F:0035 00000000:0000 0A   (127.0.0.1:53 LISTEN)\n 2: 00000000:0050 00000000:0000 0A   (0.0.0.0:80 LISTEN)\n 3: 00000000:7A69 00000000:0000 0A   (0.0.0.0:31337 LISTEN — SUSPICIOUS)\n 4: 2A01A82A:8C51 2A01A82A:0016 01   (192.168.1.42:35921 -> 192.168.1.10:22 ESTABLISHED)' },
+            '/proc/net/arp': { type: 'file',
+                content: 'IP address       HW type     Flags       HW address            Mask     Device\n192.168.1.1      0x1         0x2         aa:bb:cc:dd:ee:01     *        eth0\n192.168.1.42     0x1         0x2         de:ad:be:ef:00:42     *        eth0\n10.0.0.1         0x1         0x2         00:11:22:33:44:55     *        eth1' },
+            '/proc/1': { type: 'dir', children: ['cmdline', 'status'] },
+            '/proc/1/cmdline': { type: 'file', content: '/sbin/init' },
+            '/proc/1/status': { type: 'file',
+            content: 'Name:\tinit\nState:\tS (sleeping)\nPid:\t1\nPPid:\t0\nUid:\t0\t0\t0\t0\nGid:\t0\t0\t0\t0' },
+            '/proc/512': { type: 'dir', children: ['cmdline', 'status'] },
+            '/proc/512/cmdline': { type: 'file', content: '/usr/sbin/cron -f' },
+            '/proc/512/status': { type: 'file', content: 'Name:\tcron\nState:\tS\nPid:\t512\nUid:\t0\t0\t0\t0' },
+            '/proc/1337': { type: 'dir', children: ['cmdline', 'status', 'environ'] },
+            '/proc/1337/cmdline': { type: 'file',
+            content: '/opt/.hidden/backdoor --quiet --key /opt/.hidden/.key' },
+            '/proc/1337/status': { type: 'file',
+                content: 'Name:\tbackdoor\nState:\tS\nPid:\t1337\nUid:\t0\t0\t0\t0\nGroups:\t0 27 1000' },
+            '/proc/1337/environ': { type: 'file',
+                content: 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\nHOME=/root\nUSER=root\nSECRET_KEY=s3cr3t_b4ckd00r_k3y_2024\nENCRYPT_KEY=N3xU5!K3y#2024@Secure\nFLAG{3nv_v4rs_l34k_s3cr3ts}\nHIDDEN_FLAG_HINT=check_this_file_carefully' },
+            '/proc/self': { type: 'dir', children: ['status'] },
+            '/proc/self/status': { type: 'file',
+            content: 'Name:\tbash\nState:\tR (running)\nPid:\t3001\nUid:\t1001\t1001\t1001\t1001\nGroups:\t1001 27' },
+
+            // ── BIN ──────────────────────────────
+            '/bin': { type: 'dir', children: ['bash', 'sh', 'ls', 'cat', 'grep', 'find', 'ps', 'netstat',
+                'strings', 'hexdump'
+            ] },
+
+            // ── OPT ──────────────────────────────
+            '/opt': { type: 'dir', children: ['tools', '.hidden', 'readme.txt'] },
+            '/opt/readme.txt': { type: 'file',
+                content: 'OPT directory — Contains optional software and tools.\n\nSubdirectories:\n  tools/   — Utility scripts\n  .hidden/ — System maintenance (restricted)\n\nNote: Some tools here are for internal use only.' },
+            '/opt/tools': { type: 'dir', children: ['decoder.py', 'scanner.sh', 'hashcheck.sh'] },
+            '/opt/tools/decoder.py': { type: 'file',
+                content: '#!/usr/bin/env python3\n# NEXUS Decoder Tool\nimport base64, sys\n\ndef decode(s):\n    return base64.b64decode(s).decode()\n\nif __name__ == "__main__":\n    if len(sys.argv) > 1:\n        print(decode(sys.argv[1]))\n    else:\n        # Hardcoded test value\n        test = "RkxBR3twd3QzX2QzYzBkM3JffQ=="\n        print(f"Test decode: {decode(test)}")\n        # Result: FLAG{pwt3_d3c0d3r_}' },
+            '/opt/tools/scanner.sh': { type: 'file',
+                content: '#!/bin/bash\n# Network scanner\nfor ip in $(seq 1 254); do\n  ping -c1 -W1 10.0.0.$ip &>/dev/null && echo "10.0.0.$ip is UP"\ndone\n# Note: secret-db is at 10.0.0.10' },
+            '/opt/tools/hashcheck.sh': { type: 'file',
+                content: '#!/bin/bash\n# Hash verification tool\necho "MD5 of sup3r_s3cr3t_2024: 5f4dcc3b5aa765d61d8327deb882cf99"\necho "This matches the admin panel password hash."\necho "Try running: md5sum sup3r_s3cr3t_2024"' },
+            '/opt/.hidden': { type: 'dir', children: ['README', '.key', 'backup.sh', 'monitor.sh', '.authorized_keys',
+                    'backdoor', 'notes.txt'
+                ] },
+            '/opt/.hidden/README': { type: 'file',
+                content: 'NEXUS-7 HIDDEN TOOLS\n====================\n\nThis directory contains sensitive operational scripts.\nDo NOT share these files.\n\nFiles:\n  .key          — Master encryption key\n  backup.sh     — Automated encrypted backup script\n  monitor.sh    — System monitoring daemon\n  .authorized_keys — r00t SSH keys (DO NOT TOUCH)\n  backdoor      — [BINARY] Persistence mechanism\n  notes.txt     — Developer notes\n\nIf you find this, you are NOT supposed to be here.\nDelete your shell history and report to security@nexus7.int' },
+            '/opt/.hidden/.key': { type: 'file',
+                content: 'FLAG{y0u_f0und_th3_m4st3r_k3y_GG}\n\nMASTER KEY: 0x4E455855532D372D4B45592D303031\nAlgorithm: AES-256-CBC\nCreated: 2024-01-15\nExpiry: 2025-01-15\nNote: Used for all /var/backups/*.enc files' },
+            '/opt/.hidden/backup.sh': { type: 'file',
+                content: '#!/bin/bash\n# Encrypted backup script\nKEY=$(cat /opt/.hidden/.key | head -1)\ntar czf /tmp/backup_$(date +%Y%m%d).tar.gz /var/www /etc/nexus.conf\nopenssl enc -aes-256-cbc -k "$KEY" -in /tmp/backup_$(date +%Y%m%d).tar.gz \\\n  -out /var/backups/db_dump.sql.enc\nrm /tmp/backup_$(date +%Y%m%d).tar.gz\necho "Backup complete: $(date)"' },
+            '/opt/.hidden/monitor.sh': { type: 'file',
+                content: '#!/bin/bash\n# System monitor — checks for unauthorized access\nwhile true; do\n  if grep -q "CRITICAL\\|ALERT" /var/log/nexus.log; then\n    # Notify ops-server\n    curl -s http://10.0.0.1/alert?host=$(hostname)&level=critical &\n  fi\n  sleep 300\ndone' },
+            '/opt/.hidden/.authorized_keys': { type: 'file',
+                content: '# r00t backdoor SSH keys\nssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC... r00t@ops-server\nssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQD... r00t@backup-srv' },
+            '/opt/.hidden/backdoor': { type: 'file',
+                content: '[ELF binary — x86_64]\nMagic: 7f 45 4c 46 02 01 01 00\nEntry: 0x401080\n\nstrings output:\n  /lib/x86_64-linux-gnu/libc.so.6\n  NEXUS BACKDOOR v2.1\n  --quiet\n  --key\n  Listening on 0.0.0.0:31337\n  FLAG{b4ckd00r_b1n4ry_r3v3rs3d}\n  Connected: %s\n  key loaded: %s',
+                binary: true },
+            '/opt/.hidden/notes.txt': { type: 'file',
+                content: 'Developer notes — DO NOT COMMIT TO GIT\n======================================\n- Backdoor installed for remote maintenance\n- Listens on port 31337 (hidden from netstat by default)\n- Key file: .key in same directory\n- If backdoor crashes, core dump goes to /tmp\n- Flag reminder: strings the backdoor binary for a surprise\n- Password for admin panel: check the PHP source in /var/www/html/admin/' },
+
+            // ── USR ──────────────────────────────
+            '/usr': { type: 'dir', children: ['share', 'lib', 'local'] },
+            '/usr/share': { type: 'dir', children: ['doc', 'man', 'nexus'] },
+            '/usr/share/doc': { type: 'dir', children: ['CHANGELOG', 'LICENSE'] },
+            '/usr/share/doc/CHANGELOG': { type: 'file',
+                content: 'NEXUS-7 Changelog\n=================\nv7.3.1 — 2024-06-01\n  - Added audit logging\n  - Fixed backup encryption\n  - Known issue: backdoor process visible in /proc\n\nv7.3.0 — 2024-05-15\n  - Initial release\n  - Web admin panel added\n  - Automated backups configured' },
+            '/usr/share/doc/LICENSE': { type: 'file',
+                content: 'NEXUS-7 Research License\nInternal use only. Redistribution prohibited.\nSerial: NEXUS-RESEARCH-7-AAAA-BBBB-CCCC' },
+            '/usr/share/man': { type: 'dir', children: ['man1'] },
+            '/usr/share/man/man1': { type: 'dir', children: [] },
+            '/usr/share/nexus': { type: 'dir', children: ['banner.txt'] },
+            '/usr/share/nexus/banner.txt': { type: 'file',
+            content: 'N E X U S - 7\nResearch Operating System\n========================\n"Knowledge through exploration"' },
+            '/usr/lib': { type: 'dir', children: [] },
+            '/usr/local': { type: 'dir', children: ['bin'] },
+            '/usr/local/bin': { type: 'dir', children: [] },
+
+            // ── DOCS ──────────────────────────────
+            '/docs': { type: 'dir', children: ['guide.txt', 'security.txt', 'api.md'] },
+            '/docs/guide.txt': { type: 'file',
+                content: 'GETTING STARTED WITH NEXUS-7\n============================\n\nWelcome to the NEXUS-7 sandbox terminal!\n\nThis is both a CTF challenge and a general-purpose terminal simulator.\nExplore the virtual filesystem, find hidden flags, and learn Linux commands.\n\nQUICK START:\n  1. Type "ls" to list files in the current directory\n  2. Type "cd <directory>" to navigate\n  3. Type "cat <file>" to read a file\n  4. Type "help" for all available commands\n  5. Type "hint" for a random hint\n  6. Type "flags" to see your progress\n\nFLAGS: There are 10 hidden flags throughout the system.\nThey all follow the format: FLAG{...}\nCan you find them all?\n\nHappy exploring!' },
+            '/docs/security.txt': { type: 'file',
+                content: 'SECURITY POLICY — NEXUS-7\n=========================\n1. All access is logged to /var/log/\n2. Encryption keys must be stored in /opt/.hidden/\n3. Admin credentials must not be hardcoded (see /var/www/html/admin/)\n4. Backdoor access is restricted to r00t user\n5. Core dumps should be disabled in production\n6. Environment variables must not contain secrets\n\nViolations found: ALL OF THE ABOVE\nStatus: CRITICAL — System is compromised' },
+            '/docs/api.md': { type: 'file',
+                content: '# NEXUS-7 API Documentation\n\n## Endpoints\n- GET /admin — Admin panel\n- POST /admin/login — Authentication\n- GET /api/keys — Key retrieval (internal only)\n\n## Authentication\nUses MD5 hashing for passwords.\nSee panel.php for implementation details.\n\n## Notes\nThe key endpoint returns data from /opt/.hidden/.key' },
+
+            // ── MNT ──────────────────────────────
+            '/mnt': { type: 'dir', children: ['external', 'backup_drive'] },
+            '/mnt/external': { type: 'dir', children: ['readme.txt'] },
+            '/mnt/external/readme.txt': { type: 'file',
+                content: 'External mount point.\nCurrently empty.\nTry exploring the main filesystem first.' },
+            '/mnt/backup_drive': { type: 'dir', children: [] },
+
+            // ── SRV ──────────────────────────────
+            '/srv': { type: 'dir', children: ['ftp', 'www'] },
+            '/srv/ftp': { type: 'dir', children: ['pub'] },
+            '/srv/ftp/pub': { type: 'dir', children: ['README'] },
+            '/srv/ftp/pub/README': { type: 'file',
+                content: 'FTP Public Directory\nNo files available for anonymous download.\nCheck /var/www for the web server content.' },
+            '/srv/www': { type: 'dir', children: [] },
+
+            // ── ROOT ──────────────────────────────
+            '/root': { type: 'dir', children: ['.bashrc', '.flag_reminder'], perm: 'denied' },
+            '/root/.bashrc': { type: 'file', content: 'PERMISSION DENIED', perm: 'denied' },
+            '/root/.flag_reminder': { type: 'file', content: 'PERMISSION DENIED', perm: 'denied' },
+        };
+
+        // ── FLAGS ──────────────────────────────
+        const FLAGS = {
+            '/home/guest/welcome.txt': 'FLAG{w3lc0m3_t0_n3xu5_r3s34rch}',
+            '/opt/tools/decoder.py': 'FLAG{pwt3_d3c0d3r_}',
+            '/var/www/html/admin/panel.php': 'FLAG{php_s0urc3_c0d3_4ud1t}',
+            '/etc/nexus.conf': 'FLAG{c0nf1g_f1l3s_4r3_tr34sur3}',
+            '/var/log/auth.log': 'FLAG{l0g_4n4lys1s_1s_k3y}',
+            '/var/log/audit.log': 'FLAG{4ud1t_l0gs_r3v34l_4ll}',
+            '/proc/1337/environ': 'FLAG{3nv_v4rs_l34k_s3cr3ts}',
+            '/opt/.hidden/.key': 'FLAG{y0u_f0und_th3_m4st3r_k3y_GG}',
+            '/opt/.hidden/backdoor': 'FLAG{b4ckd00r_b1n4ry_r3v3rs3d}',
+            '/tmp/core.dump': 'FLAG{c0r3_dump_f0r3ns1cs_w1ns}',
+        };
+
+        const FOUND_FLAGS = new Set();
+
+        // ==================== TERMINAL STATE ====================
+        let CWD = '/home/guest';
+        let CMD_HISTORY = [];
+        let HIST_IDX = -1;
+        let USER = 'guest';
+        let IS_ROOT = false;
+
+        const output = document.getElementById('output');
+        const cmdInput = document.getElementById('cmd-input');
+        const promptLabel = document.getElementById('prompt-label');
+        const promptPath = document.getElementById('prompt-path');
+        const titlebarPath = document.getElementById('titlebar-path');
+        const flagCounter = document.getElementById('flag-counter');
+
+        function updateFlagCounter() {
+            const total = Object.keys(FLAGS).length;
+            const found = FOUND_FLAGS.size;
+            if (found > 0) {
+                flagCounter.textContent = `FLAGS: ${found}/${total}`;
+                document.getElementById('flag-status').style.display = 'flex';
+            }
+        }
+
+        function updatePrompt() {
+            const path = CWD === '/home/' + USER ? '~' : CWD;
+            promptLabel.innerHTML =
+                `<span class="user">${IS_ROOT ? 'root' : USER}</span>@<span class="host">nexus7</span>:<span class="path">${path}</span>${IS_ROOT ? '#' : '$'}`;
+            promptPath.textContent = path;
+            titlebarPath.textContent = CWD;
+        }
+
+        function resolvePath(p) {
+            if (!p) return CWD;
+            if (p.startsWith('/')) return normalizePath(p);
+            return normalizePath(CWD + '/' + p);
+        }
+
+        function normalizePath(p) {
+            const parts = p.split('/').filter(Boolean);
+            const resolved = [];
+            for (const part of parts) {
+                if (part === '..') resolved.pop();
+                else if (part !== '.') resolved.push(part);
+            }
+            return '/' + resolved.join('/') || '/';
+        }
+
+        function getNode(path) {
+            const p = path === '' ? '/' : path;
+            return FS[p] || null;
+        }
+
+        // ==================== OUTPUT HELPERS ====================
+        function println(text = '', cls = 'output') {
+            const d = document.createElement('div');
+            d.className = 'line ' + cls;
+            d.textContent = text;
+            output.appendChild(d);
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function printHTML(html, cls = 'output') {
+            const d = document.createElement('div');
+            d.className = 'line ' + cls;
+            d.innerHTML = html;
+            output.appendChild(d);
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function printPromptLine(cmd) {
+            const path = CWD === '/home/' + USER ? '~' : CWD;
+            const promptStr =
+                `${IS_ROOT ? 'root' : USER}@nexus7:${path}${IS_ROOT ? '#' : '$'} `;
+            printHTML(
+                `<span style="color:${IS_ROOT ? '#ff6666' : '#00ff88'}">${IS_ROOT ? 'root' : USER}</span>@<span style="color:#00ffff">nexus7</span>:<span style="color:#ffb000">${path}</span>${IS_ROOT ? '#' : '$'} <span style="color:#e8ffe8">${escapeHtml(cmd)}</span>`,
+                'prompt');
+        }
+
+        function escapeHtml(t) {
+            return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function checkFlag(fileArg) {
+            const absPath = resolvePath(fileArg);
+            if (FLAGS[absPath] && !FOUND_FLAGS.has(absPath)) {
+                FOUND_FLAGS.add(absPath);
+                updateFlagCounter();
+                setTimeout(() => {
+                    println('');
+                    println('  ╔══════════════════════════════════════════╗', 'flag');
+                    println('  ║         *** FLAG DISCOVERED! ***         ║', 'flag');
+                    println('  ╚══════════════════════════════════════════╝', 'flag');
+                    println('  ' + FLAGS[absPath], 'flag');
+                    println('');
+                    document.getElementById('flag-modal').classList.add('active');
+                    document.getElementById('modal-flag-text').innerHTML =
+                        `You discovered a flag:<br><br><span style="color:#ffff00;font-size:15px">${FLAGS[absPath]}</span><br><br>Flags found: ${FOUND_FLAGS.size}/${Object.keys(FLAGS).length}`;
+                    document.getElementById('flag-status').style.display = 'flex';
+                    if (FOUND_FLAGS.size === Object.keys(FLAGS).length) {
+                        setTimeout(() => {
+                            println('  ╔══════════════════════════════════════════╗', 'flag');
+                            println('  ║     🏆 ALL FLAGS CAPTURED! 🏆            ║', 'flag');
+                            println('  ║   You are a true NEXUS-7 investigator!   ║', 'flag');
+                            println('  ╚══════════════════════════════════════════╝', 'flag');
+                            println('');
+                        }, 600);
+                    }
+                }, 300);
+            }
+        }
+
+        // ==================== COMMANDS ====================
+        const COMMANDS = {
+            help: (args) => {
+                println('');
+                println(' ┌─────────────────────────────────────────────────────┐', 'info');
+                println(' │        NEXUS-7 TERMINAL — COMMAND REFERENCE         │', 'info');
+                println(' └─────────────────────────────────────────────────────┘', 'info');
+                println('');
+                println(' NAVIGATION', 'warning');
+                println('   ls [-la]     List directory contents', 'dim');
+                println('   cd <dir>     Change directory', 'dim');
+                println('   pwd          Print working directory', 'dim');
+                println('');
+                println(' FILE OPERATIONS', 'warning');
+                println('   cat <file>   Display file contents', 'dim');
+                println('   less <file>  Display file (same as cat)', 'dim');
+                println('   strings <f>  Extract printable strings from file', 'dim');
+                println('   hexdump <f>  Hex dump of file', 'dim');
+                println('   file <f>     Determine file type', 'dim');
+                println('');
+                println(' SEARCH', 'warning');
+                println('   find <path> [-name <pat>]  Find files', 'dim');
+                println('   grep <pat> <file>          Search in file', 'dim');
+                println('   grep -r <pat> <dir>        Recursive search', 'dim');
+                println('');
+                println(' SYSTEM INFO', 'warning');
+                println('   whoami       Current user', 'dim');
+                println('   id           User/group info', 'dim');
+                println('   ps [-aux]    Running processes', 'dim');
+                println('   netstat      Network connections', 'dim');
+                println('   uname [-a]   System info', 'dim');
+                println('   env          Environment variables', 'dim');
+                println('   history      Command history', 'dim');
+                println('');
+                println(' TOOLS', 'warning');
+                println('   base64 <str>     Encode to base64', 'dim');
+                println('   base64 -d <str>  Decode from base64', 'dim');
+                println('   md5sum <str>     MD5 hash a string', 'dim');
+                println('   echo <text>      Print text', 'dim');
+                println('   clear            Clear terminal', 'dim');
+                println('   sudo <cmd>       Run as root (if permitted)', 'dim');
+                println('');
+                println(' CTF / SANDBOX', 'warning');
+                println('   hint             Display a progressive hint', 'dim');
+                println('   flags            Show found flags & progress', 'dim');
+                println('   status           Show CTF progress overview', 'dim');
+                println('   tutorial         Show getting-started guide', 'dim');
+                println('');
+            },
+
+            ls: (args) => {
+                let showHidden = false,
+                    longFormat = false;
+                let target = null;
+                for (const a of args) {
+                    if (a.startsWith('-')) {
+                        if (a.includes('a')) showHidden = true;
+                        if (a.includes('l')) longFormat = true;
+                    } else { target = a; }
+                }
+                const path = target ? resolvePath(target) : CWD;
+                const node = getNode(path);
+                if (!node) { println(`ls: cannot access '${target}': No such file or directory`,
+                    'error'); return; }
+                if (node.perm === 'denied' && !IS_ROOT) { println(
+                        `ls: cannot open directory '${path}': Permission denied`, 'error'); return; }
+                if (node.type !== 'dir') { println(target || path.split('/').pop(), 'output'); return; }
+
+                const children = node.children || [];
+                const filtered = showHidden ? children : children.filter(c => !c.startsWith('.'));
+
+                if (filtered.length === 0) { println('total 0', 'dim'); return; }
+
+                if (longFormat) {
+                    println(`total ${filtered.length * 4}`, 'dim');
+                    const now = 'Jun 12 04:22';
+                    filtered.forEach(name => {
+                        const childPath = path === '/' ? '/' + name : path + '/' + name;
+                        const child = getNode(childPath);
+                        const isDir = child && child.type === 'dir';
+                        const perm = child && child.perm === 'denied' && !IS_ROOT ?
+                            '----------' : (isDir ? 'drwxr-xr-x' : '-rw-r--r--');
+                        const size = isDir ? '4096' : String(Math.floor(Math.random() *
+                            8192) + 512);
+                        const color = isDir ? '#00ffff' : (name.endsWith('.sh') || name.endsWith(
+                            '.py') ? '#00ff88' : '#e8ffe8');
+                        const suffix = isDir ? '/' : '';
+                        printHTML(
+                            `<span style="color:#1a7a1a">${perm}</span>  <span style="color:#556655">1 ${USER.padEnd(8)} ${USER.padEnd(8)}</span>  <span style="color:#ffb000">${size.padStart(6)}</span>  <span style="color:#556655">${now}</span>  <span style="color:${color}">${escapeHtml(name)}${suffix}</span>`
+                            );
+                    });
+                } else {
+                    const line = filtered.map(name => {
+                        const childPath = path === '/' ? '/' + name : path + '/' + name;
+                        const child = getNode(childPath);
+                        const isDir = child && child.type === 'dir';
+                        const color = isDir ? '#00ffff' : (name.endsWith('.sh') || name
+                            .endsWith('.py') ? '#00ff88' : '#e8ffe8');
+                        return `<span style="color:${color}">${escapeHtml(name)}${isDir ? '/' : ''}</span>`;
+                    }).join('  ');
+                    printHTML(line);
+                }
+                // hint if user runs ls in home for the first time
+                if (path === '/home/guest' && showHidden === false) {
+                    setTimeout(() => println('  💡 Try "ls -la" to see hidden files too!', 'dim'), 100);
+                }
+            },
+
+            cd: (args) => {
+                const target = args[0] || '/home/' + USER;
+                const path = resolvePath(target);
+                const node = getNode(path);
+                if (!node) { println(`cd: ${target}: No such file or directory`, 'error'); return; }
+                if (node.type !== 'dir') { println(`cd: ${target}: Not a directory`, 'error'); return; }
+                if (node.perm === 'denied' && !IS_ROOT) { println(`cd: ${target}: Permission denied`,
+                        'error'); return; }
+                CWD = path;
+                updatePrompt();
+            },
+
+            pwd: () => println(CWD),
+
+            cat: (args) => {
+                if (!args[0]) { println('cat: missing operand', 'error'); return; }
+                const path = resolvePath(args[0]);
+                const node = getNode(path);
+                if (!node) { println(`cat: ${args[0]}: No such file or directory`, 'error'); return; }
+                if (node.type === 'dir') { println(`cat: ${args[0]}: Is a directory`, 'error'); return; }
+                if (node.perm === 'denied' && !IS_ROOT) { println(`cat: ${args[0]}: Permission denied`,
+                        'error'); return; }
+                checkFlag(args[0]);
+                node.content.split('\n').forEach(line => println(line));
+            },
+
+            less: (args) => COMMANDS.cat(args),
+
+            strings: (args) => {
+                if (!args[0]) { println('strings: missing argument', 'error'); return; }
+                const path = resolvePath(args[0]);
+                const node = getNode(path);
+                if (!node) { println(`strings: ${args[0]}: No such file or directory`, 'error'); return; }
+                if (node.type === 'dir') { println(`strings: ${args[0]}: Is a directory`, 'error');
+                return; }
+                if (node.perm === 'denied' && !IS_ROOT) { println(
+                    `strings: ${args[0]}: Permission denied`, 'error'); return; }
+                checkFlag(args[0]);
+                println(`Extracting strings from: ${args[0]}`, 'dim');
+                const lines = node.content.split('\n').filter(l => l.trim().length > 3);
+                lines.forEach(l => println(l));
+            },
+
+            hexdump: (args) => {
+                if (!args[0]) { println('hexdump: missing argument', 'error'); return; }
+                const path = resolvePath(args[0]);
+                const node = getNode(path);
+                if (!node) { println(`hexdump: ${args[0]}: No such file or directory`, 'error'); return; }
+                if (node.perm === 'denied' && !IS_ROOT) { println(
+                    `hexdump: ${args[0]}: Permission denied`, 'error'); return; }
+                checkFlag(args[0]);
+                const content = node.content.substring(0, 240);
+                let offset = 0;
+                const bytes = Array.from(content).map(c => c.charCodeAt(0));
+                for (let i = 0; i < Math.min(bytes.length, 160); i += 16) {
+                    const chunk = bytes.slice(i, i + 16);
+                    const hex = chunk.map(b => b.toString(16).padStart(2, '0')).join(' ');
+                    const ascii = chunk.map(b => b >= 32 && b < 127 ? String.fromCharCode(b) : '.')
+                        .join('');
+                    println(`${offset.toString(16).padStart(8, '0')}  ${hex.padEnd(47)}  |${ascii}|`,
+                        'dim');
+                    offset += 16;
+                }
+                if (bytes.length > 160) println(`... (truncated, ${bytes.length} total bytes)`, 'dim');
+            },
+
+            file: (args) => {
+                if (!args[0]) { println('file: missing operand', 'error'); return; }
+                const path = resolvePath(args[0]);
+                const node = getNode(path);
+                if (!node) { println(`file: ${args[0]}: No such file or directory`, 'error'); return; }
+                const name = args[0].split('/').pop();
+                if (node.type === 'dir') { println(`${args[0]}: directory`); return; }
+                if (node.binary) {
+                    if (name.endsWith('.gz')) println(`${args[0]}: gzip compressed data, from Unix`);
+                    else if (name === 'backdoor') println(
+                        `${args[0]}: ELF 64-bit LSB executable, x86-64, dynamically linked`);
+                    else if (name.endsWith('.enc')) println(
+                        `${args[0]}: openssl enc'd data with salted password`);
+                    else println(`${args[0]}: data`);
+                } else if (name.endsWith('.sh')) println(
+                    `${args[0]}: Bourne-Again shell script, ASCII text executable`);
+                else if (name.endsWith('.py')) println(
+                `${args[0]}: Python script, ASCII text executable`);
+                else if (name.endsWith('.php')) println(`${args[0]}: PHP script, ASCII text`);
+                else if (name.endsWith('.log')) println(`${args[0]}: ASCII text`);
+                else if (name.endsWith('.md')) println(`${args[0]}: ASCII text`);
+                else if (name.endsWith('.txt')) println(`${args[0]}: ASCII text`);
+                else println(`${args[0]}: ASCII text`);
+            },
+
+            grep: (args) => {
+                let recursive = false,
+                    pattern = null,
+                    fileArg = null;
+                const positional = [];
+                for (let i = 0; i < args.length; i++) {
+                    if (args[i] === '-r' || args[i] === '-rn' || args[i] === '-ri') recursive = true;
+                    else positional.push(args[i]);
+                }
+                pattern = positional[0];
+                fileArg = positional[1];
+                if (!pattern) { println('grep: missing pattern', 'error'); return; }
+                if (!fileArg) { println('grep: missing file argument', 'error'); return; }
+
+                const searchFile = (path, name) => {
+                    const node = getNode(path);
+                    if (!node || node.type !== 'file') return;
+                    if (node.perm === 'denied' && !IS_ROOT) return;
+                    const lines = node.content.split('\n');
+                    lines.forEach((line, i) => {
+                        if (line.toLowerCase().includes(pattern.toLowerCase())) {
+                            if (recursive) println(`${path}:${i + 1}: ${line}`, 'output');
+                            else println(`${i + 1}: ${line}`, 'output');
+                        }
+                    });
+                };
+
+                const targetPath = resolvePath(fileArg);
+                const node = getNode(targetPath);
+
+                if (!node) { println(`grep: ${fileArg}: No such file or directory`, 'error'); return; }
+
+                if (recursive && node.type === 'dir') {
+                    const recurse = (p) => {
+                        const n = getNode(p);
+                        if (!n) return;
+                        if (n.type === 'file') searchFile(p, p.split('/').pop());
+                        else if (n.type === 'dir') {
+                            (n.children || []).forEach(child => recurse(p === '/' ? '/' + child : p +
+                                '/' + child));
+                        }
+                    };
+                    recurse(targetPath);
+                } else {
+                    searchFile(targetPath, fileArg);
+                }
+                // Hint for flag hunting
+                if (pattern.toLowerCase().includes('flag') && recursive) {
+                    setTimeout(() => println(
+                        '  💡 grep found matches! Now "cat" those files to capture the flags.',
+                        'dim'), 150);
+                }
+            },
+
+            find: (args) => {
+                let startPath = CWD;
+                let namePattern = null;
+                for (let i = 0; i < args.length; i++) {
+                    if (args[i] === '-name' && args[i + 1]) namePattern = args[++i].replace(/\*/g,
+                    '');
+                    else if (!args[i].startsWith('-')) startPath = resolvePath(args[i]);
+                }
+                const results = [];
+                const recurse = (p) => {
+                    const n = getNode(p);
+                    if (!n) return;
+                    const name = p.split('/').pop();
+                    if (!namePattern || name.includes(namePattern)) results.push(p);
+                    if (n.type === 'dir' && (IS_ROOT || n.perm !== 'denied')) {
+                        (n.children || []).forEach(c => recurse(p === '/' ? '/' + c : p + '/' + c));
+                    }
+                };
+                recurse(startPath);
+                if (results.length === 0) {
+                    println('No matches found.', 'dim');
+                } else {
+                    results.forEach(r => println(r));
+                }
+            },
+
+            whoami: () => println(IS_ROOT ? 'root' : USER),
+
+            id: () => {
+                if (IS_ROOT) println('uid=0(root) gid=0(root) groups=0(root)');
+                else println(
+                'uid=1001(guest) gid=1001(guest) groups=1001(guest),27(sudo)');
+            },
+
+            ps: (args) => {
+                const aux = args.some(a => a.includes('a') || a.includes('x'));
+                println('  PID TTY          TIME CMD', 'dim');
+                println('    1 ?        00:00:02 init', 'output');
+                println('  512 ?        00:00:00 cron', 'output');
+                if (aux) {
+                    println(' 1337 ?        00:01:44 backdoor  ← SUSPICIOUS', 'warning');
+                    println(' 2001 pts/0    00:00:01 bash (admin)', 'output');
+                    println(' 2244 ?        00:00:00 sshd: r00t', 'warning');
+                }
+                println(' 3001 pts/1    00:00:00 bash', 'output');
+                println(' 3002 pts/1    00:00:00 ps', 'output');
+                if (aux) {
+                    setTimeout(() => println(
+                        '  💡 Check /proc/1337/ for details on the backdoor process!', 'dim'), 100);
+                }
+            },
+
+            netstat: (args) => {
+                println('Active Internet connections (servers and established)', 'dim');
+                println('Proto Recv-Q Send-Q Local Address      Foreign Address    State', 'dim');
+                println('tcp        0      0 0.0.0.0:22         0.0.0.0:*          LISTEN', 'output');
+                println('tcp        0      0 127.0.0.1:53       0.0.0.0:*          LISTEN', 'output');
+                println('tcp        0      0 0.0.0.0:80         0.0.0.0:*          LISTEN', 'output');
+                println('tcp        0      0 0.0.0.0:31337      0.0.0.0:*          LISTEN  ⚠', 'warning');
+                println('tcp        0      0 192.168.1.10:22    192.168.1.42:35921 ESTABLISHED',
+                'output');
+                println('');
+                println('[!] Port 31337 open — suspicious process listening (backdoor?)', 'warning');
+            },
+
+            uname: (args) => {
+                if (args.includes('-a')) println(
+                    'Linux nexus7 5.15.0-91-generic #101-Ubuntu SMP Tue Nov 14 13:30:08 UTC 2023 x86_64 x86_64 x86_64 GNU/Linux'
+                    );
+                else println('Linux');
+            },
+
+            env: () => {
+                println(
+                'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/tools');
+                println('HOME=/home/guest');
+                println('USER=guest');
+                println('SHELL=/bin/bash');
+                println('TERM=xterm-256color');
+                println('LANG=en_US.UTF-8');
+                println('PWD=' + CWD);
+                println('');
+                println('💡 Check /proc/*/environ for process-specific environment variables.',
+                'dim');
+            },
+
+            history: () => {
+                CMD_HISTORY.forEach((cmd, i) => println(`  ${String(i + 1).padStart(4)}  ${cmd}`,
+                'dim'));
+                if (CMD_HISTORY.length === 0) println('  (no commands yet)', 'dim');
+            },
+
+            echo: (args) => println(args.join(' ')),
+
+            clear: () => { output.innerHTML = ''; },
+
+            sudo: (args) => {
+                if (!args.length) { println('usage: sudo <command>', 'error'); return; }
+                if (args[0] === 'su' || (args[0] === '-s' && args[1] === 'bash')) {
+                    println('[sudo] password for guest: ', 'warning');
+                    setTimeout(() => println('Sorry, try again.', 'error'), 500);
+                    return;
+                }
+                if (args[0] === 'cat' && args[1]) {
+                    const path = resolvePath(args[1]);
+                    const node = getNode(path);
+                    if (!node) { println(`cat: ${args[1]}: No such file or directory`, 'error');
+                    return; }
+                    if (node.type === 'dir') { println(`cat: ${args[1]}: Is a directory`, 'error');
+                    return; }
+                    checkFlag(args[1]);
+                    node.content.split('\n').forEach(l => println(l));
+                    return;
+                }
+                println(
+                    `Sorry, user guest is not allowed to execute '${args.join(' ')}' as root`,
+                'error');
+            },
+
+            base64: (args) => {
+                const decode = args.includes('-d');
+                const str = args.filter(a => !a.startsWith('-')).join(' ');
+                if (!str) { println('base64: missing argument', 'error'); return; }
+                try {
+                    if (decode) println(atob(str));
+                    else println(btoa(str));
+                } catch (e) { println('base64: invalid input', 'error'); }
+            },
+
+            md5sum: (args) => {
+                if (!args.length) { println('md5sum: missing argument', 'error'); return; }
+                const str = args.join(' ');
+                const fakeHashes = {
+                    'password': '5f4dcc3b5aa765d61d8327deb882cf99',
+                    'sup3r_s3cr3t_2024': '5f4dcc3b5aa765d61d8327deb882cf99',
+                    'admin': '21232f297a57a5a743894a0e4a801fc3',
+                };
+                const result = fakeHashes[str] || (([...str].reduce((h, c) => ((h << 5) - h + c
+                    .charCodeAt(0)) | 0, 0) >>> 0).toString(16).padStart(32, 'a'));
+                println(result + '  -');
+                if (str === 'sup3r_s3cr3t_2024') {
+                    setTimeout(() => println(
+                        '  💡 This is the admin panel password hash! Check /var/www/html/admin/panel.php',
+                        'dim'), 100);
+                }
+            },
+
+            hint: () => {
+                const unfound = Object.entries(FLAGS).filter(([p]) => !FOUND_FLAGS.has(p));
+                const allHints = [
+                    'Start by reading files in your home directory: cat welcome.txt and cat notes.md',
+                    'The .bash_history file shows what previous users typed — it\'s a great clue trail!',
+                    'Use "ls -la" in every directory — hidden files (starting with .) often contain secrets.',
+                    'Check /var/log/ — log files often contain interesting entries, including flags.',
+                    'Run "ps -aux" to see all running processes. The backdoor process (PID 1337) is suspicious.',
+                    'Explore /proc/1337/ — process information can leak secrets via environment variables.',
+                    'The /opt/.hidden directory exists but won\'t show up without "ls -la". Find it!',
+                    'Use "find / -name \\"*.key\\"" to search for encryption key files.',
+                    'The web server at /var/www/html/admin/ has a PHP file with hardcoded credentials.',
+                    'Check /etc/nexus.conf — configuration files are a goldmine for CTF flags.',
+                    'The decoder.py script in /opt/tools has an encoded test value. Try decoding it!',
+                    'Use "strings" on binary files like /opt/.hidden/backdoor to extract readable text.',
+                    'Check /tmp for core dumps — they can contain sensitive data from crashed processes.',
+                    'Read the audit log at /var/log/audit.log — it tracks what happened during the intrusion.',
+                    'The /docs/ directory contains helpful guides and security documentation.',
+                ];
+                // Prioritize hints related to unfound flags if possible
+                let hint;
+                if (unfound.length > 0 && Math.random() < 0.7) {
+                    const unfoundPaths = unfound.map(([p]) => p);
+                    const relevantHints = allHints.filter(h =>
+                        unfoundPaths.some(p => h.includes(p.split('/').pop()) || h.includes(p))
+                    );
+                    hint = relevantHints.length > 0 ?
+                        relevantHints[Math.floor(Math.random() * relevantHints.length)] :
+                        allHints[Math.floor(Math.random() * allHints.length)];
+                } else {
+                    hint = allHints[Math.floor(Math.random() * allHints.length)];
+                }
+                println('💡 [HINT] ' + hint, 'warning');
+                if (FOUND_FLAGS.size >= 5) {
+                    setTimeout(() => println(
+                        `  Progress: ${FOUND_FLAGS.size}/${Object.keys(FLAGS).length} flags found. Keep going!`,
+                        'success'), 80);
+                }
+            },
+
+            flags: () => {
+                println('');
+                println(`Flags found: ${FOUND_FLAGS.size} / ${Object.keys(FLAGS).length}`,
+                'info');
+                if (FOUND_FLAGS.size === 0) println('  (none yet — keep exploring!)', 'dim');
+                else {
+                    FOUND_FLAGS.forEach(p => println('  ✓ ' + FLAGS[p], 'success'));
+                    const remaining = Object.entries(FLAGS).filter(([p]) => !FOUND_FLAGS.has(p));
+                    if (remaining.length > 0) {
+                        println('');
+                        println(`  ${remaining.length} flag(s) remaining. Type "hint" for a clue.`,
+                        'dim');
+                    }
+                }
+                println('');
+            },
+
+            status: () => {
+                println('');
+                println(' ╔══════════════════════════════════════════╗', 'header');
+                println(' ║        NEXUS-7 CTF — PROGRESS REPORT     ║', 'header');
+                println(' ╚══════════════════════════════════════════╝', 'header');
+                println('');
+                const total = Object.keys(FLAGS).length;
+                const found = FOUND_FLAGS.size;
+                const pct = Math.round((found / total) * 100);
+                const bar = '█'.repeat(Math.floor(pct / 5)) + '░'.repeat(20 - Math.floor(pct / 5));
+                println(`  Progress: [${bar}] ${pct}%`, 'info');
+                println(`  Flags: ${found} / ${total}`, found === total ? 'success' : 'output');
+                println(`  Current directory: ${CWD}`, 'dim');
+                println(`  User: ${IS_ROOT ? 'root' : USER}`, 'dim');
+                println('');
+                if (found === 0) println('  Get started: "cat welcome.txt" or "tutorial"',
+                'dim');
+                else if (found < total) println(
+                    `  ${total - found} flags remaining. Type "hint" for a clue.`, 'warning');
+                else println('  🏆 All flags captured! You are a master investigator!',
+                'success');
+                println('');
+            },
+
+            tutorial: () => {
+                println('');
+                println(' ╔══════════════════════════════════════════╗', 'header');
+                println(' ║     GETTING STARTED — QUICK TUTORIAL      ║', 'header');
+                println(' ╚══════════════════════════════════════════╝', 'header');
+                println('');
+                println(' Welcome to the NEXUS-7 sandbox terminal!', 'output');
+                println('');
+                println(' This is a virtual Linux-like terminal where you can:', 'output');
+                println('   • Explore a simulated filesystem', 'dim');
+                println('   • Practice Linux commands', 'dim');
+                println('   • Hunt for hidden CTF flags (FLAG{...})', 'dim');
+                println('');
+                println(' FIRST STEPS:', 'warning');
+                println('   1. Type "ls" to see files in your home directory', 'dim');
+                println('   2. Type "cat welcome.txt" to read the welcome file', 'dim');
+                println('   3. Type "cat notes.md" for useful tips', 'dim');
+                println('   4. Type "ls -la" to see hidden files', 'dim');
+                println('   5. Type "cd /" to go to the root directory', 'dim');
+                println('   6. Explore! Try "cd /var/log" then "ls" then "cat auth.log"', 'dim');
+                println('');
+                println(' USEFUL COMMANDS:', 'warning');
+                println('   help     — Full command reference', 'dim');
+                println('   hint     — Get a hint for finding flags', 'dim');
+                println('   flags    — See your flag collection progress', 'dim');
+                println('   status   — Overall progress report', 'dim');
+                println('   grep -r FLAG /  — Search everywhere for "FLAG"', 'dim');
+                println('');
+                println(' There are ' + Object.keys(FLAGS).length +
+                    ' flags hidden in the system.', 'info');
+                println(' Can you find them all? Good luck! 🍀', 'info');
+                println('');
+            },
+
+            man: (args) => {
+                if (!args[0]) { println('What manual page do you want?', 'warning'); return; }
+                println(`No manual entry for ${args[0]} — try 'help' for built-in commands.`,
+                'dim');
+            },
+
+            ssh: (args) => {
+                println('ssh: connect to host ' + (args.join(' ') || 'localhost') +
+                    ': Connection refused', 'error');
+            },
+
+            python3: (args) => { println(
+                'Python 3.10.12 — interactive mode disabled in this terminal. Use /opt/tools/decoder.py instead.',
+                'warning'); },
+            python: (args) => COMMANDS.python3(args),
+
+            vim: () => { println('vim: terminal too primitive for vim. Use cat to read files.',
+                'warning'); },
+            nano: () => { println('nano: not installed. Use cat to read files.', 'warning'); },
+            touch: () => { println('touch: cannot create file: Read-only filesystem', 'error'); },
+            mkdir: () => { println('mkdir: cannot create directory: Read-only filesystem',
+            'error'); },
+            rm: () => { println('rm: cannot remove: Read-only filesystem', 'error'); },
+            chmod: () => { println('chmod: changing permissions not permitted for guest',
+            'error'); },
+            chown: () => { println('chown: operation not permitted', 'error'); },
+
+            curl: (args) => {
+                println('curl: (7) Failed to connect: Network restricted', 'error');
+            },
+            wget: (args) => {
+                println('wget: unable to resolve host: Network restricted', 'error');
+            },
+            ping: (args) => {
+                const host = args.filter(a => !a.startsWith('-'))[0] || 'localhost';
+                println(`PING ${host}: Network restricted — ICMP blocked`, 'error');
+            },
+            nmap: () => { println('nmap: not found. Check /opt/tools/ for scanner.sh',
+            'error'); },
+            '': () => {},
+        };
+
+        // ==================== COMMAND PROCESSOR ====================
+        function processCommand(raw) {
+            const trimmed = raw.trim();
+            if (!trimmed) return;
+
+            CMD_HISTORY.push(trimmed);
+            HIST_IDX = CMD_HISTORY.length;
+
+            printPromptLine(trimmed);
+
+            const parts = trimmed.split(/\s+/);
+            const cmd = parts[0].toLowerCase();
+            const args = parts.slice(1);
+
+            if (COMMANDS[cmd]) {
+                COMMANDS[cmd](args);
+            } else {
+                const path = resolvePath(cmd);
+                const node = getNode(path);
+                if (node && node.type === 'file') {
+                    println(`${cmd}: Permission denied (not executable as guest)`, 'error');
+                } else {
+                    println(`${cmd}: command not found. Type "help" for available commands.`,
+                        'error');
+                }
+            }
+
+            println('');
+        }
+
+        // ==================== INPUT HANDLING ====================
+        cmdInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const cmd = cmdInput.value;
+                cmdInput.value = '';
+                processCommand(cmd);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (HIST_IDX > 0) { HIST_IDX--;
+                    cmdInput.value = CMD_HISTORY[HIST_IDX]; }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (HIST_IDX < CMD_HISTORY.length - 1) { HIST_IDX++;
+                    cmdInput.value = CMD_HISTORY[HIST_IDX]; } else { HIST_IDX = CMD_HISTORY.length;
+                    cmdInput.value = ''; }
+            } else if (e.key === 'Tab') {
+                e.preventDefault();
+                autocomplete();
+            } else if (e.key === 'l' && e.ctrlKey) {
+                e.preventDefault();
+                COMMANDS.clear();
+            } else if (e.key === 'c' && e.ctrlKey) {
+                e.preventDefault();
+                printPromptLine(cmdInput.value + '^C');
+                cmdInput.value = '';
+                println('');
+            }
+        });
+
+        function autocomplete() {
+            const val = cmdInput.value;
+            const parts = val.split(/\s+/);
+            if (parts.length < 2) return;
+            const partial = parts[parts.length - 1];
+            const base = partial.includes('/') ? partial.substring(0, partial.lastIndexOf('/') + 1) : '';
+            const search = partial.includes('/') ? partial.substring(partial.lastIndexOf('/') + 1) :
+                partial;
+            const dir = base ? resolvePath(base) : CWD;
+            const node = getNode(dir);
+            if (!node || node.type !== 'dir') return;
+            const matches = (node.children || []).filter(c => c.startsWith(search));
+            if (matches.length === 1) {
+                parts[parts.length - 1] = base + matches[0];
+                const childPath = (dir === '/' ? '/' + matches[0] : dir + '/' + matches[0]);
+                const child = getNode(childPath);
+                if (child && child.type === 'dir') parts[parts.length - 1] += '/';
+                cmdInput.value = parts.join(' ');
+            } else if (matches.length > 1) {
+                println('');
+                printPromptLine(val);
+                println(matches.join('  '), 'dim');
+            }
+        }
+
+        // Click anywhere to focus input
+        document.querySelector('.crt-screen').addEventListener('click', (e) => {
+            if (!e.target.closest('.modal-box') && !e.target.closest('.modal-close')) {
+                cmdInput.focus();
+            }
+        });
+
+        // ==================== BOOT SEQUENCE ====================
+        const bootScreen = document.getElementById('boot-screen');
+
+        const bootLines = [
+            { text: '', delay: 0 },
+            { text: '  ███╗   ██╗███████╗██╗  ██╗██╗   ██╗███████╗      ███████╗', delay: 50,
+            cls: 'ascii' },
+            { text: '  ████╗  ██║██╔════╝╚██╗██╔╝██║   ██║██╔════╝      ╚════██║', delay: 100,
+                cls: 'ascii' },
+            { text: '  ██╔██╗ ██║█████╗   ╚███╔╝ ██║   ██║███████╗          ██╔╝', delay: 150,
+                cls: 'ascii' },
+            { text: '  ██║╚██╗██║██╔══╝   ██╔██╗ ██║   ██║╚════██║         ██╔╝ ', delay: 200,
+                cls: 'ascii' },
+            { text: '  ██║ ╚████║███████╗██╔╝ ██╗╚██████╔╝███████║         ██║  ', delay: 250,
+                cls: 'ascii' },
+            { text: '  ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝         ╚═╝  ', delay: 300,
+                cls: 'ascii' },
+            { text: '', delay: 350 },
+            { text: '  NEXUS Research Terminal  v7.3.1  [RESTRICTED ACCESS]', delay: 400,
+            cls: 'header' },
+            { text: '  Copyright (c) 2024 Nexus Corp — CTF Sandbox Edition', delay: 450,
+            cls: 'dim' },
+            { text: '', delay: 500 },
+            { text: '  Initializing hardware...', delay: 600 },
+            { text: '  [ OK ] Memory subsystem: 16384 MB', delay: 750, cls: 'success' },
+            { text: '  [ OK ] Storage controller: /dev/nvme0n1', delay: 850, cls: 'success' },
+            { text: '  [ OK ] Network interface: eth0 (192.168.1.10)', delay: 950,
+            cls: 'success' },
+            { text: '  [ OK ] Crypto module: AES-256-CBC active', delay: 1050, cls: 'success' },
+            { text: '  [ OK ] Virtual filesystem: 10 flags hidden', delay: 1150, cls: 'success' },
+            { text: '  [WARN] Intrusion attempt logged from 45.33.32.156', delay: 1250,
+                cls: 'warning' },
+            { text: '  [WARN] Unauthorized root login detected — audit in progress', delay: 1350,
+                cls: 'warning' },
+            { text: '', delay: 1450 },
+            { text: '  Loading user session: guest@nexus7...', delay: 1550 },
+            { text: '  Type "tutorial" for a quick start guide.', delay: 1600, cls: 'dim' },
+            { text: '', delay: 1700 },
+        ];
+
+        let bootIdx = 0;
+
+        function runBoot() {
+            if (bootIdx >= bootLines.length) {
+                showProgressBar();
+                return;
+            }
+            const line = bootLines[bootIdx++];
+            const div = document.createElement('div');
+            div.style.animationDelay = '0s';
+            div.className = 'boot-line line ' + (line.cls || 'output');
+            div.textContent = line.text;
+            bootScreen.appendChild(div);
+            div.style.animation = 'boot-appear 0.05s forwards';
+            setTimeout(runBoot, 80);
+        }
+
+        function showProgressBar() {
+            const container = document.createElement('div');
+            container.className = 'progress-container boot-line';
+            container.style.animation = 'boot-appear 0.05s forwards';
+            container.innerHTML = `
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:11px;color:#1a7a1a">
+          <span>LOADING TERMINAL</span><span id="pct">0%</span>
+        </div>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="pbar"></div></div>
+      `;
+            bootScreen.appendChild(container);
+
+            let pct = 0;
+            const interval = setInterval(() => {
+                pct += Math.random() * 15 + 5;
+                if (pct >= 100) { pct = 100;
+                    clearInterval(interval);
+                    transitionToTerminal(); }
+                document.getElementById('pbar').style.width = pct + '%';
+                document.getElementById('pct').textContent = Math.floor(pct) + '%';
+            }, 80);
+        }
+
+        function transitionToTerminal() {
+            setTimeout(() => {
+                bootScreen.style.transition = 'opacity 0.4s';
+                bootScreen.style.opacity = '0';
+                setTimeout(() => {
+                    bootScreen.style.display = 'none';
+                    showWelcome();
+                    cmdInput.focus();
+                }, 400);
+            }, 300);
+        }
+
+        function showWelcome() {
+            println('');
+            println(' ╔══════════════════════════════════════════════════════════╗', 'header');
+            println(' ║        NEXUS-7 RESEARCH TERMINAL — CTF SANDBOX           ║', 'header');
+            println(' ╚══════════════════════════════════════════════════════════╝', 'header');
+            println('');
+            println(' Welcome, guest.', 'output');
+            println('');
+            println(' This system has been COMPROMISED. Evidence of an intrusion', 'warning');
+            println(' has been detected throughout the filesystem. Your mission:', 'warning');
+            println('');
+            println(' OBJECTIVES:', 'info');
+            println('   1. Explore the virtual filesystem', 'dim');
+            println('   2. Find all ' + Object.keys(FLAGS).length + ' hidden flags (format: FLAG{...})',
+                'dim');
+            println('   3. Trace the intrusion path', 'dim');
+            println('   4. Identify the backdoor mechanism', 'dim');
+            println('');
+            println(' QUICK START:', 'info');
+            println('   • Type "tutorial" for a beginner\'s guide', 'dim');
+            println('   • Type "help" for all available commands', 'dim');
+            println('   • Type "hint" for a clue when you\'re stuck', 'dim');
+            println('   • Type "flags" to see your progress', 'dim');
+            println('   • Type "status" for a full progress report', 'dim');
+            println('');
+            println(' First tip: try "ls -la" and "cat welcome.txt"', 'dim');
+            println('');
+            updatePrompt();
+            updateFlagCounter();
+        }
+
+        // Start boot
+        setTimeout(runBoot, 300);
+    </script>
+</body>
+</html>

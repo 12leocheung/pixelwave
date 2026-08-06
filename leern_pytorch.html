@@ -1,0 +1,2805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PyTorch: Neural Networks & LLMs — A Beginner's Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,600;1,8..60,300&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e0c;
+    --surface: #1a1916;
+    --surface2: #222118;
+    --border: #2e2c24;
+    --border2: #3d3b30;
+    --text: #e8e4d8;
+    --text2: #9e9a8c;
+    --text3: #6b6860;
+    --accent: #e8b84b;
+    --accent2: #c4973a;
+    --accent-dim: #2a2210;
+    --green: #6ab187;
+    --green-dim: #0d1f14;
+    --blue: #6b9fcf;
+    --blue-dim: #0d1829;
+    --red: #cf7a6b;
+    --red-dim: #1f130f;
+    --purple: #a78bcf;
+    --purple-dim: #1a1529;
+    --code-bg: #141310;
+    --code-border: #252420;
+    --line-height: 1.85;
+    --serif: 'Source Serif 4', Georgia, serif;
+    --mono: 'IBM Plex Mono', 'Courier New', monospace;
+    --sans: 'DM Sans', system-ui, sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: var(--line-height);
+    font-weight: 300;
+  }
+
+  /* LAYOUT */
+  .shell { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    width: 280px;
+    min-width: 280px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .main {
+    flex: 1;
+    max-width: 820px;
+    padding: 0 60px 120px;
+    margin: 0 auto;
+  }
+
+  /* SIDEBAR */
+  .sidebar-header {
+    padding: 28px 24px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-logo {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .sidebar-title {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.3;
+  }
+
+  .sidebar-nav { padding: 16px 0; }
+
+  .nav-section-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text3);
+    padding: 14px 24px 6px;
+  }
+
+  .nav-link {
+    display: block;
+    padding: 7px 24px;
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--text2);
+    text-decoration: none;
+    transition: all 0.15s;
+    border-left: 2px solid transparent;
+  }
+
+  .nav-link:hover {
+    color: var(--text);
+    background: var(--surface2);
+    border-left-color: var(--border2);
+  }
+
+  .nav-link.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  /* HERO */
+  .hero {
+    padding: 80px 0 60px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 70px;
+  }
+
+  .hero-tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid var(--accent2);
+    background: var(--accent-dim);
+    padding: 4px 12px;
+    border-radius: 2px;
+    margin-bottom: 28px;
+  }
+
+  .hero h1 {
+    font-family: var(--serif);
+    font-size: clamp(38px, 5vw, 54px);
+    font-weight: 600;
+    line-height: 1.15;
+    color: var(--text);
+    margin-bottom: 20px;
+    letter-spacing: -0.02em;
+  }
+
+  .hero h1 em {
+    color: var(--accent);
+    font-style: italic;
+  }
+
+  .hero-sub {
+    font-size: 18px;
+    color: var(--text2);
+    max-width: 560px;
+    line-height: 1.7;
+    font-weight: 300;
+  }
+
+  .hero-meta {
+    display: flex;
+    gap: 32px;
+    margin-top: 36px;
+    flex-wrap: wrap;
+  }
+
+  .hero-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .hero-meta-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+
+  .hero-meta-value {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  /* SECTIONS */
+  .chapter {
+    margin-bottom: 90px;
+  }
+
+  .chapter-number {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  h2 {
+    font-family: var(--serif);
+    font-size: clamp(26px, 3.5vw, 34px);
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    margin-bottom: 24px;
+    padding-top: 10px;
+  }
+
+  h2 .highlight {
+    color: var(--accent);
+  }
+
+  h3 {
+    font-family: var(--sans);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 44px 0 16px;
+    letter-spacing: 0.01em;
+  }
+
+  h3::before {
+    content: '§ ';
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+
+  p {
+    color: var(--text2);
+    margin-bottom: 18px;
+    font-size: 17px;
+    line-height: var(--line-height);
+  }
+
+  p strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* LINE-BY-LINE CODE EXPLANATION */
+  .line-explain {
+    margin: 28px 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .line-explain-header {
+    background: var(--surface2);
+    padding: 10px 18px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--text3);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .line-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .line-row:last-child { border-bottom: none; }
+
+  .line-row:hover { background: rgba(232, 184, 75, 0.025); }
+
+  .line-code {
+    padding: 14px 18px;
+    background: var(--code-bg);
+    border-right: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.6;
+    color: #d4c89a;
+    white-space: pre;
+    overflow-x: auto;
+  }
+
+  .line-text {
+    padding: 14px 18px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text2);
+    font-family: var(--sans);
+  }
+
+  .line-text strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* FULL CODE BLOCK */
+  .code-block-wrap {
+    margin: 36px 0;
+  }
+
+  .code-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    padding: 10px 18px;
+    border-radius: 4px 4px 0 0;
+  }
+
+  .code-block-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  .code-block-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    padding: 22px 24px;
+    overflow-x: auto;
+    line-height: 1.7;
+  }
+
+  pre code {
+    font-family: var(--mono);
+    font-size: 13.5px;
+    color: #d4c89a;
+  }
+
+  /* Syntax highlighting */
+  .kw { color: #cf7a6b; }     /* keyword */
+  .kw2 { color: #a78bcf; }    /* import/from */
+  .fn { color: #6ab187; }     /* function/method */
+  .cls { color: #e8b84b; }    /* class */
+  .str { color: #6b9fcf; }    /* string */
+  .num { color: #d4a96a; }    /* number */
+  .cm { color: #5a5648; }     /* comment */
+  .df { color: #c4973a; }     /* def */
+
+  /* CALLOUT BOXES */
+  .callout {
+    margin: 28px 0;
+    padding: 18px 22px;
+    border-radius: 3px;
+    border-left: 3px solid;
+    font-size: 15px;
+    line-height: 1.75;
+  }
+
+  .callout p { margin-bottom: 0; font-size: 15px; }
+  .callout p + p { margin-top: 10px; }
+
+  .callout-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  .callout.note {
+    background: var(--blue-dim);
+    border-color: var(--blue);
+  }
+  .callout.note .callout-title { color: var(--blue); }
+  .callout.note p { color: #9ab8d4; }
+
+  .callout.tip {
+    background: var(--green-dim);
+    border-color: var(--green);
+  }
+  .callout.tip .callout-title { color: var(--green); }
+  .callout.tip p { color: #8ab89e; }
+
+  .callout.warning {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+  }
+  .callout.warning .callout-title { color: var(--accent); }
+  .callout.warning p { color: #c4aa7a; }
+
+  .callout.concept {
+    background: var(--purple-dim);
+    border-color: var(--purple);
+  }
+  .callout.concept .callout-title { color: var(--purple); }
+  .callout.concept p { color: #a898c4; }
+
+  /* ANALOGY BOXES */
+  .analogy {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 20px 24px;
+    margin: 24px 0;
+    position: relative;
+  }
+
+  .analogy::before {
+    content: '"';
+    position: absolute;
+    top: -10px;
+    left: 18px;
+    font-size: 48px;
+    color: var(--accent);
+    font-family: var(--serif);
+    line-height: 1;
+    background: var(--surface);
+    padding: 0 6px;
+  }
+
+  .analogy p {
+    color: var(--text);
+    font-style: italic;
+    font-size: 16px;
+    margin-bottom: 0;
+  }
+
+  .analogy-source {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--text3);
+    font-style: normal;
+    margin-top: 8px;
+  }
+
+  /* DIVIDER */
+  .chapter-divider {
+    height: 1px;
+    background: linear-gradient(to right, var(--border) 0%, var(--border2) 40%, var(--border) 100%);
+    margin: 80px 0;
+    position: relative;
+  }
+
+  .chapter-divider::after {
+    content: '✦';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--bg);
+    padding: 0 12px;
+    color: var(--text3);
+    font-size: 12px;
+  }
+
+  /* INLINE CODE */
+  code {
+    font-family: var(--mono);
+    font-size: 13px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 3px;
+    color: #c4aa7a;
+  }
+
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: inherit;
+    color: inherit;
+  }
+
+  /* TABLE */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 28px 0;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    font-family: var(--sans);
+  }
+
+  th {
+    background: var(--surface2);
+    color: var(--text);
+    font-weight: 600;
+    padding: 10px 16px;
+    text-align: left;
+    border: 1px solid var(--border);
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  td {
+    padding: 10px 16px;
+    border: 1px solid var(--border);
+    color: var(--text2);
+    vertical-align: top;
+  }
+
+  tr:hover td { background: var(--surface); }
+
+  /* STEPS */
+  .step-list {
+    list-style: none;
+    counter-reset: step;
+    margin: 20px 0;
+  }
+
+  .step-list li {
+    counter-increment: step;
+    display: flex;
+    gap: 16px;
+    margin-bottom: 18px;
+    align-items: flex-start;
+  }
+
+  .step-list li::before {
+    content: counter(step);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--bg);
+    background: var(--accent);
+    min-width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+
+  .step-list li p { margin-bottom: 0; }
+
+  /* FORMULA DISPLAY */
+  .formula {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 20px 28px;
+    margin: 24px 0;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 16px;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+  }
+
+  .formula-sub {
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 8px;
+    font-family: var(--sans);
+    font-style: italic;
+  }
+
+  /* PROGRESS BAR STYLE SECTION INDICATOR */
+  .progress-indicator {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 50px;
+    margin-top: 10px;
+  }
+
+  .progress-dot {
+    width: 24px;
+    height: 3px;
+    background: var(--border2);
+    border-radius: 2px;
+  }
+
+  .progress-dot.done { background: var(--accent); }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    .sidebar { display: none; }
+    .main { padding: 0 24px 80px; }
+    .line-row { grid-template-columns: 1fr; }
+    .line-code { border-right: none; border-bottom: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+<!-- SIDEBAR -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">PyTorch Guide</div>
+    <div class="sidebar-title">Neural Networks &amp; LLMs for Beginners</div>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section-label">Getting Started</div>
+    <a class="nav-link" href="#ch0">Introduction</a>
+    <a class="nav-link" href="#ch1">What is PyTorch?</a>
+
+    <div class="nav-section-label">Core Foundations</div>
+    <a class="nav-link" href="#ch2">Tensors</a>
+    <a class="nav-link" href="#ch3">Autograd</a>
+    <a class="nav-link" href="#ch4">Linear Layers</a>
+
+    <div class="nav-section-label">Building Networks</div>
+    <a class="nav-link" href="#ch5">nn.Module</a>
+    <a class="nav-link" href="#ch6">Activation Functions</a>
+    <a class="nav-link" href="#ch7">Loss Functions</a>
+    <a class="nav-link" href="#ch8">Optimisers</a>
+
+    <div class="nav-section-label">Training Loop</div>
+    <a class="nav-link" href="#ch9">The Training Loop</a>
+    <a class="nav-link" href="#ch10">Datasets &amp; DataLoaders</a>
+    <a class="nav-link" href="#ch11">Your First Network</a>
+
+    <div class="nav-section-label">Going Deeper</div>
+    <a class="nav-link" href="#ch12">Convolutional Networks</a>
+    <a class="nav-link" href="#ch13">Overfitting &amp; Dropout</a>
+    <a class="nav-link" href="#ch14">Batch Normalisation</a>
+
+    <div class="nav-section-label">Language Models</div>
+    <a class="nav-link" href="#ch15">Word Embeddings</a>
+    <a class="nav-link" href="#ch16">Recurrent Networks</a>
+    <a class="nav-link" href="#ch17">Attention Mechanism</a>
+    <a class="nav-link" href="#ch18">The Transformer</a>
+    <a class="nav-link" href="#ch19">Building a Mini-LLM</a>
+
+    <div class="nav-section-label">Production</div>
+    <a class="nav-link" href="#ch20">Saving &amp; Loading</a>
+    <a class="nav-link" href="#ch21">GPU Training</a>
+    <a class="nav-link" href="#ch22">Fine-tuning LLMs</a>
+  </div>
+</nav>
+
+<!-- MAIN CONTENT -->
+<main class="main">
+
+  <!-- HERO -->
+  <div class="hero" id="ch0">
+    <div class="hero-tag">Beginner's Field Guide</div>
+    <h1>Neural Networks &amp; <em>Large Language Models</em> with PyTorch</h1>
+    <p class="hero-sub">A thorough, line-by-line walkthrough of building neural networks from scratch — every concept explained before the code, every topic assembled into a complete working example at the end.</p>
+    <div class="hero-meta">
+      <div class="hero-meta-item">
+        <span class="hero-meta-label">Prerequisite</span>
+        <span class="hero-meta-value">Basic Python</span>
+      </div>
+      <div class="hero-meta-item">
+        <span class="hero-meta-label">Library</span>
+        <span class="hero-meta-value">PyTorch 2.x</span>
+      </div>
+      <div class="hero-meta-item">
+        <span class="hero-meta-label">Chapters</span>
+        <span class="hero-meta-value">22</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- CHAPTER 1 — WHAT IS PYTORCH -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="chapter" id="ch1">
+    <div class="chapter-number">Chapter 01</div>
+    <h2>What is <span class="highlight">PyTorch?</span></h2>
+
+    <p>PyTorch is an open-source machine learning library developed by Meta AI. It's the dominant tool for research and production deep learning, used to build everything from simple classifiers to the largest language models in the world.</p>
+
+    <div class="analogy">
+      <p>Think of PyTorch like a very powerful scientific calculator — but instead of working on single numbers, it works on entire tables (grids) of numbers at once, and it can automatically figure out how to improve itself when it makes mistakes.</p>
+      <div class="analogy-source">— Why PyTorch matters</div>
+    </div>
+
+    <p>Two ideas sit at the heart of PyTorch:</p>
+
+    <ol style="list-style: decimal; padding-left: 28px; color: var(--text2); line-height: 2; font-size: 16px;">
+      <li style="margin-bottom: 8px;"><strong>Tensors</strong> — a generalised array that can live on a CPU or GPU and supports hardware-accelerated maths.</li>
+      <li style="margin-bottom: 8px;"><strong>Autograd</strong> — an automatic differentiation engine that computes gradients for you during backpropagation.</li>
+    </ol>
+
+    <h3>Installing PyTorch</h3>
+
+    <p>Install with pip. The CPU-only version is fine for learning; add a CUDA suffix for GPU support.</p>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Shell — Installation</div>
+      <div class="line-row">
+        <div class="line-code">pip install torch torchvision</div>
+        <div class="line-text"><strong>pip install</strong> fetches PyTorch from PyPI. <code>torch</code> is the core library. <code>torchvision</code> adds image utilities and pre-trained vision models.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">pip install torch --index-url
+  https://download.pytorch.org/whl/cu121</div>
+        <div class="line-text"><strong>CUDA 12.1 version</strong> — use this if you have an NVIDIA GPU. Replace <code>cu121</code> with your CUDA version (check with <code>nvidia-smi</code>).</div>
+      </div>
+    </div>
+
+    <h3>Your first import</h3>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — Imports</div>
+      <div class="line-row">
+        <div class="line-code"><span class="kw2">import</span> torch</div>
+        <div class="line-text"><strong>Import the main torch module.</strong> This gives you tensors, autograd, and all the core maths operations. Almost every PyTorch file starts with this.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code"><span class="kw2">import</span> torch.nn <span class="kw2">as</span> nn</div>
+        <div class="line-text"><strong>Import the neural network module</strong> and alias it as <code>nn</code>. This contains all the building blocks: layers, activation functions, loss functions. The alias keeps code concise.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code"><span class="kw2">import</span> torch.optim <span class="kw2">as</span> optim</div>
+        <div class="line-text"><strong>Import the optimiser module.</strong> Optimisers are algorithms that update the network's weights during training (e.g. SGD, Adam). Aliased as <code>optim</code> by convention.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code"><span class="kw2">import</span> torch.nn.functional <span class="kw2">as</span> F</div>
+        <div class="line-text"><strong>Import functional operations.</strong> These are stateless versions of things in <code>nn</code> (like activation functions) that don't have learnable parameters. Very commonly aliased as <code>F</code>.</div>
+      </div>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-title">Convention</div>
+      <p>The aliases <code>nn</code>, <code>optim</code>, and <code>F</code> are universal conventions in the PyTorch community. You'll see them in virtually every tutorial, paper code release, and production codebase. Always use them.</p>
+    </div>
+
+    <div class="code-block-wrap">
+      <div class="code-block-header">
+        <span class="code-block-label">Complete Code</span>
+        <span class="code-block-title">standard_imports.py</span>
+      </div>
+      <pre><code><span class="kw2">import</span> torch
+<span class="kw2">import</span> torch.nn <span class="kw2">as</span> nn
+<span class="kw2">import</span> torch.optim <span class="kw2">as</span> optim
+<span class="kw2">import</span> torch.nn.functional <span class="kw2">as</span> F
+
+<span class="cm"># Quick sanity check — print PyTorch version</span>
+<span class="fn">print</span>(torch.__version__)          <span class="cm"># e.g. "2.3.0"</span>
+<span class="fn">print</span>(torch.cuda.is_available())  <span class="cm"># True if GPU is available</span></code></pre>
+    </div>
+  </div>
+
+  <div class="chapter-divider"></div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- CHAPTER 2 — TENSORS -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="chapter" id="ch2">
+    <div class="chapter-number">Chapter 02</div>
+    <h2><span class="highlight">Tensors</span> — The Foundation</h2>
+
+    <p>A <strong>tensor</strong> is the fundamental data structure in PyTorch. It's a multi-dimensional array — like a NumPy array, but with built-in GPU support and gradient tracking.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Dimensions</th>
+            <th>Name</th>
+            <th>Real-world Example</th>
+            <th>Shape</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>0D</td><td>Scalar</td><td>A single loss value</td><td><code>[]</code></td></tr>
+          <tr><td>1D</td><td>Vector</td><td>A single training example's features</td><td><code>[784]</code></td></tr>
+          <tr><td>2D</td><td>Matrix</td><td>A batch of examples</td><td><code>[32, 784]</code></td></tr>
+          <tr><td>3D</td><td>Tensor</td><td>A sequence of word embeddings</td><td><code>[8, 128, 512]</code></td></tr>
+          <tr><td>4D</td><td>Tensor</td><td>A batch of colour images</td><td><code>[16, 3, 224, 224]</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Creating Tensors</h3>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — Creating Tensors</div>
+      <div class="line-row">
+        <div class="line-code">x = torch.<span class="fn">tensor</span>([<span class="num">1.0</span>, <span class="num">2.0</span>, <span class="num">3.0</span>])</div>
+        <div class="line-text"><strong>Create a 1D tensor from a Python list.</strong> The values are converted to <code>float32</code> by default. This is the most direct way to make a tensor from data you already have.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">x = torch.<span class="fn">zeros</span>(<span class="num">3</span>, <span class="num">4</span>)</div>
+        <div class="line-text"><strong>Create a 3×4 tensor filled with zeros.</strong> Useful as a blank slate, or to initialise output buffers. The arguments are the <em>shape</em>: 3 rows, 4 columns.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">x = torch.<span class="fn">ones</span>(<span class="num">2</span>, <span class="num">3</span>)</div>
+        <div class="line-text"><strong>Create a 2×3 tensor filled with ones.</strong> Handy for masks or bias initialisations.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">x = torch.<span class="fn">randn</span>(<span class="num">5</span>, <span class="num">5</span>)</div>
+        <div class="line-text"><strong>Create a 5×5 tensor of random values</strong> sampled from a standard Normal distribution (mean=0, std=1). This is the typical way to randomly initialise model weights.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">x = torch.<span class="fn">arange</span>(<span class="num">0</span>, <span class="num">10</span>)</div>
+        <div class="line-text"><strong>Create a 1D tensor [0, 1, 2, …, 9].</strong> Like Python's <code>range()</code> but returns a tensor. Useful for position indices in transformers.</div>
+      </div>
+    </div>
+
+    <h3>Tensor Operations</h3>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — Shape &amp; Operations</div>
+      <div class="line-row">
+        <div class="line-code">x.<span class="fn">shape</span>   <span class="cm"># or x.size()</span></div>
+        <div class="line-text"><strong>Returns the shape of the tensor</strong> as a <code>torch.Size</code> object. For a batch of 32 images of 28×28 pixels: <code>torch.Size([32, 28, 28])</code>. This is the most important thing to check when debugging.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">x.<span class="fn">dtype</span></div>
+        <div class="line-text"><strong>Returns the data type.</strong> Common types: <code>torch.float32</code> (default for neural nets), <code>torch.int64</code> (class labels), <code>torch.bool</code> (masks).</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">y = x.<span class="fn">reshape</span>(<span class="num">4</span>, <span class="num">-1</span>)</div>
+        <div class="line-text"><strong>Reshape without changing data.</strong> The <code>-1</code> means "infer this dimension". If <code>x</code> has 20 elements and you reshape to <code>(4, -1)</code>, PyTorch works out <code>-1 = 5</code>. Crucial for feeding images into linear layers.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">z = x + y</div>
+        <div class="line-text"><strong>Element-wise addition.</strong> Standard Python operators work element-wise on tensors of the same shape. Same for <code>-</code>, <code>*</code>, <code>/</code>.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">z = x @ y</div>
+        <div class="line-text"><strong>Matrix multiplication.</strong> The <code>@</code> operator is shorthand for <code>torch.matmul(x, y)</code>. This is the most common operation inside neural network layers.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">z = x.<span class="fn">mean</span>()
+z = x.<span class="fn">sum</span>(dim=<span class="num">1</span>)</div>
+        <div class="line-text"><strong>Reduction operations.</strong> Without <code>dim</code>, they reduce the entire tensor to a scalar. With <code>dim=1</code>, they reduce along dimension 1 (columns) and return a 1D result.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">x = x.<span class="fn">unsqueeze</span>(<span class="num">0</span>)</div>
+        <div class="line-text"><strong>Add a dimension of size 1</strong> at position 0. Turns shape <code>[28, 28]</code> into <code>[1, 28, 28]</code>. Used to add a batch dimension when processing a single example.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">x = x.<span class="fn">squeeze</span>(<span class="num">0</span>)</div>
+        <div class="line-text"><strong>Remove a dimension of size 1</strong> at position 0. The inverse of unsqueeze. Turns <code>[1, 28, 28]</code> back to <code>[28, 28]</code>.</div>
+      </div>
+    </div>
+
+    <h3>Broadcasting</h3>
+    <p>When two tensors have different shapes, PyTorch tries to <strong>broadcast</strong> them — stretching smaller dimensions to match larger ones. This is powerful but can cause subtle bugs if you're not careful about shapes.</p>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — Broadcasting</div>
+      <div class="line-row">
+        <div class="line-code">x = torch.<span class="fn">ones</span>(<span class="num">3</span>, <span class="num">4</span>)
+y = torch.<span class="fn">ones</span>(<span class="num">4</span>)
+z = x + y  <span class="cm"># shape: [3, 4]</span></div>
+        <div class="line-text"><strong>y is broadcast across rows of x.</strong> The shape <code>[4]</code> is treated as <code>[1, 4]</code> and then "stretched" to <code>[3, 4]</code>. This lets you add a bias vector to every row of a matrix without a loop.</div>
+      </div>
+    </div>
+
+    <div class="callout warning">
+      <div class="callout-title">Shape Debugging Tip</div>
+      <p>The number one cause of bugs in PyTorch is mismatched tensor shapes. Get in the habit of printing <code>x.shape</code> at every step when writing new code. Many experienced practitioners do this religiously.</p>
+    </div>
+
+    <div class="code-block-wrap">
+      <div class="code-block-header">
+        <span class="code-block-label">Complete Code</span>
+        <span class="code-block-title">tensors.py</span>
+      </div>
+      <pre><code><span class="kw2">import</span> torch
+
+<span class="cm"># --- Creating tensors ---</span>
+a = torch.<span class="fn">tensor</span>([<span class="num">1.0</span>, <span class="num">2.0</span>, <span class="num">3.0</span>])       <span class="cm"># From list</span>
+b = torch.<span class="fn">zeros</span>(<span class="num">3</span>, <span class="num">4</span>)                    <span class="cm"># 3x4 zeros</span>
+c = torch.<span class="fn">randn</span>(<span class="num">5</span>, <span class="num">5</span>)                   <span class="cm"># 5x5 random normal</span>
+d = torch.<span class="fn">arange</span>(<span class="num">0</span>, <span class="num">10</span>)                 <span class="cm"># [0, 1, 2, ..., 9]</span>
+
+<span class="cm"># --- Inspecting ---</span>
+<span class="fn">print</span>(c.shape)    <span class="cm"># torch.Size([5, 5])</span>
+<span class="fn">print</span>(c.dtype)    <span class="cm"># torch.float32</span>
+
+<span class="cm"># --- Operations ---</span>
+e = c + c                   <span class="cm"># Element-wise add</span>
+f = c @ c                   <span class="cm"># Matrix multiply</span>
+g = c.<span class="fn">mean</span>()               <span class="cm"># Scalar mean</span>
+h = c.<span class="fn">sum</span>(dim=<span class="num">1</span>)           <span class="cm"># Sum each row → shape [5]</span>
+
+<span class="cm"># --- Reshaping ---</span>
+flat = c.<span class="fn">reshape</span>(<span class="num">25</span>)        <span class="cm"># Flatten to 1D [25]</span>
+back = flat.<span class="fn">reshape</span>(<span class="num">5</span>, <span class="num">-1</span>) <span class="cm"># Back to [5, 5]</span>
+
+<span class="cm"># --- Broadcasting ---</span>
+row_bias = torch.<span class="fn">ones</span>(<span class="num">5</span>)
+biased = c + row_bias       <span class="cm"># row_bias broadcast to [5, 5]</span></code></pre>
+    </div>
+  </div>
+
+  <div class="chapter-divider"></div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- CHAPTER 3 — AUTOGRAD -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="chapter" id="ch3">
+    <div class="chapter-number">Chapter 03</div>
+    <h2><span class="highlight">Autograd</span> — Automatic Differentiation</h2>
+
+    <p>Training a neural network requires computing <strong>gradients</strong> — the derivatives of the loss with respect to every parameter. Autograd does this automatically by recording every operation on tensors that have <code>requires_grad=True</code>.</p>
+
+    <div class="analogy">
+      <p>Imagine you're baking a cake and it comes out too salty. Autograd tells you, precisely, how much each ingredient contributed to the saltiness, so you know exactly what to change. Neural network training does the same thing with numbers.</p>
+      <div class="analogy-source">— Why autograd matters</div>
+    </div>
+
+    <div class="formula">
+      <div>∂L / ∂w</div>
+      <div class="formula-sub">The gradient: how much the loss L changes when we nudge weight w. We want this to be small (or zero) once trained.</div>
+    </div>
+
+    <h3>How Autograd Works</h3>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — Autograd Walkthrough</div>
+      <div class="line-row">
+        <div class="line-code">x = torch.<span class="fn">tensor</span>(<span class="num">3.0</span>,
+    requires_grad=<span class="kw">True</span>)</div>
+        <div class="line-text"><strong>Create a tensor and tell PyTorch to track operations on it.</strong> Setting <code>requires_grad=True</code> enables gradient computation. Model parameters always have this set automatically.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">y = x ** <span class="num">2</span></div>
+        <div class="line-text"><strong>Perform an operation.</strong> PyTorch silently records this operation in a <em>computation graph</em> — it remembers that y was created by squaring x, so it knows how to differentiate it later.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">y.<span class="fn">backward</span>()</div>
+        <div class="line-text"><strong>Compute gradients by backpropagating.</strong> This walks backwards through the computation graph, applying the chain rule. After this call, gradients are stored in each tensor's <code>.grad</code> attribute.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code"><span class="fn">print</span>(x.grad)  <span class="cm"># tensor(6.)</span></div>
+        <div class="line-text"><strong>Read the gradient.</strong> dy/dx = 2x = 2×3 = 6. That's the gradient: how much y changes per unit change in x, evaluated at x=3. The network uses this to decide how to update weights.</div>
+      </div>
+    </div>
+
+    <h3>Controlling Gradient Tracking</h3>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — Gradient Context Managers</div>
+      <div class="line-row">
+        <div class="line-code"><span class="kw">with</span> torch.<span class="fn">no_grad</span>():
+    output = model(x)</div>
+        <div class="line-text"><strong>Disable gradient tracking inside this block.</strong> Used during inference (making predictions) and evaluation. Speeds up computation significantly and reduces memory usage since no graph is built.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">optimizer.<span class="fn">zero_grad</span>()</div>
+        <div class="line-text"><strong>Clear accumulated gradients before each training step.</strong> Gradients accumulate (add up) by default in PyTorch. If you forget this, gradients from the previous batch will corrupt the current batch's update.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">loss.<span class="fn">backward</span>()</div>
+        <div class="line-text"><strong>Compute all gradients via backpropagation.</strong> Starting from the scalar loss value, this applies the chain rule backwards through every operation in the network to fill in <code>.grad</code> on all parameters.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">optimizer.<span class="fn">step</span>()</div>
+        <div class="line-text"><strong>Update parameters using the computed gradients.</strong> The optimiser reads <code>.grad</code> on every parameter and adjusts the parameter values in the direction that reduces the loss.</div>
+      </div>
+    </div>
+
+    <div class="callout note">
+      <div class="callout-title">The Four-Step Training Rhythm</div>
+      <p>Every training step in PyTorch follows the same four beats: <strong>(1)</strong> zero_grad → <strong>(2)</strong> forward pass → <strong>(3)</strong> backward() → <strong>(4)</strong> step(). This rhythm is sacred. Deviate and your model won't learn.</p>
+    </div>
+
+    <div class="code-block-wrap">
+      <div class="code-block-header">
+        <span class="code-block-label">Complete Code</span>
+        <span class="code-block-title">autograd_demo.py</span>
+      </div>
+      <pre><code><span class="kw2">import</span> torch
+
+<span class="cm"># Create a weight tensor that we want to learn</span>
+w = torch.<span class="fn">tensor</span>(<span class="num">2.0</span>, requires_grad=<span class="kw">True</span>)
+b = torch.<span class="fn">tensor</span>(<span class="num">0.5</span>, requires_grad=<span class="kw">True</span>)
+
+<span class="cm"># A simple forward pass: y = w * x + b</span>
+x = torch.<span class="fn">tensor</span>(<span class="num">3.0</span>)
+y_pred = w * x + b
+
+<span class="cm"># Compute loss (how wrong we are)</span>
+y_true = torch.<span class="fn">tensor</span>(<span class="num">10.0</span>)
+loss = (y_pred - y_true) ** <span class="num">2</span>
+
+<span class="cm"># Backprop: compute gradients</span>
+loss.<span class="fn">backward</span>()
+
+<span class="cm"># Inspect gradients — tells us how to change w and b</span>
+<span class="fn">print</span>(w.grad)   <span class="cm"># d(loss)/d(w)</span>
+<span class="fn">print</span>(b.grad)   <span class="cm"># d(loss)/d(b)</span>
+
+<span class="cm"># Manually update weights (learning rate = 0.01)</span>
+<span class="kw">with</span> torch.<span class="fn">no_grad</span>():
+    w -= <span class="num">0.01</span> * w.grad
+    b -= <span class="num">0.01</span> * b.grad
+
+<span class="cm"># Always clear grads before next step!</span>
+w.grad.<span class="fn">zero_</span>()
+b.grad.<span class="fn">zero_</span>()</code></pre>
+    </div>
+  </div>
+
+  <div class="chapter-divider"></div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- CHAPTER 4 — LINEAR LAYERS -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="chapter" id="ch4">
+    <div class="chapter-number">Chapter 04</div>
+    <h2><span class="highlight">Linear Layers</span></h2>
+
+    <p>A <strong>linear layer</strong> (also called a fully connected or dense layer) is the most fundamental building block of a neural network. It applies a linear transformation to the input: <code>output = input @ weight.T + bias</code>.</p>
+
+    <div class="formula">
+      <div>y = xWᵀ + b</div>
+      <div class="formula-sub">x = input vector, W = learned weight matrix, b = learned bias vector, y = output vector</div>
+    </div>
+
+    <p>The layer has <strong>learnable parameters</strong>: the weights <code>W</code> and biases <code>b</code>. Training adjusts these to minimise the loss.</p>
+
+    <h3>nn.Linear</h3>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — Linear Layer</div>
+      <div class="line-row">
+        <div class="line-code">layer = nn.<span class="cls">Linear</span>(<span class="num">10</span>, <span class="num">5</span>)</div>
+        <div class="line-text"><strong>Create a linear layer</strong> that takes a vector of size 10 as input and produces a vector of size 5. Internally this creates a weight matrix of shape <code>[5, 10]</code> and a bias vector of shape <code>[5]</code>, both randomly initialised.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">layer = nn.<span class="cls">Linear</span>(<span class="num">10</span>, <span class="num">5</span>,
+              bias=<span class="kw">False</span>)</div>
+        <div class="line-text"><strong>Linear layer without a bias term.</strong> Sometimes you want no bias — for example when batch normalisation (covered later) makes it redundant. Set <code>bias=False</code> to exclude it.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">x = torch.<span class="fn">randn</span>(<span class="num">32</span>, <span class="num">10</span>)
+y = <span class="fn">layer</span>(x)</div>
+        <div class="line-text"><strong>Pass a batch through the layer.</strong> <code>x</code> has shape <code>[32, 10]</code> — a batch of 32 examples, each with 10 features. <code>y</code> will have shape <code>[32, 5]</code>. The layer processes all 32 in parallel.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code"><span class="fn">print</span>(layer.weight.shape)
+<span class="cm"># torch.Size([5, 10])</span>
+<span class="fn">print</span>(layer.bias.shape)
+<span class="cm"># torch.Size([5])</span></div>
+        <div class="line-text"><strong>Inspect the layer's parameters.</strong> <code>layer.weight</code> is the weight matrix and <code>layer.bias</code> is the bias vector. Both have <code>requires_grad=True</code> automatically — the optimiser will update them during training.</div>
+      </div>
+    </div>
+
+    <div class="callout concept">
+      <div class="callout-title">Why "Fully Connected"?</div>
+      <p>Every input neuron connects to every output neuron through its own weight. A layer with 784 inputs and 128 outputs has 784 × 128 = 100,352 weight connections — plus 128 biases. That's a lot of parameters, which is one reason we use other layer types (CNNs, attention) when structure in the data can be exploited.</p>
+    </div>
+
+    <div class="code-block-wrap">
+      <div class="code-block-header">
+        <span class="code-block-label">Complete Code</span>
+        <span class="code-block-title">linear_layer.py</span>
+      </div>
+      <pre><code><span class="kw2">import</span> torch
+<span class="kw2">import</span> torch.nn <span class="kw2">as</span> nn
+
+<span class="cm"># Create a linear layer: 784 inputs → 128 outputs</span>
+layer = nn.<span class="cls">Linear</span>(<span class="num">784</span>, <span class="num">128</span>)
+
+<span class="cm"># Inspect the learnable parameters</span>
+<span class="fn">print</span>(layer.weight.shape)   <span class="cm"># [128, 784]</span>
+<span class="fn">print</span>(layer.bias.shape)     <span class="cm"># [128]</span>
+
+<span class="cm"># Create a fake batch of 32 images, each flattened to 784 pixels</span>
+x = torch.<span class="fn">randn</span>(<span class="num">32</span>, <span class="num">784</span>)
+
+<span class="cm"># Forward pass through the layer</span>
+y = <span class="fn">layer</span>(x)
+<span class="fn">print</span>(y.shape)   <span class="cm"># [32, 128] — 32 examples, 128 outputs each</span>
+
+<span class="cm"># Count parameters</span>
+num_params = <span class="fn">sum</span>(p.<span class="fn">numel</span>() <span class="kw">for</span> p <span class="kw">in</span> layer.<span class="fn">parameters</span>())
+<span class="fn">print</span>(f<span class="str">"Parameters: {num_params}"</span>)  <span class="cm"># 784*128 + 128 = 100,480</span></code></pre>
+    </div>
+  </div>
+
+  <div class="chapter-divider"></div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- CHAPTER 5 — nn.Module -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="chapter" id="ch5">
+    <div class="chapter-number">Chapter 05</div>
+    <h2><span class="highlight">nn.Module</span> — Building Blocks</h2>
+
+    <p>Every neural network in PyTorch inherits from <code>nn.Module</code>. This base class provides parameter tracking, saving/loading, and device management for free. You define the architecture in <code>__init__</code> and the forward computation in <code>forward</code>.</p>
+
+    <h3>Defining a Network</h3>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — Custom Module</div>
+      <div class="line-row">
+        <div class="line-code"><span class="kw">class</span> <span class="cls">MyNet</span>(nn.<span class="cls">Module</span>):</div>
+        <div class="line-text"><strong>Define a class that inherits from nn.Module.</strong> All PyTorch models are subclasses of this. The class name is yours to choose — by convention it's something descriptive like <code>Classifier</code>, <code>MLP</code>, or <code>GPT</code>.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">  <span class="df">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>):</div>
+        <div class="line-text"><strong>The constructor.</strong> Called when you create an instance. You define all the <em>layers with learnable parameters</em> here. PyTorch automatically registers any <code>nn.Module</code> attribute as a sub-module, so its parameters are included when you call <code>model.parameters()</code>.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">    <span class="fn">super</span>().<span class="fn">__init__</span>()</div>
+        <div class="line-text"><strong>Always call the parent constructor first.</strong> This initialises <code>nn.Module</code>'s internal bookkeeping. Forgetting this causes mysterious errors. It must be the very first line in <code>__init__</code>.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">    <span class="kw">self</span>.fc1 = nn.<span class="cls">Linear</span>(<span class="num">784</span>, <span class="num">256</span>)</div>
+        <div class="line-text"><strong>Define the first fully connected layer</strong> as an attribute. The name <code>fc1</code> is your choice (fc = fully connected). PyTorch sees this is an <code>nn.Module</code> and automatically registers its parameters.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">    <span class="kw">self</span>.fc2 = nn.<span class="cls">Linear</span>(<span class="num">256</span>, <span class="num">10</span>)</div>
+        <div class="line-text"><strong>Define the output layer.</strong> 256 inputs (matching fc1's outputs), 10 outputs (one per class for a 10-class problem like MNIST). This is the prediction head.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">  <span class="df">def</span> <span class="fn">forward</span>(<span class="kw">self</span>, x):</div>
+        <div class="line-text"><strong>Define the forward pass.</strong> This is called when you do <code>model(x)</code>. It describes <em>how data flows</em> through your layers. PyTorch's autograd records every operation here to enable backpropagation later.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">    x = F.<span class="fn">relu</span>(<span class="kw">self</span>.fc1(x))</div>
+        <div class="line-text"><strong>Pass through layer 1, then apply ReLU.</strong> <code>self.fc1(x)</code> calls the linear layer's forward. <code>F.relu</code> applies the activation function (covered next chapter). The result becomes the new <code>x</code>.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">    x = <span class="kw">self</span>.fc2(x)
+    <span class="kw">return</span> x</div>
+        <div class="line-text"><strong>Pass through the output layer and return.</strong> No activation function here — the loss function (CrossEntropy) expects raw logits. These are the raw un-normalised predictions, one per class.</div>
+      </div>
+    </div>
+
+    <h3>Using nn.Sequential</h3>
+
+    <p>For simple networks where data flows straight through layers without branching, <code>nn.Sequential</code> is a shortcut — no need to write a class:</p>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — Sequential</div>
+      <div class="line-row">
+        <div class="line-code">model = nn.<span class="cls">Sequential</span>(
+  nn.<span class="cls">Linear</span>(<span class="num">784</span>, <span class="num">256</span>),
+  nn.<span class="cls">ReLU</span>(),
+  nn.<span class="cls">Linear</span>(<span class="num">256</span>, <span class="num">10</span>)
+)</div>
+        <div class="line-text"><strong>Chain layers in order.</strong> Data is passed through each layer in sequence: linear → ReLU → linear. <code>nn.Sequential</code> creates a module that automatically chains the <code>forward</code> calls. Great for prototyping; use a custom class for anything complex.</div>
+      </div>
+    </div>
+
+    <div class="code-block-wrap">
+      <div class="code-block-header">
+        <span class="code-block-label">Complete Code</span>
+        <span class="code-block-title">nn_module.py</span>
+      </div>
+      <pre><code><span class="kw2">import</span> torch
+<span class="kw2">import</span> torch.nn <span class="kw2">as</span> nn
+<span class="kw2">import</span> torch.nn.functional <span class="kw2">as</span> F
+
+<span class="cm"># Method 1: Custom class (preferred for non-trivial networks)</span>
+<span class="kw">class</span> <span class="cls">MLP</span>(nn.<span class="cls">Module</span>):
+    <span class="df">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, input_dim, hidden_dim, output_dim):
+        <span class="fn">super</span>().<span class="fn">__init__</span>()
+        <span class="kw">self</span>.fc1 = nn.<span class="cls">Linear</span>(input_dim, hidden_dim)
+        <span class="kw">self</span>.fc2 = nn.<span class="cls">Linear</span>(hidden_dim, hidden_dim)
+        <span class="kw">self</span>.fc3 = nn.<span class="cls">Linear</span>(hidden_dim, output_dim)
+
+    <span class="df">def</span> <span class="fn">forward</span>(<span class="kw">self</span>, x):
+        x = F.<span class="fn">relu</span>(<span class="kw">self</span>.<span class="fn">fc1</span>(x))
+        x = F.<span class="fn">relu</span>(<span class="kw">self</span>.<span class="fn">fc2</span>(x))
+        x = <span class="kw">self</span>.<span class="fn">fc3</span>(x)
+        <span class="kw">return</span> x
+
+<span class="cm"># Instantiate</span>
+model = <span class="cls">MLP</span>(<span class="num">784</span>, <span class="num">256</span>, <span class="num">10</span>)
+
+<span class="cm"># Inspect parameters</span>
+total = <span class="fn">sum</span>(p.<span class="fn">numel</span>() <span class="kw">for</span> p <span class="kw">in</span> model.<span class="fn">parameters</span>())
+<span class="fn">print</span>(f<span class="str">"Total parameters: {total:,}"</span>)
+
+<span class="cm"># Forward pass</span>
+x = torch.<span class="fn">randn</span>(<span class="num">32</span>, <span class="num">784</span>)
+logits = <span class="fn">model</span>(x)           <span class="cm"># Calls model.forward(x)</span>
+<span class="fn">print</span>(logits.shape)          <span class="cm"># [32, 10]</span>
+
+<span class="cm"># Method 2: Sequential (simple architectures)</span>
+model2 = nn.<span class="cls">Sequential</span>(
+    nn.<span class="cls">Linear</span>(<span class="num">784</span>, <span class="num">256</span>),
+    nn.<span class="cls">ReLU</span>(),
+    nn.<span class="cls">Linear</span>(<span class="num">256</span>, <span class="num">10</span>)
+)</code></pre>
+    </div>
+  </div>
+
+  <div class="chapter-divider"></div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- CHAPTER 6 — ACTIVATIONS -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="chapter" id="ch6">
+    <div class="chapter-number">Chapter 06</div>
+    <h2><span class="highlight">Activation Functions</span></h2>
+
+    <p>Without activation functions, stacking linear layers is mathematically equivalent to a single linear layer — you'd never learn complex patterns. Activation functions introduce <strong>non-linearity</strong>, allowing networks to approximate any function.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Activation</th><th>Formula</th><th>Use Case</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>ReLU</code></td><td>max(0, x)</td><td>Hidden layers — general purpose</td><td>Fast, simple. Can "die" (output always 0)</td></tr>
+          <tr><td><code>GELU</code></td><td>x · Φ(x)</td><td>Transformers, BERT, GPT</td><td>Smoother than ReLU; state of the art</td></tr>
+          <tr><td><code>Sigmoid</code></td><td>1/(1+e⁻ˣ)</td><td>Binary classification output</td><td>Squashes to [0, 1]. Suffers vanishing gradients in deep nets</td></tr>
+          <tr><td><code>Tanh</code></td><td>(eˣ - e⁻ˣ)/(eˣ + e⁻ˣ)</td><td>RNNs, some hidden layers</td><td>Squashes to [-1, 1]. Zero-centred, better than sigmoid</td></tr>
+          <tr><td><code>Softmax</code></td><td>eˣᵢ / Σeˣⱼ</td><td>Multi-class output</td><td>Converts logits to probabilities that sum to 1</td></tr>
+          <tr><td><code>LeakyReLU</code></td><td>max(αx, x)</td><td>When ReLU dies are a problem</td><td>Allows small negative gradients</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Using Activations</h3>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — Activation Functions</div>
+      <div class="line-row">
+        <div class="line-code">x = F.<span class="fn">relu</span>(x)</div>
+        <div class="line-text"><strong>ReLU via functional API.</strong> Replaces all negative values with 0. Fast and effective. The default choice for hidden layers in most networks. Use this unless you have a reason to choose otherwise.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">x = F.<span class="fn">gelu</span>(x)</div>
+        <div class="line-text"><strong>GELU (Gaussian Error Linear Unit).</strong> Used in GPT, BERT, and most modern transformers. It's a smoother, probabilistic version of ReLU. Slightly more computationally expensive but consistently better in practice for language tasks.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">probs = F.<span class="fn">softmax</span>(logits,
+               dim=<span class="num">-1</span>)</div>
+        <div class="line-text"><strong>Softmax to get probabilities.</strong> Takes raw logit scores (any real numbers) and converts them to a probability distribution (all values between 0 and 1, summing to 1). <code>dim=-1</code> applies it to the last dimension (the class scores). Note: <code>nn.CrossEntropyLoss</code> applies softmax internally, so don't double-apply.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">prob = torch.<span class="fn">sigmoid</span>(x)</div>
+        <div class="line-text"><strong>Sigmoid for binary output.</strong> Squashes a single score to a value between 0 and 1 (a probability). Used in the final layer for binary classification (yes/no tasks).</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code"><span class="cm"># As a layer (in nn.Sequential)</span>
+nn.<span class="cls">ReLU</span>()
+nn.<span class="cls">GELU</span>()
+nn.<span class="cls">Sigmoid</span>()</div>
+        <div class="line-text"><strong>Module versions.</strong> These are identical to the functional versions but can be added to <code>nn.Sequential</code> or used as class attributes. They have no learnable parameters.</div>
+      </div>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-title">Quick Rule of Thumb</div>
+      <p>Use <strong>ReLU</strong> for simple/quick experiments. Use <strong>GELU</strong> for transformer architectures. Use <strong>Sigmoid</strong> only on the final output of a binary classifier. Use <strong>Softmax</strong> when you need interpretable probabilities — but remember CrossEntropyLoss does it for you during training.</p>
+    </div>
+
+    <div class="code-block-wrap">
+      <div class="code-block-header">
+        <span class="code-block-label">Complete Code</span>
+        <span class="code-block-title">activations.py</span>
+      </div>
+      <pre><code><span class="kw2">import</span> torch
+<span class="kw2">import</span> torch.nn <span class="kw2">as</span> nn
+<span class="kw2">import</span> torch.nn.functional <span class="kw2">as</span> F
+
+x = torch.<span class="fn">tensor</span>([<span class="num">-2.0</span>, <span class="num">-1.0</span>, <span class="num">0.0</span>, <span class="num">1.0</span>, <span class="num">2.0</span>])
+
+<span class="cm"># ReLU: negative → 0, positive unchanged</span>
+<span class="fn">print</span>(F.<span class="fn">relu</span>(x))       <span class="cm"># [0, 0, 0, 1, 2]</span>
+
+<span class="cm"># GELU: smooth near-zero, similar to ReLU for large pos</span>
+<span class="fn">print</span>(F.<span class="fn">gelu</span>(x))
+
+<span class="cm"># Sigmoid: everything squashed to (0, 1)</span>
+<span class="fn">print</span>(torch.<span class="fn">sigmoid</span>(x))  <span class="cm"># [0.12, 0.27, 0.5, 0.73, 0.88]</span>
+
+<span class="cm"># Softmax on logits (e.g. 3-class prediction scores)</span>
+logits = torch.<span class="fn">tensor</span>([<span class="num">2.0</span>, <span class="num">1.0</span>, <span class="num">0.5</span>])
+probs = F.<span class="fn">softmax</span>(logits, dim=<span class="num">0</span>)
+<span class="fn">print</span>(probs)          <span class="cm"># sums to 1.0</span>
+<span class="fn">print</span>(probs.<span class="fn">sum</span>())    <span class="cm"># tensor(1.0)</span>
+
+<span class="cm"># In a Sequential model</span>
+model = nn.<span class="cls">Sequential</span>(
+    nn.<span class="cls">Linear</span>(<span class="num">64</span>, <span class="num">128</span>),
+    nn.<span class="cls">GELU</span>(),           <span class="cm"># Non-linearity after each linear layer</span>
+    nn.<span class="cls">Linear</span>(<span class="num">128</span>, <span class="num">10</span>)
+)</code></pre>
+    </div>
+  </div>
+
+  <div class="chapter-divider"></div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- CHAPTER 7 — LOSS FUNCTIONS -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="chapter" id="ch7">
+    <div class="chapter-number">Chapter 07</div>
+    <h2><span class="highlight">Loss Functions</span></h2>
+
+    <p>A <strong>loss function</strong> (or criterion) measures how wrong your model's predictions are. It outputs a single scalar number — the <em>loss</em>. The entire goal of training is to minimise this number.</p>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — Loss Functions</div>
+      <div class="line-row">
+        <div class="line-code">criterion = nn.<span class="cls">CrossEntropyLoss</span>()</div>
+        <div class="line-text"><strong>Cross-Entropy Loss for multi-class classification.</strong> Expects raw logits (not softmax probabilities) and integer class labels. Internally applies log-softmax then negative log-likelihood. The standard choice for classification tasks like image recognition or next-token prediction.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">loss = <span class="fn">criterion</span>(logits, labels)</div>
+        <div class="line-text"><strong>Compute the loss.</strong> <code>logits</code> has shape <code>[batch, num_classes]</code>, <code>labels</code> has shape <code>[batch]</code> with integer class indices. Returns a scalar tensor. Low loss = model predicts correctly; high loss = it's wrong.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">criterion = nn.<span class="cls">MSELoss</span>()</div>
+        <div class="line-text"><strong>Mean Squared Error for regression.</strong> Measures the average squared difference between predictions and targets. Use this when the output is a continuous value (e.g. predicting house prices, temperatures, or embeddings).</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">criterion = nn.<span class="cls">BCEWithLogitsLoss</span>()</div>
+        <div class="line-text"><strong>Binary Cross-Entropy for binary classification.</strong> The safe version — it applies sigmoid internally, which is numerically more stable than applying sigmoid then BCE manually. Use when predicting yes/no outcomes.</div>
+      </div>
+    </div>
+
+    <div class="code-block-wrap">
+      <div class="code-block-header">
+        <span class="code-block-label">Complete Code</span>
+        <span class="code-block-title">loss_functions.py</span>
+      </div>
+      <pre><code><span class="kw2">import</span> torch
+<span class="kw2">import</span> torch.nn <span class="kw2">as</span> nn
+
+<span class="cm"># --- Multi-class classification (e.g. MNIST: 10 classes) ---</span>
+logits = torch.<span class="fn">randn</span>(<span class="num">4</span>, <span class="num">10</span>)          <span class="cm"># 4 examples, 10 class scores</span>
+labels = torch.<span class="fn">tensor</span>([<span class="num">3</span>, <span class="num">7</span>, <span class="num">1</span>, <span class="num">9</span>])  <span class="cm"># True class indices</span>
+
+criterion = nn.<span class="cls">CrossEntropyLoss</span>()
+loss = <span class="fn">criterion</span>(logits, labels)
+<span class="fn">print</span>(f<span class="str">"CE Loss: {loss.item():.4f}"</span>)
+
+<span class="cm"># --- Regression (predicting a number) ---</span>
+predictions = torch.<span class="fn">randn</span>(<span class="num">8</span>, <span class="num">1</span>)
+targets = torch.<span class="fn">randn</span>(<span class="num">8</span>, <span class="num">1</span>)
+
+mse = nn.<span class="cls">MSELoss</span>()
+loss_r = <span class="fn">mse</span>(predictions, targets)
+<span class="fn">print</span>(f<span class="str">"MSE Loss: {loss_r.item():.4f}"</span>)
+
+<span class="cm"># --- Binary classification (e.g. spam / not spam) ---</span>
+logits_binary = torch.<span class="fn">randn</span>(<span class="num">8</span>, <span class="num">1</span>)
+labels_binary = torch.<span class="fn">randint</span>(<span class="num">0</span>, <span class="num">2</span>, (<span class="num">8</span>, <span class="num">1</span>)).<span class="fn">float</span>()
+
+bce = nn.<span class="cls">BCEWithLogitsLoss</span>()
+loss_b = <span class="fn">bce</span>(logits_binary, labels_binary)
+<span class="fn">print</span>(f<span class="str">"BCE Loss: {loss_b.item():.4f}"</span>)</code></pre>
+    </div>
+  </div>
+
+  <div class="chapter-divider"></div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- CHAPTER 8 — OPTIMISERS -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="chapter" id="ch8">
+    <div class="chapter-number">Chapter 08</div>
+    <h2><span class="highlight">Optimisers</span></h2>
+
+    <p>An <strong>optimiser</strong> uses the gradients computed by <code>backward()</code> to update the network's parameters in a direction that reduces the loss. Different optimisers have different strategies for doing this.</p>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — Optimisers</div>
+      <div class="line-row">
+        <div class="line-code">opt = optim.<span class="cls">SGD</span>(
+    model.<span class="fn">parameters</span>(),
+    lr=<span class="num">0.01</span>
+)</div>
+        <div class="line-text"><strong>Stochastic Gradient Descent.</strong> The simplest optimiser: <code>param = param - lr × grad</code>. <code>model.parameters()</code> passes all learnable tensors to the optimiser. <code>lr</code> (learning rate) controls the step size. Good for learning fundamentals; Adam is usually faster in practice.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">opt = optim.<span class="cls">Adam</span>(
+    model.<span class="fn">parameters</span>(),
+    lr=<span class="num">3e-4</span>
+)</div>
+        <div class="line-text"><strong>Adam — the default for most deep learning.</strong> Combines momentum (remembers recent gradient directions) with adaptive learning rates per parameter. Converges faster than plain SGD in most cases. <code>3e-4</code> is the "Karpathy constant" — a reliable default learning rate for Adam.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">opt = optim.<span class="cls">AdamW</span>(
+    model.<span class="fn">parameters</span>(),
+    lr=<span class="num">3e-4</span>,
+    weight_decay=<span class="num">0.01</span>
+)</div>
+        <div class="line-text"><strong>AdamW — the standard for training LLMs.</strong> A corrected version of Adam that handles <em>weight decay</em> (a regularisation technique that prevents weights from growing too large) properly. The go-to choice for transformers. GPT-2, GPT-3, and most modern LLMs trained with AdamW.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">scheduler = optim.lr_scheduler.<span class="cls">CosineAnnealingLR</span>(
+    opt, T_max=<span class="num">100</span>
+)</div>
+        <div class="line-text"><strong>Learning rate scheduler.</strong> Gradually reduces the learning rate over training. Cosine annealing is popular — it starts high and smoothly decays following a cosine curve. Call <code>scheduler.step()</code> after each epoch.</div>
+      </div>
+    </div>
+
+    <div class="code-block-wrap">
+      <div class="code-block-header">
+        <span class="code-block-label">Complete Code</span>
+        <span class="code-block-title">optimisers.py</span>
+      </div>
+      <pre><code><span class="kw2">import</span> torch
+<span class="kw2">import</span> torch.nn <span class="kw2">as</span> nn
+<span class="kw2">import</span> torch.optim <span class="kw2">as</span> optim
+
+model = nn.<span class="cls">Linear</span>(<span class="num">10</span>, <span class="num">1</span>)
+
+<span class="cm"># Adam with a learning rate of 3e-4</span>
+optimizer = optim.<span class="cls">Adam</span>(model.<span class="fn">parameters</span>(), lr=<span class="num">3e-4</span>)
+
+<span class="cm"># AdamW — prefer this for transformers</span>
+optimizer = optim.<span class="cls">AdamW</span>(
+    model.<span class="fn">parameters</span>(),
+    lr=<span class="num">3e-4</span>,
+    betas=(<span class="num">0.9</span>, <span class="num">0.999</span>),   <span class="cm"># momentum coefficients (defaults)</span>
+    weight_decay=<span class="num">0.01</span>
+)
+
+<span class="cm"># Cosine annealing scheduler</span>
+scheduler = optim.lr_scheduler.<span class="cls">CosineAnnealingLR</span>(
+    optimizer, T_max=<span class="num">100</span>
+)
+
+<span class="cm"># One optimisation step (inside training loop)</span>
+x = torch.<span class="fn">randn</span>(<span class="num">4</span>, <span class="num">10</span>)
+target = torch.<span class="fn">randn</span>(<span class="num">4</span>, <span class="num">1</span>)
+
+optimizer.<span class="fn">zero_grad</span>()            <span class="cm"># Clear old gradients</span>
+output = <span class="fn">model</span>(x)                 <span class="cm"># Forward pass</span>
+loss = nn.<span class="cls">MSELoss</span>()(output, target) <span class="cm"># Compute loss</span>
+loss.<span class="fn">backward</span>()                  <span class="cm"># Backprop</span>
+optimizer.<span class="fn">step</span>()                 <span class="cm"># Update weights</span>
+scheduler.<span class="fn">step</span>()                 <span class="cm"># Decay learning rate</span></code></pre>
+    </div>
+  </div>
+
+  <div class="chapter-divider"></div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- CHAPTER 9 — TRAINING LOOP -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="chapter" id="ch9">
+    <div class="chapter-number">Chapter 09</div>
+    <h2>The <span class="highlight">Training Loop</span></h2>
+
+    <p>The training loop is the engine of learning. It repeatedly feeds batches of data through the network, measures the error, computes gradients, and updates the weights until the model is good enough.</p>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — Training Loop Line by Line</div>
+      <div class="line-row">
+        <div class="line-code"><span class="kw">for</span> epoch <span class="kw">in</span> <span class="fn">range</span>(num_epochs):</div>
+        <div class="line-text"><strong>Outer loop over epochs.</strong> One epoch = one full pass through the entire training dataset. Typical training runs from 10 to hundreds of epochs depending on dataset size and task complexity.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">    model.<span class="fn">train</span>()</div>
+        <div class="line-text"><strong>Put the model in training mode.</strong> This enables layers that behave differently during training vs. evaluation — specifically Dropout (randomly zeros activations) and BatchNorm (uses batch statistics). Essential to call before your training loop.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">    <span class="kw">for</span> X, y <span class="kw">in</span> train_loader:</div>
+        <div class="line-text"><strong>Inner loop over mini-batches.</strong> <code>train_loader</code> is a DataLoader that yields batches. <code>X</code> is the batch of inputs, <code>y</code> is the batch of labels. Each iteration processes one mini-batch (e.g. 32 examples at a time).</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">        optimizer.<span class="fn">zero_grad</span>()</div>
+        <div class="line-text"><strong>Clear gradients from the previous batch.</strong> Critical step — PyTorch accumulates (adds) gradients by default, so if you forget this, gradients from the previous step will still be there, corrupting the current update.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">        logits = <span class="fn">model</span>(X)</div>
+        <div class="line-text"><strong>Forward pass.</strong> Run the input batch through the network. The result, <code>logits</code>, contains the model's raw predictions — one vector of class scores per example in the batch.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">        loss = <span class="fn">criterion</span>(logits, y)</div>
+        <div class="line-text"><strong>Compute the loss.</strong> Compare predictions to ground-truth labels. This scalar tells us how wrong the model is on this batch. This is what we want to drive to zero.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">        loss.<span class="fn">backward</span>()</div>
+        <div class="line-text"><strong>Backpropagation.</strong> Computes the gradient of the loss with respect to every parameter in the network. After this call, every parameter's <code>.grad</code> attribute holds the direction we should nudge it to reduce the loss.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">        optimizer.<span class="fn">step</span>()</div>
+        <div class="line-text"><strong>Update weights.</strong> The optimiser reads all the gradients and adjusts the parameters. One step of gradient descent. The loss should be slightly lower after this — over thousands of steps, the model learns.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">    model.<span class="fn">eval</span>()
+    <span class="kw">with</span> torch.<span class="fn">no_grad</span>():
+        <span class="cm"># Validation loop here</span></div>
+        <div class="line-text"><strong>Evaluation mode after each epoch.</strong> <code>model.eval()</code> turns off Dropout and makes BatchNorm use running statistics. <code>no_grad()</code> disables gradient computation (faster + less memory). This is where you check performance on unseen validation data.</div>
+      </div>
+    </div>
+
+    <div class="code-block-wrap">
+      <div class="code-block-header">
+        <span class="code-block-label">Complete Code</span>
+        <span class="code-block-title">training_loop.py</span>
+      </div>
+      <pre><code><span class="kw2">import</span> torch
+<span class="kw2">import</span> torch.nn <span class="kw2">as</span> nn
+<span class="kw2">import</span> torch.optim <span class="kw2">as</span> optim
+
+<span class="df">def</span> <span class="fn">train</span>(model, train_loader, val_loader, num_epochs=<span class="num">10</span>):
+    criterion = nn.<span class="cls">CrossEntropyLoss</span>()
+    optimizer = optim.<span class="cls">AdamW</span>(model.<span class="fn">parameters</span>(), lr=<span class="num">3e-4</span>)
+
+    <span class="kw">for</span> epoch <span class="kw">in</span> <span class="fn">range</span>(num_epochs):
+        <span class="cm"># ----- Training -----</span>
+        model.<span class="fn">train</span>()
+        train_loss = <span class="num">0.0</span>
+
+        <span class="kw">for</span> X, y <span class="kw">in</span> train_loader:
+            optimizer.<span class="fn">zero_grad</span>()
+            logits = <span class="fn">model</span>(X)
+            loss = <span class="fn">criterion</span>(logits, y)
+            loss.<span class="fn">backward</span>()
+            optimizer.<span class="fn">step</span>()
+            train_loss += loss.<span class="fn">item</span>()
+
+        <span class="cm"># ----- Validation -----</span>
+        model.<span class="fn">eval</span>()
+        correct = <span class="num">0</span>
+
+        <span class="kw">with</span> torch.<span class="fn">no_grad</span>():
+            <span class="kw">for</span> X, y <span class="kw">in</span> val_loader:
+                logits = <span class="fn">model</span>(X)
+                preds = logits.<span class="fn">argmax</span>(dim=<span class="num">-1</span>)
+                correct += (preds == y).<span class="fn">sum</span>().<span class="fn">item</span>()
+
+        avg_loss = train_loss / <span class="fn">len</span>(train_loader)
+        acc = correct / <span class="fn">len</span>(val_loader.dataset)
+        <span class="fn">print</span>(f<span class="str">"Epoch {epoch+1}/{num_epochs}  loss={avg_loss:.4f}  acc={acc:.3f}"</span>)</code></pre>
+    </div>
+  </div>
+
+  <div class="chapter-divider"></div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- CHAPTER 10 — DATASETS & DATALOADERS -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="chapter" id="ch10">
+    <div class="chapter-number">Chapter 10</div>
+    <h2><span class="highlight">Datasets &amp; DataLoaders</span></h2>
+
+    <p>PyTorch provides a clean abstraction for feeding data: <code>Dataset</code> defines <em>what</em> your data is, and <code>DataLoader</code> handles <em>how</em> to batch, shuffle, and load it efficiently during training.</p>
+
+    <h3>Custom Dataset</h3>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — Custom Dataset</div>
+      <div class="line-row">
+        <div class="line-code"><span class="kw">class</span> <span class="cls">MyDataset</span>(
+    torch.utils.data.<span class="cls">Dataset</span>
+):</div>
+        <div class="line-text"><strong>Inherit from torch.utils.data.Dataset.</strong> To create a custom dataset you must implement exactly two methods: <code>__len__</code> and <code>__getitem__</code>. The Dataset class itself doesn't do any loading — it just defines the interface.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">  <span class="df">def</span> <span class="fn">__len__</span>(<span class="kw">self</span>):
+    <span class="kw">return</span> <span class="fn">len</span>(<span class="kw">self</span>.data)</div>
+        <div class="line-text"><strong>Return the total number of samples.</strong> The DataLoader calls this to know how many batches to create. If you have 60,000 images and batch_size=64, it will create ceil(60000/64) = 938 batches.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">  <span class="df">def</span> <span class="fn">__getitem__</span>(<span class="kw">self</span>, idx):
+    <span class="kw">return</span> <span class="kw">self</span>.data[idx],
+           <span class="kw">self</span>.labels[idx]</div>
+        <div class="line-text"><strong>Return the sample at index idx.</strong> The DataLoader calls this for each sample it needs to assemble a batch. Return a tuple of (input, label). This is where you can apply augmentations or transforms.</div>
+      </div>
+    </div>
+
+    <h3>DataLoader</h3>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — DataLoader</div>
+      <div class="line-row">
+        <div class="line-code">loader = DataLoader(
+    dataset,
+    batch_size=<span class="num">64</span>,
+    shuffle=<span class="kw">True</span>,
+    num_workers=<span class="num">4</span>
+)</div>
+        <div class="line-text"><strong>Wrap a dataset in a DataLoader.</strong> <code>batch_size</code> controls how many samples per batch. <code>shuffle=True</code> randomises the order each epoch (important for training; prevents the model from memorising order). <code>num_workers=4</code> uses 4 subprocesses for parallel data loading — speeds up I/O-bound datasets significantly.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code"><span class="kw">for</span> X, y <span class="kw">in</span> loader:
+    <span class="cm"># X: [64, ...]</span>
+    <span class="cm"># y: [64]</span></div>
+        <div class="line-text"><strong>Iterate over batches.</strong> Each iteration yields a batch. <code>X</code> has your features and <code>y</code> has your labels, both with the batch dimension as the first axis. The DataLoader handles all the indexing, collation, and parallel loading.</div>
+      </div>
+    </div>
+
+    <div class="code-block-wrap">
+      <div class="code-block-header">
+        <span class="code-block-label">Complete Code</span>
+        <span class="code-block-title">dataset_loader.py</span>
+      </div>
+      <pre><code><span class="kw2">import</span> torch
+<span class="kw2">from</span> torch.utils.data <span class="kw2">import</span> Dataset, DataLoader
+
+<span class="kw">class</span> <span class="cls">TabularDataset</span>(Dataset):
+    <span class="df">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, X, y):
+        <span class="kw">self</span>.X = torch.<span class="fn">tensor</span>(X, dtype=torch.float32)
+        <span class="kw">self</span>.y = torch.<span class="fn">tensor</span>(y, dtype=torch.long)
+
+    <span class="df">def</span> <span class="fn">__len__</span>(<span class="kw">self</span>):
+        <span class="kw">return</span> <span class="fn">len</span>(<span class="kw">self</span>.X)
+
+    <span class="df">def</span> <span class="fn">__getitem__</span>(<span class="kw">self</span>, idx):
+        <span class="kw">return</span> <span class="kw">self</span>.X[idx], <span class="kw">self</span>.y[idx]
+
+<span class="cm"># Create dummy data</span>
+<span class="kw">import</span> numpy as np
+X_data = np.<span class="fn">random.randn</span>(<span class="num">1000</span>, <span class="num">20</span>)
+y_data = np.<span class="fn">random.randint</span>(<span class="num">0</span>, <span class="num">5</span>, (<span class="num">1000</span>,))
+
+<span class="cm"># Split train / val</span>
+train_ds = <span class="cls">TabularDataset</span>(X_data[:<span class="num">800</span>], y_data[:<span class="num">800</span>])
+val_ds   = <span class="cls">TabularDataset</span>(X_data[<span class="num">800</span>:], y_data[<span class="num">800</span>:])
+
+<span class="cm"># Wrap in DataLoaders</span>
+train_loader = <span class="cls">DataLoader</span>(train_ds, batch_size=<span class="num">32</span>,
+                           shuffle=<span class="kw">True</span>, num_workers=<span class="num">0</span>)
+val_loader   = <span class="cls">DataLoader</span>(val_ds, batch_size=<span class="num">32</span>,
+                           shuffle=<span class="kw">False</span>, num_workers=<span class="num">0</span>)
+
+<span class="fn">print</span>(f<span class="str">"Train batches: {len(train_loader)}"</span>)
+<span class="fn">print</span>(f<span class="str">"Val batches:   {len(val_loader)}"</span>)
+
+<span class="cm"># Peek at one batch</span>
+X_batch, y_batch = <span class="fn">next</span>(<span class="fn">iter</span>(train_loader))
+<span class="fn">print</span>(X_batch.shape)  <span class="cm"># [32, 20]</span>
+<span class="fn">print</span>(y_batch.shape)  <span class="cm"># [32]</span></code></pre>
+    </div>
+  </div>
+
+  <div class="chapter-divider"></div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- CHAPTER 11 — FIRST COMPLETE NETWORK -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="chapter" id="ch11">
+    <div class="chapter-number">Chapter 11</div>
+    <h2>Your <span class="highlight">First Complete Network</span></h2>
+
+    <p>Let's now build a complete, working neural network — a classifier for the MNIST handwritten digit dataset (28×28 pixel grayscale images, 10 classes: digits 0–9). This pulls together everything from the previous chapters.</p>
+
+    <div class="callout note">
+      <div class="callout-title">What is MNIST?</div>
+      <p>MNIST is the "Hello World" of machine learning — 60,000 training images of handwritten digits and 10,000 test images. It's small enough to train in minutes on a CPU and a great sandbox for understanding classification.</p>
+    </div>
+
+    <div class="code-block-wrap">
+      <div class="code-block-header">
+        <span class="code-block-label">Complete Code</span>
+        <span class="code-block-title">mnist_classifier.py</span>
+      </div>
+      <pre><code><span class="kw2">import</span> torch
+<span class="kw2">import</span> torch.nn <span class="kw2">as</span> nn
+<span class="kw2">import</span> torch.optim <span class="kw2">as</span> optim
+<span class="kw2">import</span> torch.nn.functional <span class="kw2">as</span> F
+<span class="kw2">from</span> torch.utils.data <span class="kw2">import</span> DataLoader
+<span class="kw2">from</span> torchvision <span class="kw2">import</span> datasets, transforms
+
+<span class="cm"># ── 1. DATA ───────────────────────────────────────────────</span>
+transform = transforms.<span class="cls">Compose</span>([
+    transforms.<span class="cls">ToTensor</span>(),             <span class="cm"># PIL → [1, 28, 28] tensor</span>
+    transforms.<span class="cls">Normalize</span>((<span class="num">0.5</span>,), (<span class="num">0.5</span>,)) <span class="cm"># Normalise to [-1, 1]</span>
+])
+
+train_ds = datasets.<span class="cls">MNIST</span>(
+    root=<span class="str">'./data'</span>, train=<span class="kw">True</span>,
+    download=<span class="kw">True</span>, transform=transform
+)
+val_ds = datasets.<span class="cls">MNIST</span>(
+    root=<span class="str">'./data'</span>, train=<span class="kw">False</span>,
+    download=<span class="kw">True</span>, transform=transform
+)
+
+train_loader = <span class="cls">DataLoader</span>(train_ds, batch_size=<span class="num">64</span>, shuffle=<span class="kw">True</span>)
+val_loader   = <span class="cls">DataLoader</span>(val_ds, batch_size=<span class="num">256</span>, shuffle=<span class="kw">False</span>)
+
+<span class="cm"># ── 2. MODEL ──────────────────────────────────────────────</span>
+<span class="kw">class</span> <span class="cls">MNISTClassifier</span>(nn.<span class="cls">Module</span>):
+    <span class="df">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>):
+        <span class="fn">super</span>().<span class="fn">__init__</span>()
+        <span class="kw">self</span>.fc1 = nn.<span class="cls">Linear</span>(<span class="num">784</span>, <span class="num">512</span>)
+        <span class="kw">self</span>.fc2 = nn.<span class="cls">Linear</span>(<span class="num">512</span>, <span class="num">256</span>)
+        <span class="kw">self</span>.fc3 = nn.<span class="cls">Linear</span>(<span class="num">256</span>, <span class="num">10</span>)
+        <span class="kw">self</span>.dropout = nn.<span class="cls">Dropout</span>(<span class="num">0.3</span>)
+
+    <span class="df">def</span> <span class="fn">forward</span>(<span class="kw">self</span>, x):
+        x = x.<span class="fn">view</span>(-<span class="num">1</span>, <span class="num">784</span>)          <span class="cm"># Flatten [B,1,28,28] → [B, 784]</span>
+        x = F.<span class="fn">relu</span>(<span class="kw">self</span>.<span class="fn">fc1</span>(x))
+        x = <span class="kw">self</span>.<span class="fn">dropout</span>(x)
+        x = F.<span class="fn">relu</span>(<span class="kw">self</span>.<span class="fn">fc2</span>(x))
+        x = <span class="kw">self</span>.<span class="fn">dropout</span>(x)
+        x = <span class="kw">self</span>.<span class="fn">fc3</span>(x)              <span class="cm"># Raw logits for 10 classes</span>
+        <span class="kw">return</span> x
+
+model = <span class="cls">MNISTClassifier</span>()
+
+<span class="cm"># ── 3. TRAINING ───────────────────────────────────────────</span>
+criterion = nn.<span class="cls">CrossEntropyLoss</span>()
+optimizer = optim.<span class="cls">AdamW</span>(model.<span class="fn">parameters</span>(), lr=<span class="num">1e-3</span>)
+
+<span class="kw">for</span> epoch <span class="kw">in</span> <span class="fn">range</span>(<span class="num">10</span>):
+    model.<span class="fn">train</span>()
+    train_loss = <span class="num">0</span>
+    <span class="kw">for</span> X, y <span class="kw">in</span> train_loader:
+        optimizer.<span class="fn">zero_grad</span>()
+        logits = <span class="fn">model</span>(X)
+        loss = <span class="fn">criterion</span>(logits, y)
+        loss.<span class="fn">backward</span>()
+        optimizer.<span class="fn">step</span>()
+        train_loss += loss.<span class="fn">item</span>()
+
+    model.<span class="fn">eval</span>()
+    correct = <span class="num">0</span>
+    <span class="kw">with</span> torch.<span class="fn">no_grad</span>():
+        <span class="kw">for</span> X, y <span class="kw">in</span> val_loader:
+            preds = <span class="fn">model</span>(X).<span class="fn">argmax</span>(dim=<span class="num">1</span>)
+            correct += (preds == y).<span class="fn">sum</span>().<span class="fn">item</span>()
+    acc = correct / <span class="fn">len</span>(val_ds)
+    <span class="fn">print</span>(f<span class="str">"Epoch {epoch+1:02d} | loss {train_loss/len(train_loader):.4f} | acc {acc:.4f}"</span>)
+<span class="cm"># Expected: ~98% accuracy on val set after 10 epochs</span></code></pre>
+    </div>
+  </div>
+
+  <div class="chapter-divider"></div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- CHAPTER 12 — CNNs -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="chapter" id="ch12">
+    <div class="chapter-number">Chapter 12</div>
+    <h2><span class="highlight">Convolutional Networks</span></h2>
+
+    <p>A <strong>Convolutional Neural Network (CNN)</strong> is designed for grid-structured data like images. Instead of connecting every pixel to every output (expensive and ignores spatial structure), convolutional layers slide a small <em>kernel</em> (filter) across the image, detecting features like edges, textures, and patterns wherever they appear.</p>
+
+    <div class="analogy">
+      <p>A kernel is like a stamp — you press the same stamp across the entire image, producing a map of "where this feature is". You learn many different stamps, each detecting a different feature. Early layers detect edges, later layers detect shapes, the final layers detect objects.</p>
+      <div class="analogy-source">— Convolutions as feature detectors</div>
+    </div>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — Convolutional Layers</div>
+      <div class="line-row">
+        <div class="line-code">nn.<span class="cls">Conv2d</span>(
+  in_channels=<span class="num">1</span>,
+  out_channels=<span class="num">32</span>,
+  kernel_size=<span class="num">3</span>
+)</div>
+        <div class="line-text"><strong>2D Convolution layer.</strong> <code>in_channels=1</code> means grayscale input. <code>out_channels=32</code> means we learn 32 different filters (producing 32 feature maps). <code>kernel_size=3</code> means each filter is 3×3 pixels. The layer has 1×32×3×3 + 32 = 320 learnable parameters.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">nn.<span class="cls">Conv2d</span>(<span class="num">1</span>, <span class="num">32</span>, <span class="num">3</span>,
+         padding=<span class="num">1</span>)</div>
+        <div class="line-text"><strong>Padding preserves spatial dimensions.</strong> Without padding, a 3×3 conv on a 28×28 image produces a 26×26 output. <code>padding=1</code> adds a border of zeros, keeping the output at 28×28. Use <code>padding='same'</code> for the same effect automatically.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">nn.<span class="cls">MaxPool2d</span>(
+  kernel_size=<span class="num">2</span>,
+  stride=<span class="num">2</span>
+)</div>
+        <div class="line-text"><strong>Max pooling halves the spatial dimensions.</strong> Takes the maximum value in each 2×2 window. This reduces computation, adds translation invariance (feature found slightly off-center is still detected), and increases the receptive field of later layers.</div>
+      </div>
+    </div>
+
+    <div class="code-block-wrap">
+      <div class="code-block-header">
+        <span class="code-block-label">Complete Code</span>
+        <span class="code-block-title">simple_cnn.py</span>
+      </div>
+      <pre><code><span class="kw2">import</span> torch
+<span class="kw2">import</span> torch.nn <span class="kw2">as</span> nn
+<span class="kw2">import</span> torch.nn.functional <span class="kw2">as</span> F
+
+<span class="kw">class</span> <span class="cls">SimpleCNN</span>(nn.<span class="cls">Module</span>):
+    <span class="df">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>):
+        <span class="fn">super</span>().<span class="fn">__init__</span>()
+        <span class="cm"># Feature extraction: conv layers detect local patterns</span>
+        <span class="kw">self</span>.conv1 = nn.<span class="cls">Conv2d</span>(<span class="num">1</span>, <span class="num">32</span>, kernel_size=<span class="num">3</span>, padding=<span class="num">1</span>)
+        <span class="kw">self</span>.conv2 = nn.<span class="cls">Conv2d</span>(<span class="num">32</span>, <span class="num">64</span>, kernel_size=<span class="num">3</span>, padding=<span class="num">1</span>)
+        <span class="kw">self</span>.pool  = nn.<span class="cls">MaxPool2d</span>(<span class="num">2</span>, <span class="num">2</span>)   <span class="cm"># Halves spatial dimensions</span>
+
+        <span class="cm"># Classification head: linear layers on flattened features</span>
+        <span class="cm"># After 2 pools on 28x28: 28→14→7, with 64 channels → 64*7*7=3136</span>
+        <span class="kw">self</span>.fc1 = nn.<span class="cls">Linear</span>(<span class="num">64</span> * <span class="num">7</span> * <span class="num">7</span>, <span class="num">128</span>)
+        <span class="kw">self</span>.fc2 = nn.<span class="cls">Linear</span>(<span class="num">128</span>, <span class="num">10</span>)
+
+    <span class="df">def</span> <span class="fn">forward</span>(<span class="kw">self</span>, x):
+        x = <span class="kw">self</span>.<span class="fn">pool</span>(F.<span class="fn">relu</span>(<span class="kw">self</span>.<span class="fn">conv1</span>(x)))  <span class="cm"># [B,1,28,28]→[B,32,14,14]</span>
+        x = <span class="kw">self</span>.<span class="fn">pool</span>(F.<span class="fn">relu</span>(<span class="kw">self</span>.<span class="fn">conv2</span>(x)))  <span class="cm"># [B,32,14,14]→[B,64,7,7]</span>
+        x = x.<span class="fn">flatten</span>(<span class="num">1</span>)                     <span class="cm"># [B, 3136]</span>
+        x = F.<span class="fn">relu</span>(<span class="kw">self</span>.<span class="fn">fc1</span>(x))               <span class="cm"># [B, 128]</span>
+        x = <span class="kw">self</span>.<span class="fn">fc2</span>(x)                       <span class="cm"># [B, 10]</span>
+        <span class="kw">return</span> x
+
+model = <span class="cls">SimpleCNN</span>()
+x = torch.<span class="fn">randn</span>(<span class="num">4</span>, <span class="num">1</span>, <span class="num">28</span>, <span class="num">28</span>)  <span class="cm"># Batch of 4 grayscale images</span>
+<span class="fn">print</span>(<span class="fn">model</span>(x).shape)           <span class="cm"># [4, 10]</span></code></pre>
+    </div>
+  </div>
+
+  <div class="chapter-divider"></div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- CHAPTER 13 — DROPOUT & OVERFITTING -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="chapter" id="ch13">
+    <div class="chapter-number">Chapter 13</div>
+    <h2><span class="highlight">Overfitting &amp; Dropout</span></h2>
+
+    <p><strong>Overfitting</strong> is when a model memorises the training data instead of learning general patterns — it performs great on training data but poorly on unseen data. <strong>Regularisation</strong> techniques fight this.</p>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — Dropout</div>
+      <div class="line-row">
+        <div class="line-code"><span class="kw">self</span>.dropout = nn.<span class="cls">Dropout</span>(p=<span class="num">0.5</span>)</div>
+        <div class="line-text"><strong>Create a Dropout layer with probability 0.5.</strong> During training, each neuron's output is randomly zeroed out with probability <code>p</code>. With <code>p=0.5</code>, half the neurons are silenced on each forward pass. This forces the network to learn redundant representations and not rely on specific neurons.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">x = <span class="kw">self</span>.<span class="fn">dropout</span>(x)</div>
+        <div class="line-text"><strong>Apply dropout to activations.</strong> During training, this randomly zeros ~50% of values. During evaluation (after <code>model.eval()</code>), dropout does nothing — all neurons are active. This asymmetry is why you must always call <code>model.eval()</code> before inference.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">nn.<span class="cls">Dropout</span>(p=<span class="num">0.1</span>)  <span class="cm"># Transformers</span>
+nn.<span class="cls">Dropout</span>(p=<span class="num">0.5</span>)  <span class="cm"># MLPs</span></div>
+        <div class="line-text"><strong>Typical dropout rates.</strong> Transformers commonly use p=0.1 (10%) as they're already regularised by other means. MLPs often use 0.3–0.5. Higher = more regularisation but potentially slower learning. Tune this if your model overfits.</div>
+      </div>
+    </div>
+
+    <div class="callout warning">
+      <div class="callout-title">Train vs Eval Mode</div>
+      <p>Dropout behaves differently in training vs evaluation. Always remember: <code>model.train()</code> before training batches, <code>model.eval()</code> before validation or inference. Missing this is a common source of mysteriously bad evaluation results.</p>
+    </div>
+
+    <div class="code-block-wrap">
+      <div class="code-block-header">
+        <span class="code-block-label">Complete Code</span>
+        <span class="code-block-title">dropout.py</span>
+      </div>
+      <pre><code><span class="kw2">import</span> torch
+<span class="kw2">import</span> torch.nn <span class="kw2">as</span> nn
+<span class="kw2">import</span> torch.nn.functional <span class="kw2">as</span> F
+
+<span class="kw">class</span> <span class="cls">RegularisedMLP</span>(nn.<span class="cls">Module</span>):
+    <span class="df">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, dropout_rate=<span class="num">0.3</span>):
+        <span class="fn">super</span>().<span class="fn">__init__</span>()
+        <span class="kw">self</span>.fc1     = nn.<span class="cls">Linear</span>(<span class="num">784</span>, <span class="num">512</span>)
+        <span class="kw">self</span>.fc2     = nn.<span class="cls">Linear</span>(<span class="num">512</span>, <span class="num">256</span>)
+        <span class="kw">self</span>.fc3     = nn.<span class="cls">Linear</span>(<span class="num">256</span>, <span class="num">10</span>)
+        <span class="kw">self</span>.dropout = nn.<span class="cls">Dropout</span>(dropout_rate)
+
+    <span class="df">def</span> <span class="fn">forward</span>(<span class="kw">self</span>, x):
+        x = x.<span class="fn">view</span>(-<span class="num">1</span>, <span class="num">784</span>)
+        x = F.<span class="fn">relu</span>(<span class="kw">self</span>.<span class="fn">fc1</span>(x))
+        x = <span class="kw">self</span>.<span class="fn">dropout</span>(x)     <span class="cm"># Applied AFTER activation</span>
+        x = F.<span class="fn">relu</span>(<span class="kw">self</span>.<span class="fn">fc2</span>(x))
+        x = <span class="kw">self</span>.<span class="fn">dropout</span>(x)
+        x = <span class="kw">self</span>.<span class="fn">fc3</span>(x)          <span class="cm"># No dropout on output layer</span>
+        <span class="kw">return</span> x
+
+model = <span class="cls">RegularisedMLP</span>()
+
+<span class="cm"># During training — dropout ACTIVE</span>
+model.<span class="fn">train</span>()
+x = torch.<span class="fn">randn</span>(<span class="num">4</span>, <span class="num">784</span>)
+out_train = <span class="fn">model</span>(x)
+
+<span class="cm"># During inference — dropout DISABLED</span>
+model.<span class="fn">eval</span>()
+<span class="kw">with</span> torch.<span class="fn">no_grad</span>():
+    out_eval = <span class="fn">model</span>(x)</code></pre>
+    </div>
+  </div>
+
+  <div class="chapter-divider"></div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- CHAPTER 14 — BATCH NORM -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="chapter" id="ch14">
+    <div class="chapter-number">Chapter 14</div>
+    <h2><span class="highlight">Batch Normalisation</span></h2>
+
+    <p>Batch Normalisation (BatchNorm) normalises the activations within each mini-batch to have zero mean and unit variance, then applies learnable scale and shift parameters. It dramatically speeds up training and acts as mild regularisation.</p>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — Batch Normalisation</div>
+      <div class="line-row">
+        <div class="line-code">nn.<span class="cls">BatchNorm1d</span>(num_features=<span class="num">256</span>)</div>
+        <div class="line-text"><strong>BatchNorm for 1D data (fully connected layers).</strong> <code>num_features</code> must match the number of outputs from the previous linear layer. It will normalise each feature (column) across the batch.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">nn.<span class="cls">BatchNorm2d</span>(num_features=<span class="num">64</span>)</div>
+        <div class="line-text"><strong>BatchNorm for 2D data (convolutional layers).</strong> <code>num_features</code> is the number of channels. Normalises across spatial dimensions and the batch, so each channel has zero mean and unit variance.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code"><span class="cm"># Placement pattern:</span>
+linear → batchnorm → relu</div>
+        <div class="line-text"><strong>BN comes after the linear operation, before the activation.</strong> This is the standard order: linear layer produces output, BatchNorm normalises it, then ReLU applies non-linearity. Note: transformers use LayerNorm instead (different normalisation scope).</div>
+      </div>
+    </div>
+
+    <div class="code-block-wrap">
+      <div class="code-block-header">
+        <span class="code-block-label">Complete Code</span>
+        <span class="code-block-title">batchnorm.py</span>
+      </div>
+      <pre><code><span class="kw2">import</span> torch
+<span class="kw2">import</span> torch.nn <span class="kw2">as</span> nn
+<span class="kw2">import</span> torch.nn.functional <span class="kw2">as</span> F
+
+<span class="kw">class</span> <span class="cls">BNNet</span>(nn.<span class="cls">Module</span>):
+    <span class="df">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>):
+        <span class="fn">super</span>().<span class="fn">__init__</span>()
+        <span class="kw">self</span>.fc1 = nn.<span class="cls">Linear</span>(<span class="num">784</span>, <span class="num">512</span>, bias=<span class="kw">False</span>) <span class="cm"># bias=False with BN</span>
+        <span class="kw">self</span>.bn1 = nn.<span class="cls">BatchNorm1d</span>(<span class="num">512</span>)
+        <span class="kw">self</span>.fc2 = nn.<span class="cls">Linear</span>(<span class="num">512</span>, <span class="num">256</span>, bias=<span class="kw">False</span>)
+        <span class="kw">self</span>.bn2 = nn.<span class="cls">BatchNorm1d</span>(<span class="num">256</span>)
+        <span class="kw">self</span>.fc3 = nn.<span class="cls">Linear</span>(<span class="num">256</span>, <span class="num">10</span>)
+
+    <span class="df">def</span> <span class="fn">forward</span>(<span class="kw">self</span>, x):
+        x = x.<span class="fn">view</span>(-<span class="num">1</span>, <span class="num">784</span>)
+        x = F.<span class="fn">relu</span>(<span class="kw">self</span>.<span class="fn">bn1</span>(<span class="kw">self</span>.<span class="fn">fc1</span>(x)))  <span class="cm"># Linear → BN → ReLU</span>
+        x = F.<span class="fn">relu</span>(<span class="kw">self</span>.<span class="fn">bn2</span>(<span class="kw">self</span>.<span class="fn">fc2</span>(x)))
+        x = <span class="kw">self</span>.<span class="fn">fc3</span>(x)
+        <span class="kw">return</span> x
+
+<span class="cm"># BN + bias=False: BN's learned shift replaces the bias,</span>
+<span class="cm"># saving a tiny bit of memory with identical expressivity.</span></code></pre>
+    </div>
+  </div>
+
+  <div class="chapter-divider"></div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- LANGUAGE MODELS START HERE -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="chapter" id="ch15">
+    <div class="chapter-number">Chapter 15</div>
+    <h2><span class="highlight">Word Embeddings</span></h2>
+
+    <p>Text is discrete — networks work with continuous numbers. <strong>Embeddings</strong> are a learned mapping from token IDs (integers) to dense vectors. Each word or token gets a vector of floating-point numbers that encodes its meaning and relationships to other tokens.</p>
+
+    <div class="analogy">
+      <p>"cat" and "dog" should have similar embedding vectors because they're both small domestic animals. "cat" and "skyscraper" should be far apart. The network learns these relationships automatically from the training data.</p>
+      <div class="analogy-source">— What embeddings encode</div>
+    </div>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — nn.Embedding</div>
+      <div class="line-row">
+        <div class="line-code">embedding = nn.<span class="cls">Embedding</span>(
+    num_embeddings=<span class="num">50000</span>,
+    embedding_dim=<span class="num">512</span>
+)</div>
+        <div class="line-text"><strong>Create an embedding table.</strong> <code>num_embeddings</code> is vocabulary size — how many unique tokens exist. <code>embedding_dim</code> is the size of each token's vector. Internally this is a matrix of shape <code>[50000, 512]</code>. Each token ID is a row index into this table.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">token_ids = torch.<span class="fn">tensor</span>([<span class="num">42</span>, <span class="num">17</span>, <span class="num">5</span>])
+vecs = <span class="fn">embedding</span>(token_ids)</div>
+        <div class="line-text"><strong>Look up embeddings by token ID.</strong> <code>token_ids</code> is a tensor of integers. The embedding layer does a table lookup: token 42 → row 42 of the weight matrix. <code>vecs</code> will have shape <code>[3, 512]</code> — three 512-dimensional vectors.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">embedding = nn.<span class="cls">Embedding</span>(
+    vocab_size, dim,
+    padding_idx=<span class="num">0</span>
+)</div>
+        <div class="line-text"><strong>padding_idx keeps token 0's embedding as zeros.</strong> When batching sequences of different lengths, short sequences are padded with zeros. Setting <code>padding_idx=0</code> ensures the padding token always produces a zero vector that contributes nothing to the computation.</div>
+      </div>
+    </div>
+
+    <div class="code-block-wrap">
+      <div class="code-block-header">
+        <span class="code-block-label">Complete Code</span>
+        <span class="code-block-title">embeddings.py</span>
+      </div>
+      <pre><code><span class="kw2">import</span> torch
+<span class="kw2">import</span> torch.nn <span class="kw2">as</span> nn
+
+VOCAB_SIZE = <span class="num">10000</span>
+EMBED_DIM  = <span class="num">256</span>
+SEQ_LEN    = <span class="num">32</span>
+BATCH_SIZE = <span class="num">8</span>
+
+embedding_table = nn.<span class="cls">Embedding</span>(VOCAB_SIZE, EMBED_DIM)
+
+<span class="cm"># Simulated batch of token ID sequences</span>
+token_ids = torch.<span class="fn">randint</span>(<span class="num">0</span>, VOCAB_SIZE, (BATCH_SIZE, SEQ_LEN))
+<span class="fn">print</span>(token_ids.shape)  <span class="cm"># [8, 32]</span>
+
+<span class="cm"># Look up embeddings for every token in every sequence</span>
+embeddings = <span class="fn">embedding_table</span>(token_ids)
+<span class="fn">print</span>(embeddings.shape) <span class="cm"># [8, 32, 256]</span>
+<span class="cm"># Batch=8, Seq=32 tokens, Embed=256 dims per token</span>
+
+<span class="cm"># The embedding weights are learnable — they update during backprop</span>
+<span class="fn">print</span>(embedding_table.weight.shape)  <span class="cm"># [10000, 256]</span></code></pre>
+    </div>
+  </div>
+
+  <div class="chapter-divider"></div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- CHAPTER 16 — RNNs -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="chapter" id="ch16">
+    <div class="chapter-number">Chapter 16</div>
+    <h2><span class="highlight">Recurrent Networks</span> (RNNs &amp; LSTMs)</h2>
+
+    <p>A <strong>Recurrent Neural Network (RNN)</strong> processes sequences one step at a time, maintaining a <em>hidden state</em> that carries information from previous steps. This makes them suitable for sequences — but they struggle with long-range dependencies.</p>
+
+    <p><strong>LSTMs</strong> (Long Short-Term Memory networks) solve this with a more sophisticated gating mechanism, allowing information to persist over hundreds of steps.</p>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — LSTM</div>
+      <div class="line-row">
+        <div class="line-code">lstm = nn.<span class="cls">LSTM</span>(
+    input_size=<span class="num">256</span>,
+    hidden_size=<span class="num">512</span>,
+    num_layers=<span class="num">2</span>,
+    batch_first=<span class="kw">True</span>
+)</div>
+        <div class="line-text"><strong>Create an LSTM.</strong> <code>input_size</code> is the embedding dimension. <code>hidden_size</code> is the number of LSTM units. <code>num_layers=2</code> stacks two LSTMs, where the output of the first feeds into the second. <code>batch_first=True</code> makes input shape <code>[batch, seq, features]</code> — much more intuitive than the default.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">output, (h_n, c_n) = <span class="fn">lstm</span>(x)</div>
+        <div class="line-text"><strong>Run the LSTM over a sequence.</strong> <code>x</code> has shape <code>[batch, seq_len, input_size]</code>. Returns: <code>output</code> (hidden states at every timestep, shape <code>[batch, seq, hidden]</code>), <code>h_n</code> (final hidden state), <code>c_n</code> (final cell state — the LSTM's long-term memory).</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">last = output[:, <span class="num">-1</span>, :]</div>
+        <div class="line-text"><strong>Take the last timestep's output for classification.</strong> For tasks like sentiment analysis, you only need the final summary of the sequence — the last hidden state. Index <code>-1</code> selects the last step. Shape becomes <code>[batch, hidden_size]</code>.</div>
+      </div>
+    </div>
+
+    <div class="callout note">
+      <div class="callout-title">RNNs vs Transformers</div>
+      <p>RNNs and LSTMs process sequences step-by-step — they can't parallelise across a sequence. Transformers (next chapters) process the entire sequence at once with <em>attention</em>, making them much faster on modern hardware. Modern LLMs all use transformers. But understanding RNNs builds intuition for what transformers solve.</p>
+    </div>
+
+    <div class="code-block-wrap">
+      <div class="code-block-header">
+        <span class="code-block-label">Complete Code</span>
+        <span class="code-block-title">lstm_classifier.py</span>
+      </div>
+      <pre><code><span class="kw2">import</span> torch
+<span class="kw2">import</span> torch.nn <span class="kw2">as</span> nn
+
+<span class="kw">class</span> <span class="cls">LSTMClassifier</span>(nn.<span class="cls">Module</span>):
+    <span class="df">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, vocab_size, embed_dim, hidden_size, num_classes):
+        <span class="fn">super</span>().<span class="fn">__init__</span>()
+        <span class="kw">self</span>.embedding = nn.<span class="cls">Embedding</span>(vocab_size, embed_dim)
+        <span class="kw">self</span>.lstm = nn.<span class="cls">LSTM</span>(
+            input_size=embed_dim,
+            hidden_size=hidden_size,
+            num_layers=<span class="num">2</span>,
+            batch_first=<span class="kw">True</span>,
+            dropout=<span class="num">0.3</span>
+        )
+        <span class="kw">self</span>.classifier = nn.<span class="cls">Linear</span>(hidden_size, num_classes)
+
+    <span class="df">def</span> <span class="fn">forward</span>(<span class="kw">self</span>, token_ids):
+        x = <span class="kw">self</span>.<span class="fn">embedding</span>(token_ids)       <span class="cm"># [B, S] → [B, S, E]</span>
+        output, (h_n, _) = <span class="kw">self</span>.<span class="fn">lstm</span>(x)    <span class="cm"># Process sequence</span>
+        last = output[:, <span class="num">-1</span>, :]             <span class="cm"># [B, H] — last timestep</span>
+        logits = <span class="kw">self</span>.<span class="fn">classifier</span>(last)      <span class="cm"># [B, num_classes]</span>
+        <span class="kw">return</span> logits
+
+model = <span class="cls">LSTMClassifier</span>(
+    vocab_size=<span class="num">10000</span>, embed_dim=<span class="num">128</span>,
+    hidden_size=<span class="num">256</span>, num_classes=<span class="num">2</span>
+)
+x = torch.<span class="fn">randint</span>(<span class="num">0</span>, <span class="num">10000</span>, (<span class="num">8</span>, <span class="num">64</span>))  <span class="cm"># Batch of 8 sequences, length 64</span>
+<span class="fn">print</span>(<span class="fn">model</span>(x).shape)  <span class="cm"># [8, 2]</span></code></pre>
+    </div>
+  </div>
+
+  <div class="chapter-divider"></div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- CHAPTER 17 — ATTENTION -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="chapter" id="ch17">
+    <div class="chapter-number">Chapter 17</div>
+    <h2>The <span class="highlight">Attention Mechanism</span></h2>
+
+    <p><strong>Attention</strong> is the core innovation of modern AI. Instead of summarising a sequence into a single hidden state (like RNNs), attention lets every position in the output look at every position in the input — directly — and decide how much to "attend" to each one.</p>
+
+    <div class="formula">
+      <div>Attention(Q, K, V) = softmax( QKᵀ / √dₖ ) · V</div>
+      <div class="formula-sub">Q = Queries, K = Keys, V = Values, dₖ = key dimension. The scale √dₖ prevents gradients from vanishing when dₖ is large.</div>
+    </div>
+
+    <div class="analogy">
+      <p>Imagine you're reading "The cat sat because <em>it</em> was tired." Attention lets the network automatically figure out that "it" refers to "cat" — by computing how relevant each word in the sentence is to understanding the word "it".</p>
+      <div class="analogy-source">— What attention solves: long-range dependencies</div>
+    </div>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — Scaled Dot-Product Attention</div>
+      <div class="line-row">
+        <div class="line-code">Q = <span class="fn">query</span>(x)   <span class="cm"># [B, S, dₖ]</span>
+K = <span class="fn">key</span>(x)     <span class="cm"># [B, S, dₖ]</span>
+V = <span class="fn">value</span>(x)   <span class="cm"># [B, S, dᵥ]</span></div>
+        <div class="line-text"><strong>Project input x into Queries, Keys, and Values.</strong> These are three separate linear projections of the same input. The Query asks "what am I looking for?", the Key says "what do I contain?", and the Value says "what information do I carry?".</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">scores = (Q @ K.<span class="fn">transpose</span>(-<span class="num">2</span>, -<span class="num">1</span>)
+         / math.<span class="fn">sqrt</span>(d_k))</div>
+        <div class="line-text"><strong>Compute attention scores.</strong> For each query token, dot-product with every key token — this gives a similarity score. Divide by √d_k to prevent the scores from getting so large that softmax saturates (producing near-zero gradients).</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">scores = scores.<span class="fn">masked_fill</span>(
+    mask == <span class="num">0</span>, <span class="kw">float</span>(<span class="str">'-inf'</span>)
+)</div>
+        <div class="line-text"><strong>Apply a causal mask for language models.</strong> In an LLM, token at position i should only attend to positions ≤ i (the future is unknown). We set future positions to -∞ so they become 0 after softmax. This is the "autoregressive" property.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">weights = F.<span class="fn">softmax</span>(scores, dim=<span class="num">-1</span>)</div>
+        <div class="line-text"><strong>Convert scores to attention weights.</strong> Softmax turns the scores into a probability distribution — how much attention to pay to each position. High score = look here a lot; low score = mostly ignore this.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">output = weights @ V</div>
+        <div class="line-text"><strong>Compute weighted sum of values.</strong> Each output position is a weighted average of all Value vectors, where the weights came from the attention scores. This is how information flows: "focus heavily on the cat when computing the embedding of 'it'".</div>
+      </div>
+    </div>
+
+    <h3>Multi-Head Attention</h3>
+    <p>Instead of one attention computation, we run several in parallel (each "head") with different learned projections. Each head can attend to different aspects of the sequence — syntax, semantics, coreference — simultaneously.</p>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — nn.MultiheadAttention</div>
+      <div class="line-row">
+        <div class="line-code">mha = nn.<span class="cls">MultiheadAttention</span>(
+    embed_dim=<span class="num">512</span>,
+    num_heads=<span class="num">8</span>,
+    batch_first=<span class="kw">True</span>
+)</div>
+        <div class="line-text"><strong>Create multi-head attention.</strong> <code>embed_dim=512</code> is the model dimension. <code>num_heads=8</code> means 8 parallel attention heads, each operating on 512/8=64 dimensions. The outputs are concatenated and projected back to 512. <code>batch_first=True</code> for the standard <code>[batch, seq, dim]</code> convention.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">out, weights = <span class="fn">mha</span>(Q, K, V,
+    attn_mask=mask)</div>
+        <div class="line-text"><strong>Run multi-head attention.</strong> Returns the attended output (same shape as Q) and the attention weight matrix (useful for visualisation). Pass a causal mask via <code>attn_mask</code> for language modelling tasks.</div>
+      </div>
+    </div>
+
+    <div class="code-block-wrap">
+      <div class="code-block-header">
+        <span class="code-block-label">Complete Code</span>
+        <span class="code-block-title">attention.py</span>
+      </div>
+      <pre><code><span class="kw2">import</span> torch
+<span class="kw2">import</span> torch.nn <span class="kw2">as</span> nn
+<span class="kw2">import</span> torch.nn.functional <span class="kw2">as</span> F
+<span class="kw2">import</span> math
+
+<span class="kw">class</span> <span class="cls">SelfAttention</span>(nn.<span class="cls">Module</span>):
+    <span class="df">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, embed_dim, num_heads):
+        <span class="fn">super</span>().<span class="fn">__init__</span>()
+        <span class="kw">self</span>.d_head = embed_dim // num_heads
+        <span class="kw">self</span>.num_heads = num_heads
+        <span class="cm"># One combined linear for Q, K, V (3x for efficiency)</span>
+        <span class="kw">self</span>.qkv = nn.<span class="cls">Linear</span>(embed_dim, <span class="num">3</span> * embed_dim)
+        <span class="kw">self</span>.out = nn.<span class="cls">Linear</span>(embed_dim, embed_dim)
+
+    <span class="df">def</span> <span class="fn">forward</span>(<span class="kw">self</span>, x, causal=<span class="kw">True</span>):
+        B, S, E = x.shape
+        QKV = <span class="kw">self</span>.<span class="fn">qkv</span>(x).<span class="fn">reshape</span>(B, S, <span class="num">3</span>, <span class="kw">self</span>.num_heads, <span class="kw">self</span>.d_head)
+        QKV = QKV.<span class="fn">permute</span>(<span class="num">2</span>, <span class="num">0</span>, <span class="num">3</span>, <span class="num">1</span>, <span class="num">4</span>)  <span class="cm"># [3, B, H, S, D]</span>
+        Q, K, V = QKV[<span class="num">0</span>], QKV[<span class="num">1</span>], QKV[<span class="num">2</span>]
+
+        scores = (Q @ K.<span class="fn">transpose</span>(-<span class="num">2</span>, -<span class="num">1</span>)) / math.<span class="fn">sqrt</span>(<span class="kw">self</span>.d_head)
+
+        <span class="kw">if</span> causal:
+            mask = torch.<span class="fn">tril</span>(torch.<span class="fn">ones</span>(S, S, device=x.device))
+            scores = scores.<span class="fn">masked_fill</span>(mask[<span class="kw">None</span>, <span class="kw">None</span>] == <span class="num">0</span>, <span class="kw">float</span>(<span class="str">'-inf'</span>))
+
+        weights = F.<span class="fn">softmax</span>(scores, dim=<span class="num">-1</span>)
+        out = weights @ V                          <span class="cm"># [B, H, S, D]</span>
+        out = out.<span class="fn">permute</span>(<span class="num">0</span>, <span class="num">2</span>, <span class="num">1</span>, <span class="num">3</span>).<span class="fn">reshape</span>(B, S, E)
+        <span class="kw">return</span> <span class="kw">self</span>.<span class="fn">out</span>(out)</code></pre>
+    </div>
+  </div>
+
+  <div class="chapter-divider"></div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- CHAPTER 18 — TRANSFORMER -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="chapter" id="ch18">
+    <div class="chapter-number">Chapter 18</div>
+    <h2>The <span class="highlight">Transformer</span> Architecture</h2>
+
+    <p>The Transformer was introduced in the 2017 paper "Attention Is All You Need" and is the architecture underlying virtually every modern LLM. It combines multi-head self-attention with a feed-forward network, layer normalisation, and residual connections.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Component</th><th>Purpose</th><th>Key Parameter</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Token Embedding</td><td>Maps token IDs to vectors</td><td>vocab_size × d_model</td></tr>
+          <tr><td>Positional Encoding</td><td>Injects position information</td><td>max_seq_len × d_model</td></tr>
+          <tr><td>Multi-Head Attention</td><td>Attends across the sequence</td><td>num_heads, d_model</td></tr>
+          <tr><td>Feed-Forward Network</td><td>Processes each position independently</td><td>d_ff = 4 × d_model</td></tr>
+          <tr><td>Layer Normalisation</td><td>Stabilises training</td><td>d_model (normalise features)</td></tr>
+          <tr><td>Residual Connection</td><td>Prevents vanishing gradients</td><td>output = sublayer(x) + x</td></tr>
+          <tr><td>LM Head</td><td>Projects to vocab logits</td><td>d_model × vocab_size</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>The Transformer Block</h3>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — Transformer Block</div>
+      <div class="line-row">
+        <div class="line-code"><span class="kw">self</span>.attn  = <span class="cls">SelfAttention</span>(d, h)
+<span class="kw">self</span>.ln1   = nn.<span class="cls">LayerNorm</span>(d)
+<span class="kw">self</span>.ff    = <span class="cls">FeedForward</span>(d)
+<span class="kw">self</span>.ln2   = nn.<span class="cls">LayerNorm</span>(d)</div>
+        <div class="line-text"><strong>Each transformer block has four sub-components.</strong> Self-attention to mix information between positions. Two LayerNorms to stabilise the signal. A feed-forward network to process each position's representation independently (this is where most computation happens). All with residual connections around each sub-component.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">x = x + <span class="kw">self</span>.<span class="fn">attn</span>(
+    <span class="kw">self</span>.<span class="fn">ln1</span>(x)
+)</div>
+        <div class="line-text"><strong>Pre-LayerNorm with residual connection.</strong> The <em>residual connection</em> (<code>x = x + ...</code>) adds the block's output back to its input. This allows gradients to flow unchanged from the output all the way to early layers — crucial for training very deep networks. Pre-norm (normalise before the sublayer) is now more common than post-norm as it's more stable.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">x = x + <span class="kw">self</span>.<span class="fn">ff</span>(
+    <span class="kw">self</span>.<span class="fn">ln2</span>(x)
+)</div>
+        <div class="line-text"><strong>Same residual pattern around the feed-forward network.</strong> The FFN expands to 4× the model dimension, applies a non-linearity (usually GELU), then contracts back. This "bottleneck expansion" gives the network capacity to store factual knowledge in its weights. Famously, researchers have found that different facts can be localised to specific FFN layers.</div>
+      </div>
+    </div>
+
+    <h3>Positional Encoding</h3>
+    <p>Attention is permutation-invariant — it doesn't care about order unless we tell it. Positional encodings inject position information by adding a position-dependent vector to each token's embedding.</p>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — Learnable Positional Embedding</div>
+      <div class="line-row">
+        <div class="line-code"><span class="kw">self</span>.pos_emb = nn.<span class="cls">Embedding</span>(
+    max_seq_len, d_model
+)</div>
+        <div class="line-text"><strong>Learnable position embeddings.</strong> The simplest approach — give each position index (0, 1, 2, …, T-1) its own learnable embedding vector. GPT-2 and GPT-3 use this approach. It's simple and works well. The positions learn semantics like "early in sentence" vs "end of sentence".</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">positions = torch.<span class="fn">arange</span>(<span class="num">0</span>, T)
+x = tok_emb + <span class="kw">self</span>.<span class="fn">pos_emb</span>(positions)</div>
+        <div class="line-text"><strong>Add positional embeddings to token embeddings.</strong> Create position indices 0 to T-1, look them up in the position embedding table, and add element-wise to the token embeddings. Each token now encodes both <em>what</em> it is and <em>where</em> it is.</div>
+      </div>
+    </div>
+
+    <div class="code-block-wrap">
+      <div class="code-block-header">
+        <span class="code-block-label">Complete Code</span>
+        <span class="code-block-title">transformer_block.py</span>
+      </div>
+      <pre><code><span class="kw2">import</span> torch
+<span class="kw2">import</span> torch.nn <span class="kw2">as</span> nn
+<span class="kw2">import</span> torch.nn.functional <span class="kw2">as</span> F
+
+<span class="kw">class</span> <span class="cls">FeedForward</span>(nn.<span class="cls">Module</span>):
+    <span class="df">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, d_model, dropout=<span class="num">0.1</span>):
+        <span class="fn">super</span>().<span class="fn">__init__</span>()
+        <span class="kw">self</span>.net = nn.<span class="cls">Sequential</span>(
+            nn.<span class="cls">Linear</span>(d_model, <span class="num">4</span> * d_model),
+            nn.<span class="cls">GELU</span>(),                         <span class="cm"># Transformers use GELU</span>
+            nn.<span class="cls">Dropout</span>(dropout),
+            nn.<span class="cls">Linear</span>(<span class="num">4</span> * d_model, d_model),
+        )
+    <span class="df">def</span> <span class="fn">forward</span>(<span class="kw">self</span>, x):
+        <span class="kw">return</span> <span class="kw">self</span>.<span class="fn">net</span>(x)
+
+<span class="kw">class</span> <span class="cls">TransformerBlock</span>(nn.<span class="cls">Module</span>):
+    <span class="df">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, d_model, num_heads, dropout=<span class="num">0.1</span>):
+        <span class="fn">super</span>().<span class="fn">__init__</span>()
+        <span class="kw">self</span>.ln1  = nn.<span class="cls">LayerNorm</span>(d_model)
+        <span class="kw">self</span>.attn = nn.<span class="cls">MultiheadAttention</span>(
+            d_model, num_heads,
+            batch_first=<span class="kw">True</span>, dropout=dropout
+        )
+        <span class="kw">self</span>.ln2  = nn.<span class="cls">LayerNorm</span>(d_model)
+        <span class="kw">self</span>.ff   = <span class="cls">FeedForward</span>(d_model, dropout)
+
+    <span class="df">def</span> <span class="fn">forward</span>(<span class="kw">self</span>, x):
+        B, S, _ = x.shape
+        <span class="cm"># Causal mask: lower-triangular (each token attends to itself + past)</span>
+        mask = nn.<span class="fn">Transformer.generate_square_subsequent_mask</span>(
+            S, device=x.device
+        )
+        <span class="cm"># Self-attention sublayer with residual</span>
+        normed = <span class="kw">self</span>.<span class="fn">ln1</span>(x)
+        attn_out, _ = <span class="kw">self</span>.<span class="fn">attn</span>(normed, normed, normed, attn_mask=mask,
+                                  is_causal=<span class="kw">True</span>)
+        x = x + attn_out
+        <span class="cm"># Feed-forward sublayer with residual</span>
+        x = x + <span class="kw">self</span>.<span class="fn">ff</span>(<span class="kw">self</span>.<span class="fn">ln2</span>(x))
+        <span class="kw">return</span> x</code></pre>
+    </div>
+  </div>
+
+  <div class="chapter-divider"></div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- CHAPTER 19 — MINI LLM -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="chapter" id="ch19">
+    <div class="chapter-number">Chapter 19</div>
+    <h2>Building a <span class="highlight">Mini Language Model</span></h2>
+
+    <p>Now we assemble everything into a working GPT-style character-level language model. It predicts the next character in a sequence — tiny enough to train on a laptop, but a real LLM at heart.</p>
+
+    <div class="callout concept">
+      <div class="callout-title">GPT Architecture Overview</div>
+      <p>Token IDs → Embedding + Positional Embedding → N × Transformer Blocks → LayerNorm → Linear (LM Head) → Logits over vocabulary. Training objective: predict the next token at every position (cross-entropy loss). Generation: sample from the predicted distribution autoregressively.</p>
+    </div>
+
+    <div class="code-block-wrap">
+      <div class="code-block-header">
+        <span class="code-block-label">Complete Code</span>
+        <span class="code-block-title">mini_gpt.py</span>
+      </div>
+      <pre><code><span class="kw2">import</span> torch
+<span class="kw2">import</span> torch.nn <span class="kw2">as</span> nn
+<span class="kw2">import</span> torch.nn.functional <span class="kw2">as</span> F
+
+<span class="cm"># ── CONFIG ─────────────────────────────────────────────────</span>
+VOCAB_SIZE  = <span class="num">65</span>      <span class="cm"># Characters in Shakespeare</span>
+D_MODEL     = <span class="num">128</span>     <span class="cm"># Model dimension</span>
+N_HEADS     = <span class="num">4</span>       <span class="cm"># Attention heads</span>
+N_LAYERS    = <span class="num">4</span>       <span class="cm"># Transformer blocks</span>
+MAX_SEQ     = <span class="num">256</span>     <span class="cm"># Context window (max tokens)</span>
+DROPOUT     = <span class="num">0.1</span>
+
+<span class="cm"># ── BUILDING BLOCKS ────────────────────────────────────────</span>
+<span class="kw">class</span> <span class="cls">FeedForward</span>(nn.<span class="cls">Module</span>):
+    <span class="df">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, d):
+        <span class="fn">super</span>().<span class="fn">__init__</span>()
+        <span class="kw">self</span>.net = nn.<span class="cls">Sequential</span>(
+            nn.<span class="cls">Linear</span>(d, <span class="num">4</span>*d), nn.<span class="cls">GELU</span>(),
+            nn.<span class="cls">Dropout</span>(DROPOUT),
+            nn.<span class="cls">Linear</span>(<span class="num">4</span>*d, d),
+        )
+    <span class="df">def</span> <span class="fn">forward</span>(<span class="kw">self</span>, x): <span class="kw">return</span> <span class="kw">self</span>.<span class="fn">net</span>(x)
+
+<span class="kw">class</span> <span class="cls">Block</span>(nn.<span class="cls">Module</span>):
+    <span class="df">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, d, h):
+        <span class="fn">super</span>().<span class="fn">__init__</span>()
+        <span class="kw">self</span>.ln1  = nn.<span class="cls">LayerNorm</span>(d)
+        <span class="kw">self</span>.attn = nn.<span class="cls">MultiheadAttention</span>(d, h, batch_first=<span class="kw">True</span>,
+                                           dropout=DROPOUT)
+        <span class="kw">self</span>.ln2  = nn.<span class="cls">LayerNorm</span>(d)
+        <span class="kw">self</span>.ff   = <span class="cls">FeedForward</span>(d)
+
+    <span class="df">def</span> <span class="fn">forward</span>(<span class="kw">self</span>, x):
+        S = x.size(<span class="num">1</span>)
+        mask = nn.<span class="fn">Transformer.generate_square_subsequent_mask</span>(S, device=x.device)
+        a, _ = <span class="kw">self</span>.<span class="fn">attn</span>(<span class="kw">self</span>.<span class="fn">ln1</span>(x), <span class="kw">self</span>.<span class="fn">ln1</span>(x), <span class="kw">self</span>.<span class="fn">ln1</span>(x),
+                         attn_mask=mask, is_causal=<span class="kw">True</span>)
+        x = x + a
+        x = x + <span class="kw">self</span>.<span class="fn">ff</span>(<span class="kw">self</span>.<span class="fn">ln2</span>(x))
+        <span class="kw">return</span> x
+
+<span class="cm"># ── FULL MODEL ─────────────────────────────────────────────</span>
+<span class="kw">class</span> <span class="cls">MiniGPT</span>(nn.<span class="cls">Module</span>):
+    <span class="df">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>):
+        <span class="fn">super</span>().<span class="fn">__init__</span>()
+        <span class="kw">self</span>.tok_emb = nn.<span class="cls">Embedding</span>(VOCAB_SIZE, D_MODEL)
+        <span class="kw">self</span>.pos_emb = nn.<span class="cls">Embedding</span>(MAX_SEQ, D_MODEL)
+        <span class="kw">self</span>.blocks  = nn.<span class="cls">Sequential</span>(
+            *[<span class="cls">Block</span>(D_MODEL, N_HEADS) <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(N_LAYERS)]
+        )
+        <span class="kw">self</span>.ln_f    = nn.<span class="cls">LayerNorm</span>(D_MODEL)          <span class="cm"># Final layer norm</span>
+        <span class="kw">self</span>.lm_head = nn.<span class="cls">Linear</span>(D_MODEL, VOCAB_SIZE,  <span class="cm"># LM head</span>
+                                    bias=<span class="kw">False</span>)
+        <span class="cm"># Weight tying: share embedding and LM head weights</span>
+        <span class="kw">self</span>.lm_head.weight = <span class="kw">self</span>.tok_emb.weight
+
+    <span class="df">def</span> <span class="fn">forward</span>(<span class="kw">self</span>, idx, targets=<span class="kw">None</span>):
+        B, T = idx.shape
+        positions = torch.<span class="fn">arange</span>(<span class="num">0</span>, T, device=idx.device)
+        x = <span class="kw">self</span>.<span class="fn">tok_emb</span>(idx) + <span class="kw">self</span>.<span class="fn">pos_emb</span>(positions)
+        x = <span class="kw">self</span>.<span class="fn">blocks</span>(x)
+        x = <span class="kw">self</span>.<span class="fn">ln_f</span>(x)
+        logits = <span class="kw">self</span>.<span class="fn">lm_head</span>(x)   <span class="cm"># [B, T, vocab_size]</span>
+
+        loss = <span class="kw">None</span>
+        <span class="kw">if</span> targets <span class="kw">is not</span> <span class="kw">None</span>:
+            <span class="cm"># Flatten for cross-entropy: [B*T, vocab] vs [B*T]</span>
+            loss = F.<span class="fn">cross_entropy</span>(
+                logits.<span class="fn">view</span>(-<span class="num">1</span>, VOCAB_SIZE),
+                targets.<span class="fn">view</span>(-<span class="num">1</span>)
+            )
+        <span class="kw">return</span> logits, loss
+
+    <span class="cm"># ── GENERATION ─────────────────────────────────────────</span>
+    @torch.<span class="fn">no_grad</span>()
+    <span class="df">def</span> <span class="fn">generate</span>(<span class="kw">self</span>, idx, max_new_tokens, temperature=<span class="num">1.0</span>):
+        <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(max_new_tokens):
+            <span class="cm"># Crop to context window</span>
+            idx_cond = idx[:, -MAX_SEQ:]
+            logits, _ = <span class="kw">self</span>(<span class="fn">idx_cond</span>)
+            <span class="cm"># Take logits at last position, scale by temperature</span>
+            logits = logits[:, <span class="num">-1</span>, :] / temperature
+            probs = F.<span class="fn">softmax</span>(logits, dim=<span class="num">-1</span>)
+            <span class="cm"># Sample from the distribution</span>
+            next_tok = torch.<span class="fn">multinomial</span>(probs, num_samples=<span class="num">1</span>)
+            idx = torch.<span class="fn">cat</span>([idx, next_tok], dim=<span class="num">1</span>)
+        <span class="kw">return</span> idx
+
+<span class="cm"># Count parameters</span>
+model = <span class="cls">MiniGPT</span>()
+n_params = <span class="fn">sum</span>(p.<span class="fn">numel</span>() <span class="kw">for</span> p <span class="kw">in</span> model.<span class="fn">parameters</span>())
+<span class="fn">print</span>(f<span class="str">"MiniGPT: {n_params/1e6:.2f}M parameters"</span>)
+<span class="cm"># ~0.8M parameters — tiny but a real transformer!</span></code></pre>
+    </div>
+  </div>
+
+  <div class="chapter-divider"></div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- CHAPTER 20 — SAVING AND LOADING -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="chapter" id="ch20">
+    <div class="chapter-number">Chapter 20</div>
+    <h2><span class="highlight">Saving &amp; Loading</span> Models</h2>
+
+    <p>After training, you need to save your model's learned parameters so you can use them later without retraining. PyTorch provides two approaches; the recommended one uses the <em>state dict</em>.</p>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — Saving &amp; Loading</div>
+      <div class="line-row">
+        <div class="line-code">torch.<span class="fn">save</span>(model.<span class="fn">state_dict</span>(),
+     <span class="str">'model.pth'</span>)</div>
+        <div class="line-text"><strong>Save only the model's parameters (recommended).</strong> <code>state_dict()</code> returns an OrderedDict of all the learnable parameter tensors — weight matrices, biases, batch norm statistics. The <code>.pth</code> extension is convention. This is portable: you can load it into any architecture that matches.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">model = <span class="cls">MyModel</span>()
+model.<span class="fn">load_state_dict</span>(
+    torch.<span class="fn">load</span>(<span class="str">'model.pth'</span>)
+)</div>
+        <div class="line-text"><strong>Load parameters back.</strong> First recreate the model architecture (it must match the saved one exactly). Then call <code>load_state_dict()</code> to populate its parameters with the saved values. The model is now restored to the state it was in when you saved it.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">model.<span class="fn">load_state_dict</span>(
+    torch.<span class="fn">load</span>(<span class="str">'model.pth'</span>,
+        map_location=<span class="str">'cpu'</span>)
+)</div>
+        <div class="line-text"><strong>Load onto a specific device.</strong> If you saved on a GPU but are loading on a CPU (or a different GPU), use <code>map_location</code> to redirect. <code>'cpu'</code> loads to CPU. <code>'cuda:0'</code> loads to the first GPU.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">checkpoint = {
+  <span class="str">'epoch'</span>: epoch,
+  <span class="str">'model'</span>: model.<span class="fn">state_dict</span>(),
+  <span class="str">'optim'</span>: optim.<span class="fn">state_dict</span>(),
+  <span class="str">'loss'</span>: best_loss,
+}
+torch.<span class="fn">save</span>(checkpoint, <span class="str">'ckpt.pth'</span>)</div>
+        <div class="line-text"><strong>Save a full training checkpoint.</strong> For long training runs, save the optimiser state too — this allows resuming training from the exact same point, including momentum buffers. Also save epoch and loss for bookkeeping.</div>
+      </div>
+    </div>
+
+    <div class="code-block-wrap">
+      <div class="code-block-header">
+        <span class="code-block-label">Complete Code</span>
+        <span class="code-block-title">save_load.py</span>
+      </div>
+      <pre><code><span class="kw2">import</span> torch
+<span class="kw2">import</span> torch.nn <span class="kw2">as</span> nn
+<span class="kw2">import</span> torch.optim <span class="kw2">as</span> optim
+
+model = nn.<span class="cls">Linear</span>(<span class="num">10</span>, <span class="num">5</span>)
+optimizer = optim.<span class="cls">Adam</span>(model.<span class="fn">parameters</span>())
+
+<span class="cm"># ── SAVE ────────────────────────────────────────────────</span>
+torch.<span class="fn">save</span>(model.<span class="fn">state_dict</span>(), <span class="str">'model_weights.pth'</span>)
+
+<span class="cm"># Save full checkpoint (for resumable training)</span>
+torch.<span class="fn">save</span>({
+    <span class="str">'epoch'</span>: <span class="num">42</span>,
+    <span class="str">'model_state_dict'</span>: model.<span class="fn">state_dict</span>(),
+    <span class="str">'optimizer_state_dict'</span>: optimizer.<span class="fn">state_dict</span>(),
+    <span class="str">'loss'</span>: <span class="num">0.034</span>,
+}, <span class="str">'checkpoint.pth'</span>)
+
+<span class="cm"># ── LOAD ────────────────────────────────────────────────</span>
+<span class="cm"># Load weights only</span>
+model2 = nn.<span class="cls">Linear</span>(<span class="num">10</span>, <span class="num">5</span>)
+model2.<span class="fn">load_state_dict</span>(
+    torch.<span class="fn">load</span>(<span class="str">'model_weights.pth'</span>, map_location=<span class="str">'cpu'</span>)
+)
+model2.<span class="fn">eval</span>()   <span class="cm"># Always eval() after loading for inference</span>
+
+<span class="cm"># Load full checkpoint</span>
+ckpt = torch.<span class="fn">load</span>(<span class="str">'checkpoint.pth'</span>)
+model3 = nn.<span class="cls">Linear</span>(<span class="num">10</span>, <span class="num">5</span>)
+opt3   = optim.<span class="cls">Adam</span>(model3.<span class="fn">parameters</span>())
+model3.<span class="fn">load_state_dict</span>(ckpt[<span class="str">'model_state_dict'</span>])
+opt3.<span class="fn">load_state_dict</span>(ckpt[<span class="str">'optimizer_state_dict'</span>])
+start_epoch = ckpt[<span class="str">'epoch'</span>] + <span class="num">1</span>   <span class="cm"># Resume from next epoch</span></code></pre>
+    </div>
+  </div>
+
+  <div class="chapter-divider"></div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- CHAPTER 21 — GPU TRAINING -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="chapter" id="ch21">
+    <div class="chapter-number">Chapter 21</div>
+    <h2><span class="highlight">GPU Training</span></h2>
+
+    <p>Moving to a GPU can speed up training by 10–100× for large models. PyTorch's device system makes this almost seamless — you just move your model and data to the same device.</p>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — Device Management</div>
+      <div class="line-row">
+        <div class="line-code">device = <span class="str">'cuda'</span> <span class="kw">if</span> torch.cuda.<span class="fn">is_available</span>() <span class="kw">else</span> <span class="str">'cpu'</span></div>
+        <div class="line-text"><strong>Detect the best available device.</strong> This one-liner makes your code portable — it uses a GPU if one is available, otherwise gracefully falls back to CPU. Always define <code>device</code> at the top of your script this way.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">model = model.<span class="fn">to</span>(device)</div>
+        <div class="line-text"><strong>Move all model parameters to the device.</strong> This transfers all weight matrices and biases to GPU memory. After this, all computations in the forward pass happen on the GPU. This is in-place but returns self, so the assignment is for clarity.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">X, y = X.<span class="fn">to</span>(device), y.<span class="fn">to</span>(device)</div>
+        <div class="line-text"><strong>Move data batches to the device.</strong> Model and data must be on the same device. Do this inside the training loop for each batch. Typically the DataLoader runs on CPU and you move each batch to GPU just before the forward pass.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">device = <span class="str">'mps'</span>  <span class="cm"># Apple Silicon</span>
+device = <span class="str">'cuda:1'</span>  <span class="cm"># 2nd GPU</span></div>
+        <div class="line-text"><strong>Other devices.</strong> <code>'mps'</code> uses Apple's Metal Performance Shaders on M1/M2/M3 Macs — much faster than CPU. <code>'cuda:1'</code> selects the second GPU (zero-indexed) on multi-GPU machines.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code"><span class="kw">with</span> torch.cuda.<span class="fn">amp.autocast</span>():
+    logits = <span class="fn">model</span>(X)</div>
+        <div class="line-text"><strong>Automatic Mixed Precision (AMP).</strong> Uses float16 for most operations (2× faster, 2× less VRAM) while keeping float32 where precision matters. The <code>autocast</code> context manager handles this automatically. Combined with <code>GradScaler</code>, this is the standard way to train large models efficiently on modern GPUs.</div>
+      </div>
+    </div>
+
+    <div class="code-block-wrap">
+      <div class="code-block-header">
+        <span class="code-block-label">Complete Code</span>
+        <span class="code-block-title">gpu_training.py</span>
+      </div>
+      <pre><code><span class="kw2">import</span> torch
+<span class="kw2">import</span> torch.nn <span class="kw2">as</span> nn
+<span class="kw2">import</span> torch.optim <span class="kw2">as</span> optim
+
+<span class="cm"># ── DEVICE SETUP ───────────────────────────────────────────</span>
+<span class="kw">if</span> torch.cuda.<span class="fn">is_available</span>():
+    device = torch.device(<span class="str">'cuda'</span>)
+<span class="kw">elif</span> torch.backends.mps.<span class="fn">is_available</span>():
+    device = torch.device(<span class="str">'mps'</span>)   <span class="cm"># Apple Silicon</span>
+<span class="kw">else</span>:
+    device = torch.device(<span class="str">'cpu'</span>)
+<span class="fn">print</span>(f<span class="str">"Using: {device}"</span>)
+
+<span class="cm"># ── MOVE MODEL ─────────────────────────────────────────────</span>
+model = nn.<span class="cls">Sequential</span>(
+    nn.<span class="cls">Linear</span>(<span class="num">784</span>, <span class="num">256</span>), nn.<span class="cls">ReLU</span>(),
+    nn.<span class="cls">Linear</span>(<span class="num">256</span>, <span class="num">10</span>)
+).<span class="fn">to</span>(device)
+
+optimizer = optim.<span class="cls">AdamW</span>(model.<span class="fn">parameters</span>(), lr=<span class="num">3e-4</span>)
+criterion = nn.<span class="cls">CrossEntropyLoss</span>()
+scaler    = torch.cuda.amp.<span class="cls">GradScaler</span>()  <span class="cm"># For AMP</span>
+
+<span class="cm"># ── TRAINING WITH AMP ──────────────────────────────────────</span>
+<span class="df">def</span> <span class="fn">train_step</span>(X, y):
+    X, y = X.<span class="fn">to</span>(device), y.<span class="fn">to</span>(device)
+    optimizer.<span class="fn">zero_grad</span>()
+
+    <span class="kw">with</span> torch.cuda.amp.<span class="fn">autocast</span>():       <span class="cm"># Use fp16 where safe</span>
+        logits = <span class="fn">model</span>(X)
+        loss = <span class="fn">criterion</span>(logits, y)
+
+    scaler.<span class="fn">scale</span>(loss).<span class="fn">backward</span>()         <span class="cm"># Scaled backward</span>
+    scaler.<span class="fn">step</span>(optimizer)                 <span class="cm"># Unscale and step</span>
+    scaler.<span class="fn">update</span>()                        <span class="cm"># Update scaler</span>
+    <span class="kw">return</span> loss.<span class="fn">item</span>()</code></pre>
+    </div>
+  </div>
+
+  <div class="chapter-divider"></div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- CHAPTER 22 — FINE-TUNING -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="chapter" id="ch22">
+    <div class="chapter-number">Chapter 22</div>
+    <h2><span class="highlight">Fine-tuning</span> Pre-trained LLMs</h2>
+
+    <p>Training an LLM from scratch requires enormous compute. Instead, <strong>fine-tuning</strong> takes a pre-trained model (which has already learned vast world knowledge) and adapts it to a specific task with a small dataset. This is how chatbots, code assistants, and specialist models are built in practice.</p>
+
+    <h3>Full Fine-tuning</h3>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — Hugging Face Full Fine-tune</div>
+      <div class="line-row">
+        <div class="line-code"><span class="kw2">from</span> transformers <span class="kw2">import</span>
+  AutoModelForCausalLM,
+  AutoTokenizer</div>
+        <div class="line-text"><strong>Load Hugging Face Transformers.</strong> The <code>transformers</code> library wraps thousands of pre-trained models (GPT-2, LLaMA, Mistral, etc.) with a consistent API. <code>AutoModel</code> classes automatically select the right architecture for a given model checkpoint.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">model = <span class="cls">AutoModelForCausalLM</span>.<span class="fn">from_pretrained</span>(
+    <span class="str">"gpt2"</span>
+)</div>
+        <div class="line-text"><strong>Download and load a pre-trained model.</strong> This downloads GPT-2's weights (~500MB) from the Hugging Face Hub and loads them into a PyTorch model. All 124M parameters come pre-trained on a large text corpus — you're starting with a model that already "knows" a lot about language.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">tokenizer = <span class="cls">AutoTokenizer</span>.<span class="fn">from_pretrained</span>(
+    <span class="str">"gpt2"</span>
+)</div>
+        <div class="line-text"><strong>Load the matching tokenizer.</strong> Every LLM has a specific tokenizer — it must match the model. The tokenizer converts text to token IDs (integers the model understands) and vice versa. GPT-2 uses BPE (Byte-Pair Encoding) with a 50,257-token vocabulary.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">tokens = <span class="fn">tokenizer</span>(text,
+    return_tensors=<span class="str">"pt"</span>
+)</div>
+        <div class="line-text"><strong>Tokenise input text.</strong> <code>return_tensors="pt"</code> returns PyTorch tensors. The result contains <code>input_ids</code> (token IDs) and <code>attention_mask</code> (1 for real tokens, 0 for padding). This is what you feed into the model.</div>
+      </div>
+    </div>
+
+    <h3>Parameter-Efficient Fine-tuning (LoRA)</h3>
+
+    <p>Fine-tuning all 7B parameters of a modern LLM is prohibitively expensive. <strong>LoRA (Low-Rank Adaptation)</strong> adds small trainable adapters alongside frozen pre-trained weights, reducing trainable parameters by 99%+ while achieving comparable results.</p>
+
+    <div class="line-explain">
+      <div class="line-explain-header">Python — LoRA with PEFT</div>
+      <div class="line-row">
+        <div class="line-code"><span class="kw2">from</span> peft <span class="kw2">import</span> LoraConfig,
+              get_peft_model</div>
+        <div class="line-text"><strong>Import PEFT — Parameter-Efficient Fine-Tuning library.</strong> This is Hugging Face's library that implements LoRA and other PEFT methods. Install with <code>pip install peft</code>.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">config = <span class="cls">LoraConfig</span>(
+    r=<span class="num">16</span>,
+    lora_alpha=<span class="num">32</span>,
+    target_modules=[<span class="str">"q_proj"</span>, <span class="str">"v_proj"</span>]
+)</div>
+        <div class="line-text"><strong>Configure LoRA.</strong> <code>r</code> is the rank — smaller means fewer parameters (faster, more regularised). <code>lora_alpha</code> controls the learning rate scaling. <code>target_modules</code> specifies which layers get adapters — typically the query and value projections of attention. Only these tiny adapters are trained; the massive pre-trained weights stay frozen.</div>
+      </div>
+      <div class="line-row">
+        <div class="line-code">model = <span class="fn">get_peft_model</span>(
+    base_model, config
+)</div>
+        <div class="line-text"><strong>Wrap the base model with LoRA adapters.</strong> This inserts tiny trainable matrices alongside the frozen weights. Call <code>model.print_trainable_parameters()</code> to see how few parameters you're actually training — typically under 1% of the total.</div>
+      </div>
+    </div>
+
+    <div class="code-block-wrap">
+      <div class="code-block-header">
+        <span class="code-block-label">Complete Code</span>
+        <span class="code-block-title">fine_tune_lora.py</span>
+      </div>
+      <pre><code><span class="cm"># pip install transformers peft datasets accelerate</span>
+<span class="kw2">import</span> torch
+<span class="kw2">from</span> transformers <span class="kw2">import</span> AutoModelForCausalLM, AutoTokenizer, TrainingArguments
+<span class="kw2">from</span> peft <span class="kw2">import</span> LoraConfig, get_peft_model
+<span class="kw2">from</span> trl <span class="kw2">import</span> SFTTrainer   <span class="cm"># Supervised fine-tuning trainer</span>
+
+MODEL_ID = <span class="str">"gpt2"</span>   <span class="cm"># or "mistralai/Mistral-7B-v0.1" etc.</span>
+
+<span class="cm"># ── 1. Load base model and tokenizer ───────────────────────</span>
+tokenizer = <span class="cls">AutoTokenizer</span>.<span class="fn">from_pretrained</span>(MODEL_ID)
+tokenizer.pad_token = tokenizer.eos_token   <span class="cm"># GPT2 has no pad token</span>
+
+model = <span class="cls">AutoModelForCausalLM</span>.<span class="fn">from_pretrained</span>(
+    MODEL_ID,
+    torch_dtype=torch.float16,              <span class="cm"># Load in fp16 to save memory</span>
+    device_map=<span class="str">"auto"</span>                       <span class="cm"># Auto-place on available GPUs</span>
+)
+
+<span class="cm"># ── 2. Configure LoRA ──────────────────────────────────────</span>
+lora_config = <span class="cls">LoraConfig</span>(
+    r=<span class="num">16</span>,                          <span class="cm"># Rank of the adapter matrices</span>
+    lora_alpha=<span class="num">32</span>,                  <span class="cm"># Scaling factor</span>
+    target_modules=[<span class="str">"c_attn"</span>],    <span class="cm"># GPT-2 attention weights</span>
+    lora_dropout=<span class="num">0.1</span>,
+    bias=<span class="str">"none"</span>,
+    task_type=<span class="str">"CAUSAL_LM"</span>
+)
+
+model = <span class="fn">get_peft_model</span>(model, lora_config)
+model.<span class="fn">print_trainable_parameters</span>()
+<span class="cm"># e.g. "trainable params: 294,912 || all params: 124,735,488 || 0.24%"</span>
+
+<span class="cm"># ── 3. Train ───────────────────────────────────────────────</span>
+training_args = <span class="cls">TrainingArguments</span>(
+    output_dir=<span class="str">"./ft_output"</span>,
+    num_train_epochs=<span class="num">3</span>,
+    per_device_train_batch_size=<span class="num">4</span>,
+    learning_rate=<span class="num">2e-4</span>,
+    fp16=<span class="kw">True</span>,
+    logging_steps=<span class="num">10</span>,
+    save_strategy=<span class="str">"epoch"</span>
+)
+
+<span class="cm"># SFTTrainer handles data formatting for chat/instruction datasets</span>
+<span class="cm"># trainer = SFTTrainer(model=model, args=training_args, ...)</span>
+<span class="cm"># trainer.train()</span></code></pre>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-title">The Journey from Here</div>
+      <p>You've now covered the entire stack — from tensors and autograd, through classification networks and CNNs, all the way to attention, transformers, and fine-tuning language models. The next steps are: <strong>(1)</strong> Train the MiniGPT on Shakespeare text (Karpathy's nanoGPT tutorial). <strong>(2)</strong> Fine-tune GPT-2 on your own data. <strong>(3)</strong> Explore RLHF and instruction tuning. <strong>(4)</strong> Dive into efficient inference (quantisation, vLLM).</p>
+    </div>
+
+    <div class="code-block-wrap">
+      <div class="code-block-header">
+        <span class="code-block-label">Quick Reference</span>
+        <span class="code-block-title">cheat_sheet.py</span>
+      </div>
+      <pre><code><span class="cm"># ═══════════════════════════════════════════════════════════
+# PYTORCH CHEAT SHEET
+# ═══════════════════════════════════════════════════════════</span>
+
+<span class="cm"># Tensor ops</span>
+x.<span class="fn">shape</span>          <span class="cm"># Get shape</span>
+x.<span class="fn">to</span>(device)     <span class="cm"># Move to GPU/CPU</span>
+x.<span class="fn">detach</span>()       <span class="cm"># Detach from computation graph</span>
+x.<span class="fn">item</span>()         <span class="cm"># Scalar tensor → Python float</span>
+x.<span class="fn">numpy</span>()        <span class="cm"># Tensor → NumPy (CPU only)</span>
+
+<span class="cm"># Model pattern</span>
+model = <span class="cls">MyModel</span>().<span class="fn">to</span>(device)
+optimizer = optim.<span class="cls">AdamW</span>(model.<span class="fn">parameters</span>(), lr=<span class="num">3e-4</span>)
+criterion = nn.<span class="cls">CrossEntropyLoss</span>()
+
+<span class="cm"># Training step (4-beat rhythm)</span>
+optimizer.<span class="fn">zero_grad</span>()          <span class="cm"># 1. Clear gradients</span>
+loss = <span class="fn">criterion</span>(<span class="fn">model</span>(X), y)  <span class="cm"># 2. Forward + loss</span>
+loss.<span class="fn">backward</span>()                <span class="cm"># 3. Backprop</span>
+optimizer.<span class="fn">step</span>()               <span class="cm"># 4. Update weights</span>
+
+<span class="cm"># Inference</span>
+model.<span class="fn">eval</span>()
+<span class="kw">with</span> torch.<span class="fn">no_grad</span>():
+    preds = <span class="fn">model</span>(X).<span class="fn">argmax</span>(dim=-<span class="num">1</span>)
+
+<span class="cm"># Saving / Loading</span>
+torch.<span class="fn">save</span>(model.<span class="fn">state_dict</span>(), <span class="str">'model.pth'</span>)
+model.<span class="fn">load_state_dict</span>(torch.<span class="fn">load</span>(<span class="str">'model.pth'</span>))
+
+<span class="cm"># Device detection</span>
+device = <span class="str">'cuda'</span> <span class="kw">if</span> torch.cuda.<span class="fn">is_available</span>() <span class="kw">else</span> <span class="str">'cpu'</span></code></pre>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<script>
+  // Highlight active sidebar link on scroll
+  const links = document.querySelectorAll('.nav-link');
+  const chapters = document.querySelectorAll('.chapter, .hero');
+  const sidebar = document.getElementById('sidebar');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        links.forEach(link => {
+          link.classList.toggle('active', link.getAttribute('href') === `#${id}`);
+        });
+      }
+    });
+  }, { threshold: 0.2, rootMargin: '-10% 0px -80% 0px' });
+
+  chapters.forEach(ch => { if (ch.id) observer.observe(ch); });
+</script>
+</body>
+</html>

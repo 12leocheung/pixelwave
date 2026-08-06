@@ -1,0 +1,1755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DUSTLINE — one drives, one shoots</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --void:#0b0d11; --panel:#141922; --panel2:#1b2230; --edge:#26303f;
+  --bone:#e9e5da; --mute:#7d8899;
+  --driver:#f5a623; --gunner:#35d0d8;
+  --danger:#ff3b4e; --ok:#7ee081;
+  --red:#e4533d; --blue:#4a7fe0;
+  --display:'Oxanium',system-ui,sans-serif;
+  --data:'IBM Plex Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--void);color:var(--bone);font-family:var(--display)}
+canvas{display:block}
+#gl{position:fixed;inset:0}
+button{font-family:inherit;color:inherit;cursor:pointer;border:none;background:none}
+button:focus-visible,input:focus-visible{outline:2px solid var(--gunner);outline-offset:2px}
+input{font-family:inherit;color:inherit;background:none;border:none}
+
+/* ---------- shared screen chrome ---------- */
+.screen{position:fixed;inset:0;display:none;place-items:center;padding:24px;
+  background:radial-gradient(ellipse at 50% 120%, rgba(20,26,38,.35), rgba(6,8,11,.9) 70%);
+  overflow-y:auto}
+.screen.on{display:grid}
+.shell{width:min(980px,100%);}
+.eyebrow{font-family:var(--data);font-size:11px;letter-spacing:.34em;color:var(--mute);text-transform:uppercase}
+.rule{height:1px;background:var(--edge);margin:14px 0}
+
+/* ---------- menu ---------- */
+.wordmark{font-size:clamp(52px,11vw,120px);font-weight:800;letter-spacing:-.03em;line-height:.86}
+.wordmark span{color:var(--driver)}
+.wordmark span+span{color:var(--gunner)}
+.tagline{font-family:var(--data);font-size:13px;color:var(--mute);margin-top:12px;letter-spacing:.06em}
+.menu-grid{display:grid;grid-template-columns:1fr 340px;gap:28px;align-items:end;margin-top:34px}
+@media(max-width:820px){.menu-grid{grid-template-columns:1fr;align-items:stretch}}
+.card{background:linear-gradient(180deg,rgba(27,34,48,.82),rgba(15,19,26,.9));
+  border:1px solid var(--edge);border-radius:4px;padding:18px}
+.field{margin-bottom:14px}
+.field>label{display:block;font-family:var(--data);font-size:10px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--mute);margin-bottom:6px}
+.textin{width:100%;background:var(--void);border:1px solid var(--edge);border-radius:3px;
+  padding:10px 12px;font-family:var(--data);font-size:14px;letter-spacing:.12em}
+.seg{display:flex;gap:4px;flex-wrap:wrap}
+.seg button{flex:1;min-width:52px;padding:9px 4px;border:1px solid var(--edge);border-radius:3px;
+  font-family:var(--data);font-size:12px;color:var(--mute);background:var(--void);transition:.14s}
+.seg button:hover{border-color:var(--mute);color:var(--bone)}
+.seg button.sel{background:var(--bone);color:var(--void);border-color:var(--bone);font-weight:600}
+.modelist{display:grid;gap:6px}
+.modelist button{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;
+  text-align:left;padding:11px 13px;border:1px solid var(--edge);border-radius:3px;background:var(--void);transition:.14s}
+.modelist button:hover{border-color:var(--mute)}
+.modelist button.sel{border-color:var(--driver);background:rgba(245,166,35,.07)}
+.mode-key{font-family:var(--data);font-size:10px;letter-spacing:.14em;color:var(--mute);
+  border:1px solid var(--edge);border-radius:2px;padding:3px 6px}
+.modelist button.sel .mode-key{color:var(--driver);border-color:var(--driver)}
+.mode-name{font-weight:600;font-size:14px}
+.mode-desc{font-family:var(--data);font-size:11px;color:var(--mute);margin-top:2px}
+.btn{display:block;width:100%;padding:13px;border-radius:3px;font-weight:800;
+  font-size:14px;letter-spacing:.14em;text-transform:uppercase;transition:.14s}
+.btn-primary{background:var(--driver);color:#1a1206}
+.btn-primary:hover{filter:brightness(1.12)}
+.btn-ghost{border:1px solid var(--edge);color:var(--mute)}
+.btn-ghost:hover{border-color:var(--bone);color:var(--bone)}
+.btn:disabled{opacity:.35;cursor:not-allowed;filter:none}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.note{font-family:var(--data);font-size:11px;color:var(--mute);margin-top:10px;line-height:1.6}
+.note b{color:var(--bone);font-weight:600}
+
+/* ---------- lobby: the pit lane ---------- */
+.lobby-top{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap}
+.code-slab{border:1px solid var(--edge);border-radius:4px;padding:10px 16px;background:var(--panel);text-align:right}
+.code-slab .val{font-family:var(--data);font-size:30px;font-weight:600;letter-spacing:.34em;color:var(--driver)}
+.pit{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px}
+@media(max-width:820px){.pit{grid-template-columns:1fr}}
+.pit-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.pit-tag{font-family:var(--data);font-size:11px;letter-spacing:.24em;font-weight:600}
+.pit-team[data-team="0"] .pit-tag{color:var(--red)}
+.pit-team[data-team="1"] .pit-tag{color:var(--blue)}
+.pit-count{font-family:var(--data);font-size:11px;color:var(--mute)}
+.pit-rows{display:grid;gap:7px}
+.chassis{display:grid;grid-template-columns:44px 1fr 1fr;gap:1px;background:var(--edge);
+  border:1px solid var(--edge);border-radius:3px;overflow:hidden}
+.livery{background:var(--panel2);display:grid;place-items:center;font-family:var(--data);
+  font-size:16px;font-weight:600;color:var(--mute)}
+.pit-team[data-team="0"] .livery{box-shadow:inset 3px 0 0 var(--red)}
+.pit-team[data-team="1"] .livery{box-shadow:inset 3px 0 0 var(--blue)}
+.bay{background:var(--panel);padding:9px 11px;text-align:left;transition:.14s;min-height:52px}
+.bay:hover{background:var(--panel2)}
+.bay-role{display:block;font-family:var(--data);font-size:9px;letter-spacing:.2em;text-transform:uppercase}
+.bay[data-seat="driver"] .bay-role{color:var(--driver)}
+.bay[data-seat="gunner"] .bay-role{color:var(--gunner)}
+.bay-name{display:block;font-size:13px;margin-top:3px;color:var(--mute)}
+.bay.filled .bay-name{color:var(--bone)}
+.bay.bot .bay-name{color:var(--mute);font-style:italic}
+.bay.mine{background:rgba(233,229,218,.1)}
+.bay.mine .bay-name{color:var(--bone);font-weight:600}
+.lobby-foot{display:flex;gap:10px;margin-top:22px;align-items:center;flex-wrap:wrap}
+.lobby-foot .btn{width:auto;padding:13px 28px}
+.status{font-family:var(--data);font-size:12px;color:var(--mute);flex:1;min-width:200px}
+
+/* ---------- HUD ---------- */
+#hud{position:fixed;inset:0;display:none;pointer-events:none;font-family:var(--data)}
+#hud.on{display:block}
+.hud-corner{position:absolute;padding:16px}
+.tl{top:0;left:0} .tr{top:0;right:0;text-align:right} .bl{bottom:0;left:0} .br{bottom:0;right:0;text-align:right}
+
+/* driver telemetry */
+#drive-panel{display:none}
+#drive-panel.on{display:block}
+.speed{font-size:52px;font-weight:600;line-height:.9;color:var(--driver)}
+.speed small{font-size:12px;color:var(--mute);letter-spacing:.2em;margin-left:6px}
+.meter{width:190px;height:5px;background:rgba(255,255,255,.09);border-radius:3px;margin-top:9px;overflow:hidden}
+.meter i{display:block;height:100%;width:0;transition:width .1s linear}
+.meter.nitro i{background:var(--driver)}
+.meter.hp i{background:var(--ok)}
+.mlabel{font-size:9px;letter-spacing:.2em;color:var(--mute);margin-top:7px;text-transform:uppercase}
+
+/* gunner */
+#gun-panel{display:none}
+#gun-panel.on{display:block}
+.ammo{font-size:44px;font-weight:600;line-height:.9;color:var(--gunner)}
+.ammo small{font-size:15px;color:var(--mute)}
+.wname{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--bone);margin-top:6px}
+#reload-tag{color:var(--danger);font-size:11px;letter-spacing:.2em;margin-top:4px;display:none}
+#reload-tag.on{display:block}
+
+/* reticle */
+#reticle{position:absolute;left:50%;top:50%;width:46px;height:46px;transform:translate(-50%,-50%);display:none}
+#reticle.on{display:block}
+#reticle b{position:absolute;background:var(--gunner);opacity:.85}
+#reticle .n{left:50%;top:0;width:2px;height:12px;margin-left:-1px}
+#reticle .s{left:50%;bottom:0;width:2px;height:12px;margin-left:-1px}
+#reticle .w{top:50%;left:0;height:2px;width:12px;margin-top:-1px}
+#reticle .e{top:50%;right:0;height:2px;width:12px;margin-top:-1px}
+#reticle.wide{width:86px;height:86px}
+#hitmark{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(45deg);
+  width:22px;height:22px;opacity:0;transition:opacity .1s}
+#hitmark b{position:absolute;background:var(--danger)}
+#hitmark .n{left:50%;top:0;width:2px;height:8px;margin-left:-1px}
+#hitmark .s{left:50%;bottom:0;width:2px;height:8px;margin-left:-1px}
+#hitmark .w{top:50%;left:0;height:2px;width:8px;margin-top:-1px}
+#hitmark .e{top:50%;right:0;height:2px;width:8px;margin-top:-1px}
+
+/* radar */
+#radar{width:154px;height:154px;border-radius:50%;border:1px solid var(--edge);
+  background:rgba(11,13,17,.55);margin-left:auto}
+.hud-stat{font-size:11px;color:var(--mute);letter-spacing:.16em;margin-top:9px}
+.hud-stat b{color:var(--bone);font-weight:600}
+#storm-line{color:var(--danger)}
+
+/* crew strip */
+#crew{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
+  display:flex;gap:8px;align-items:center;background:rgba(11,13,17,.6);
+  border:1px solid var(--edge);border-radius:3px;padding:7px 13px;font-size:11px;letter-spacing:.12em}
+#crew .sep{color:var(--edge)}
+#crew .d{color:var(--driver)} #crew .g{color:var(--gunner)}
+
+/* feed */
+#feed{position:absolute;top:16px;left:50%;transform:translateX(-50%);
+  display:grid;gap:4px;justify-items:center;font-size:11px;letter-spacing:.1em}
+.feed-item{background:rgba(11,13,17,.7);border-left:2px solid var(--edge);padding:4px 10px}
+#toast{position:absolute;top:34%;left:50%;transform:translateX(-50%);font-family:var(--display);
+  font-size:24px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;opacity:0;transition:opacity .3s}
+#dmg{position:absolute;inset:0;box-shadow:inset 0 0 120px rgba(255,59,78,0);transition:box-shadow .25s}
+
+/* results */
+.verdict{font-size:clamp(40px,8vw,86px);font-weight:800;letter-spacing:-.02em;line-height:.9}
+.scoretable{width:100%;border-collapse:collapse;font-family:var(--data);font-size:12px;margin-top:18px}
+.scoretable th{text-align:left;font-size:10px;letter-spacing:.2em;color:var(--mute);
+  text-transform:uppercase;padding:0 10px 8px;font-weight:400}
+.scoretable td{padding:8px 10px;border-top:1px solid var(--edge)}
+.scoretable .t0{color:var(--red)} .scoretable .t1{color:var(--blue)}
+
+#boot{position:fixed;inset:0;display:grid;place-items:center;background:var(--void);z-index:50}
+#boot .eyebrow{animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+
+<!-- ============ MENU ============ -->
+<section id="screen-menu" class="screen">
+  <div class="shell">
+    <p class="eyebrow">Two-seat vehicular battle royale</p>
+    <h1 class="wordmark">DUST<span>L</span>I<span>N</span>E</h1>
+    <p class="tagline">One drives. One shoots. Last crew standing takes the field.</p>
+
+    <div class="menu-grid">
+      <div>
+        <div class="card">
+          <div class="field">
+            <label for="in-name">Callsign</label>
+            <input id="in-name" class="textin" maxlength="12" placeholder="ENTER NAME">
+          </div>
+          <div class="field">
+            <label>Game mode</label>
+            <div class="modelist" id="mode-list"></div>
+          </div>
+          <div class="field" id="size-field">
+            <label>Cars per team</label>
+            <div class="seg" id="size-seg"></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <button id="btn-host" class="btn btn-primary">Open a lobby</button>
+          <div class="rule"></div>
+          <div class="field">
+            <label for="in-code">Join with room code</label>
+            <input id="in-code" class="textin" maxlength="4" placeholder="ABCD" style="text-transform:uppercase">
+          </div>
+          <button id="btn-join" class="btn btn-ghost">Join lobby</button>
+          <p class="note" id="menu-note">Host picks the mode and lobby size. Everyone else needs the four-character room code.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LOBBY ============ -->
+<section id="screen-lobby" class="screen">
+  <div class="shell">
+    <div class="lobby-top">
+      <div>
+        <p class="eyebrow">Pit lane</p>
+        <h2 style="font-size:32px;font-weight:800;letter-spacing:-.01em" id="lobby-mode">Skirmish</h2>
+        <p class="note" id="lobby-sub">Claim a seat. Every car needs a driver and a gunner.</p>
+      </div>
+      <div class="code-slab">
+        <div class="eyebrow">Room code</div>
+        <div class="val" id="lobby-code">----</div>
+      </div>
+    </div>
+
+    <div class="pit">
+      <div class="pit-team" data-team="0">
+        <div class="pit-head"><span class="pit-tag">CRIMSON</span><span class="pit-count" id="cnt0">0 crew</span></div>
+        <div class="pit-rows" id="rows0"></div>
+      </div>
+      <div class="pit-team" data-team="1">
+        <div class="pit-head"><span class="pit-tag">COBALT</span><span class="pit-count" id="cnt1">0 crew</span></div>
+        <div class="pit-rows" id="rows1"></div>
+      </div>
+    </div>
+
+    <div class="lobby-foot">
+      <p class="status" id="lobby-status">Waiting for the host to drop the flag.</p>
+      <button id="btn-leave" class="btn btn-ghost">Leave</button>
+      <button id="btn-start" class="btn btn-primary">Drop the flag</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HUD ============ -->
+<div id="hud">
+  <div id="dmg"></div>
+  <div id="reticle"><b class="n"></b><b class="s"></b><b class="w"></b><b class="e"></b></div>
+  <div id="hitmark"><b class="n"></b><b class="s"></b><b class="w"></b><b class="e"></b></div>
+  <div id="toast"></div>
+  <div id="feed" class="hud-corner"></div>
+
+  <div class="hud-corner tr">
+    <canvas id="radar" width="308" height="308"></canvas>
+    <div class="hud-stat">CREWS LEFT <b id="alive-n">0</b></div>
+    <div class="hud-stat" id="storm-line">STORM <b id="storm-t">--</b></div>
+  </div>
+
+  <div class="hud-corner bl">
+    <div id="drive-panel">
+      <div class="speed"><span id="spd">0</span><small>KM/H</small></div>
+      <div class="meter nitro"><i id="nitro-bar"></i></div>
+      <div class="mlabel">Nitro — hold Shift</div>
+    </div>
+    <div id="gun-panel">
+      <div class="ammo"><span id="ammo-n">0</span><small>/<span id="ammo-m">0</span></small></div>
+      <div class="wname" id="wep-name">Autocannon</div>
+      <div id="reload-tag">RELOADING</div>
+    </div>
+    <div class="meter hp" style="margin-top:12px"><i id="hp-bar"></i></div>
+    <div class="mlabel">Chassis integrity</div>
+  </div>
+
+  <div id="crew">
+    <span class="d">DRV</span> <span id="crew-d">—</span>
+    <span class="sep">/</span>
+    <span class="g">GUN</span> <span id="crew-g">—</span>
+    <span class="sep">/</span>
+    <span id="crew-hint">V to swap seat</span>
+  </div>
+</div>
+
+<!-- ============ RESULTS ============ -->
+<section id="screen-over" class="screen">
+  <div class="shell">
+    <p class="eyebrow" id="over-eyebrow">Match over</p>
+    <h2 class="verdict" id="over-verdict">CRIMSON HOLDS</h2>
+    <table class="scoretable">
+      <thead><tr><th>Crew</th><th>Driver</th><th>Gunner</th><th>Damage</th><th>Kills</th><th>Out</th></tr></thead>
+      <tbody id="over-body"></tbody>
+    </table>
+    <div class="lobby-foot">
+      <p class="status" id="over-status"></p>
+      <button id="btn-again" class="btn btn-primary">Back to pit lane</button>
+    </div>
+  </div>
+</section>
+
+<div id="boot"><p class="eyebrow">Warming the engines</p></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+<script>
+"use strict";
+
+/* =========================================================================
+   DUSTLINE — two-seat vehicular battle royale
+   Host is authoritative. Every peer simulates; host snapshots correct drift.
+   ========================================================================= */
+
+const C = {
+  TICK: 1/60,
+  SNAP_HZ: 15,
+  INPUT_HZ: 30,
+  CAR_R: 2.3,
+  MAX_HP: 190,
+  ENGINE: 26,
+  BRAKE: 34,
+  DRAG: 0.55,
+  ROLL: 1.6,
+  STEER: 2.5,
+  GRIP: 7.0,
+  DRIFT_GRIP: 1.5,
+  NITRO_MULT: 1.85,
+  NITRO_DRAIN: 34,
+  NITRO_REGEN: 9,
+  RAM_MIN: 11,
+  RAM_DMG: 1.35,
+  TURRET_SPEED: 3.4,
+  PITCH_MIN: -0.18,
+  PITCH_MAX: 0.55,
+  STORM_HOLD: 28,
+  STORM_SHRINK: 38,
+  STORM_MIN: 26,
+  CRATE_EVERY: 14,
+};
+
+const WEAPONS = {
+  mg:      {name:'Autocannon', dmg:6,  rpm:440,  mag:40,  reload:2.2, spread:0.013, range:165, splash:0, tracer:0x35d0d8},
+  cannon:  {name:'Siege Cannon', dmg:42, rpm:62, mag:5,   reload:3.4, spread:0.006, range:250, splash:8, tracer:0xf5a623},
+  minigun: {name:'Rotary Minigun', dmg:4, rpm:1000, mag:130, reload:4.2, spread:0.030, range:125, splash:0, tracer:0xffe08a},
+};
+
+const WEP_IDS=['mg','cannon','minigun'];
+
+const MODES = [
+  {id:'skirmish', key:'PVP', name:'Skirmish',   ai:false, desc:'Humans only. Empty seats sit empty.'},
+  {id:'crewfill', key:'FILL', name:'Crew Fill', ai:true,  desc:'Bots take any seat nobody claimed.'},
+  {id:'gauntlet', key:'AI',  name:'Gauntlet',   ai:true,  desc:'Your crew against a full bot roster.'},
+];
+
+/* ---------- math ---------- */
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const lerp=(a,b,t)=>a+(b-a)*t;
+const TAU=Math.PI*2;
+function angDiff(a,b){let d=(b-a)%TAU;if(d>Math.PI)d-=TAU;if(d<-Math.PI)d+=TAU;return d;}
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);
+  t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function pick(rng,arr){return arr[Math.floor(rng()*arr.length)];}
+
+/* ---------- global state ---------- */
+const G = {
+  phase:'menu',
+  me:null,            // my player id
+  isHost:false,
+  name:'',
+  mode:MODES[1],
+  teamSize:2,
+  code:'----',
+  seed:1,
+  world:400,
+  players:{},         // id -> {id,name,carId,seat,bot,ping}
+  cars:[],            // authoritative-ish car list
+  obstacles:[],
+  crates:[],
+  storm:{cx:0,cz:0,r:400,tr:400,phase:0,t:C.STORM_HOLD,shrinking:false},
+  tick:0,
+  events:[],
+  winner:null,
+  started:0,
+};
+
+let myCar=null, mySeat=null, spectating=false;
+
+function carById(id){for(let i=0;i<G.cars.length;i++)if(G.cars[i].id===id)return G.cars[i];return null;}
+function seatedPlayer(car,seat){const id=seat==='driver'?car.driverId:car.gunnerId;return id?G.players[id]:null;}
+function myRole(){ if(!myCar)return null; return mySeat; }
+function aliveCars(){return G.cars.filter(c=>c.alive);}
+function teamsAlive(){const s=new Set();aliveCars().forEach(c=>s.add(c.team));return [...s];}
+
+/* =========================================================================
+   NETWORKING — PeerJS, host-authoritative star topology
+   ========================================================================= */
+const Net = {
+  peer:null, conns:new Map(), hostConn:null, ready:false,
+
+  _mkCode(){let s='';const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    for(let i=0;i<4;i++)s+=A[Math.floor(Math.random()*A.length)];return s;},
+
+  host(onReady,onErr){
+    const attempt=(tries)=>{
+      const code=this._mkCode();
+      const p=new Peer('dstl-'+code,{debug:0});
+      p.on('open',()=>{ this.peer=p; G.code=code; G.isHost=true; G.me=p.id; this.ready=true;
+        p.on('connection',(conn)=>this._acceptClient(conn));
+        onReady(code);
+      });
+      p.on('error',(e)=>{
+        if(e.type==='unavailable-id'&&tries<6){ try{p.destroy();}catch(_){} attempt(tries+1); }
+        else onErr(this._msg(e));
+      });
+    };
+    attempt(0);
+  },
+
+  join(code,onReady,onErr){
+    const p=new Peer({debug:0});
+    let settled=false;
+    p.on('open',()=>{
+      this.peer=p; G.isHost=false; G.me=p.id;
+      const conn=p.connect('dstl-'+code,{reliable:true});
+      this.hostConn=conn;
+      const t=setTimeout(()=>{ if(!settled){settled=true;onErr('No lobby answered on '+code+'.');} },9000);
+      conn.on('open',()=>{ settled=true; clearTimeout(t); this.ready=true;
+        conn.send({t:'hello',name:G.name}); onReady(); });
+      conn.on('data',(m)=>handleFromHost(m));
+      conn.on('close',()=>onHostLost());
+      conn.on('error',()=>{ if(!settled){settled=true;clearTimeout(t);onErr('Could not reach that lobby.');} });
+    });
+    p.on('error',(e)=>{ if(!settled){settled=true;onErr(this._msg(e));} });
+  },
+
+  _acceptClient(conn){
+    conn.on('open',()=>{
+      this.conns.set(conn.peer,conn);
+      conn.on('data',(m)=>handleFromClient(conn.peer,m));
+      conn.on('close',()=>{ this.conns.delete(conn.peer); removePlayer(conn.peer); });
+      conn.on('error',()=>{ this.conns.delete(conn.peer); removePlayer(conn.peer); });
+    });
+  },
+
+  _msg(e){
+    if(!e)return 'Connection failed.';
+    if(e.type==='peer-unavailable')return 'No lobby with that code.';
+    if(e.type==='network'||e.type==='server-error')return 'Signalling server unreachable. Check your connection.';
+    if(e.type==='browser-incompatible')return 'This browser cannot do WebRTC.';
+    return 'Connection failed ('+(e.type||'unknown')+').';
+  },
+
+  broadcast(m){ this.conns.forEach(c=>{ if(c.open) try{c.send(m);}catch(_){} }); },
+  toHost(m){ if(this.hostConn&&this.hostConn.open) try{this.hostConn.send(m);}catch(_){} },
+  sendTo(id,m){ const c=this.conns.get(id); if(c&&c.open) try{c.send(m);}catch(_){} },
+  shutdown(){ try{this.peer&&this.peer.destroy();}catch(_){} this.peer=null;this.conns.clear();this.hostConn=null;this.ready=false; },
+};
+
+/* =========================================================================
+   LOBBY
+   ========================================================================= */
+function makeCars(){
+  G.cars=[];
+  for(let team=0;team<2;team++)
+    for(let i=0;i<G.teamSize;i++)
+      G.cars.push(newCar(team*100+i,team,i));
+}
+function newCar(id,team,idx){
+  return {id,team,idx,driverId:null,gunnerId:null,
+    x:0,z:0,h:0,fs:0,ls:0,ty:0,tp:0.1,hp:C.MAX_HP,alive:true,
+    nitro:100,wep:'mg',ammo:WEAPONS.mg.mag,reloadT:0,fireT:0,
+    inp:{th:0,st:0,br:0,nx:0,fire:0},
+    dmgDealt:0,kills:0,placement:0,
+    ai:{tgt:null,think:0,dist:1e9,jitter:Math.random()*TAU,
+        skill:0.42+Math.random()*0.38, aggr:0.25+Math.random()*0.7,
+        errY:0, errP:0, burst:0, rest:0, react:0, los:false, losT:0,
+        phase:Math.random()*TAU, flip:2+Math.random()*4, wander:Math.random()*TAU,
+        orbit:Math.random()<0.5?-1:1, lastX:0, lastZ:0, stuckT:-1.2, recover:0, recDir:1},
+    rx:0,rz:0,rh:0,rty:0,rtp:0, mesh:null};
+}
+
+function lobbySnapshot(){
+  return {t:'lobby',code:G.code,mode:G.mode.id,size:G.teamSize,
+    players:Object.values(G.players).map(p=>({id:p.id,name:p.name,carId:p.carId,seat:p.seat})),
+    cars:G.cars.map(c=>({id:c.id,team:c.team,idx:c.idx,driverId:c.driverId,gunnerId:c.gunnerId}))};
+}
+function applyLobby(m){
+  G.code=m.code; G.mode=MODES.find(x=>x.id===m.mode)||MODES[0]; G.teamSize=m.size;
+  G.players={}; m.players.forEach(p=>G.players[p.id]={...p,bot:false});
+  if(G.cars.length!==m.cars.length) makeCars();
+  m.cars.forEach((cm,i)=>{const c=G.cars[i];c.id=cm.id;c.team=cm.team;c.idx=cm.idx;
+    c.driverId=cm.driverId;c.gunnerId=cm.gunnerId;});
+  refreshMySeat(); renderLobby();
+}
+function pushLobby(){ if(!G.isHost)return; const s=lobbySnapshot(); Net.broadcast(s); refreshMySeat(); renderLobby(); }
+
+function refreshMySeat(){
+  myCar=null;mySeat=null;
+  for(const c of G.cars){
+    if(c.driverId===G.me){myCar=c;mySeat='driver';break;}
+    if(c.gunnerId===G.me){myCar=c;mySeat='gunner';break;}
+  }
+}
+function vacate(pid){
+  for(const c of G.cars){
+    if(c.driverId===pid){c.driverId=null;c.inp.th=0;c.inp.st=0;c.inp.br=0;c.inp.nx=0;}
+    if(c.gunnerId===pid){c.gunnerId=null;c.inp.fire=0;}
+  }
+}
+function takeSeat(pid,carId,seat){
+  const car=carById(carId); if(!car)return;
+  const occupant = seat==='driver'?car.driverId:car.gunnerId;
+  if(occupant===pid){ vacate(pid); const p=G.players[pid]; if(p){p.carId=null;p.seat=null;} pushLobby(); return; }
+  if(occupant)return;                       // taken
+  vacate(pid);
+  if(seat==='driver')car.driverId=pid; else car.gunnerId=pid;
+  const p=G.players[pid]; if(p){p.carId=carId;p.seat=seat;}
+  pushLobby();
+}
+function removePlayer(pid){
+  if(!G.isHost)return;
+  vacate(pid); delete G.players[pid];
+  if(G.phase==='playing'){ pushEvent({e:'leave',name:'a crew member'}); checkWin(); }
+  pushLobby();
+}
+function onHostLost(){
+  if(G.phase==='menu')return;
+  Net.shutdown(); toMenu('The host closed the lobby.');
+}
+
+/* ---- message routing ---- */
+function handleFromClient(pid,m){
+  if(!G.isHost)return;
+  switch(m.t){
+    case 'hello':
+      G.players[pid]={id:pid,name:(m.name||'Rookie').slice(0,12),carId:null,seat:null,bot:false};
+      Net.sendTo(pid,{t:'welcome',you:pid});
+      if(G.phase==='playing') Net.sendTo(pid,startPacket());
+      pushLobby(); break;
+    case 'seat': if(G.phase==='lobby') takeSeat(pid,m.car,m.seat); break;
+    case 'in': {
+      const p=G.players[pid]; if(!p||p.carId==null)break;
+      const c=carById(p.carId); if(!c)break;
+      if(p.seat==='driver'){ c.inp.th=clamp(m.th,-1,1); c.inp.st=clamp(m.st,-1,1); c.inp.br=m.br?1:0; c.inp.nx=m.nx?1:0; }
+      else { c.ty=m.ty; c.tp=clamp(m.tp,C.PITCH_MIN,C.PITCH_MAX); c.inp.fire=m.f?1:0; }
+      break; }
+    case 'swap': { const p=G.players[pid]; if(!p||p.carId==null)break; const c=carById(p.carId);
+      if(!c)break; const other=p.seat==='driver'?c.gunnerId:c.driverId;
+      if(other)break;
+      if(p.seat==='driver'){c.driverId=null;c.gunnerId=pid;p.seat='gunner';}
+      else{c.gunnerId=null;c.driverId=pid;p.seat='driver';}
+      Net.broadcast({t:'seatchg',pid,car:c.id,seat:p.seat}); applySeatChange(pid,c.id,p.seat); break; }
+  }
+}
+function handleFromHost(m){
+  switch(m.t){
+    case 'welcome': G.me=m.you; break;
+    case 'lobby': applyLobby(m); if(G.phase==='menu'||G.phase==='over'){G.phase='lobby';showScreen('lobby');} break;
+    case 'start': receiveStart(m); break;
+    case 's': applySnapshot(m); break;
+    case 'ev': m.list.forEach(handleEvent); break;
+    case 'seatchg': applySeatChange(m.pid,m.car,m.seat); break;
+    case 'end': showResults(m.winner,m.rows); break;
+  }
+}
+function applySeatChange(pid,carId,seat){
+  const c=carById(carId); if(!c)return;
+  if(seat==='driver'){c.driverId=pid; if(c.gunnerId===pid)c.gunnerId=null;}
+  else {c.gunnerId=pid; if(c.driverId===pid)c.driverId=null;}
+  const p=G.players[pid]; if(p)p.seat=seat;
+  refreshMySeat(); updateCrewStrip();
+}
+
+/* =========================================================================
+   WORLD / RENDER
+   ========================================================================= */
+let renderer,scene,cam,ground,stormMesh,stormRing,sunLight;
+const FX=[],TRACERS=[];
+const TEAM_COL=[0xe4533d,0x4a7fe0];
+const M={};
+
+function initGL(){
+  renderer=new THREE.WebGLRenderer({canvas:document.getElementById('gl'),antialias:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setSize(innerWidth,innerHeight);
+  scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x1a2230,0.0042);
+  scene.background=skyTexture();
+  cam=new THREE.PerspectiveCamera(72,innerWidth/innerHeight,0.4,3000);
+
+  scene.add(new THREE.HemisphereLight(0x9fb6d4,0x3a2c1e,0.85));
+  sunLight=new THREE.DirectionalLight(0xffd9a8,0.95);
+  sunLight.position.set(-120,180,90); scene.add(sunLight);
+
+  M.body=[new THREE.MeshLambertMaterial({color:TEAM_COL[0]}),new THREE.MeshLambertMaterial({color:TEAM_COL[1]})];
+  M.dark=new THREE.MeshLambertMaterial({color:0x1d232e});
+  M.glass=new THREE.MeshLambertMaterial({color:0x0d1219});
+  M.metal=new THREE.MeshLambertMaterial({color:0x525c6b});
+  M.rock=new THREE.MeshLambertMaterial({color:0x51504a,flatShading:true});
+  M.wall=new THREE.MeshLambertMaterial({color:0x6b6152});
+  M.foliage=new THREE.MeshLambertMaterial({color:0x3c5240,flatShading:true});
+  M.crate=new THREE.MeshLambertMaterial({color:0xf5a623});
+  M.shadow=new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.28,depthWrite:false});
+  M.wreck=new THREE.MeshLambertMaterial({color:0x2a2622});
+
+  const gt=groundTexture();
+  ground=new THREE.Mesh(new THREE.PlaneBufferGeometry(4000,4000),
+    new THREE.MeshLambertMaterial({map:gt}));
+  ground.rotation.x=-Math.PI/2; ground.position.y=-0.02; scene.add(ground);
+
+  stormMesh=new THREE.Mesh(new THREE.CylinderBufferGeometry(1,1,180,72,1,true),
+    new THREE.MeshBasicMaterial({color:0xff3b4e,transparent:true,opacity:0.11,side:THREE.BackSide,depthWrite:false}));
+  stormMesh.position.y=88; scene.add(stormMesh);
+  stormRing=new THREE.Mesh(new THREE.RingBufferGeometry(0.985,1,96),
+    new THREE.MeshBasicMaterial({color:0xff5566,transparent:true,opacity:0.55,side:THREE.DoubleSide,depthWrite:false}));
+  stormRing.rotation.x=-Math.PI/2; stormRing.position.y=0.6; scene.add(stormRing);
+
+  for(let i=0;i<64;i++){
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(6),3));
+    const l=new THREE.Line(g,new THREE.LineBasicMaterial({color:0x35d0d8,transparent:true,opacity:0.9}));
+    l.visible=false; l.frustumCulled=false; scene.add(l); TRACERS.push({line:l,life:0});
+  }
+  addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);
+    cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();});
+}
+
+function skyTexture(){
+  const c=document.createElement('canvas');c.width=8;c.height=256;const x=c.getContext('2d');
+  const g=x.createLinearGradient(0,0,0,256);
+  g.addColorStop(0,'#0a1020');g.addColorStop(0.45,'#22344c');g.addColorStop(0.72,'#5a5a63');g.addColorStop(1,'#8b6a4a');
+  x.fillStyle=g;x.fillRect(0,0,8,256);
+  const t=new THREE.CanvasTexture(c);t.magFilter=THREE.LinearFilter;return t;
+}
+function groundTexture(){
+  const s=512,c=document.createElement('canvas');c.width=c.height=s;const x=c.getContext('2d');
+  x.fillStyle='#4c4437';x.fillRect(0,0,s,s);
+  for(let i=0;i<2600;i++){const r=Math.random()*2.4+0.4;
+    x.fillStyle='rgba('+(60+Math.random()*44|0)+','+(54+Math.random()*38|0)+','+(40+Math.random()*30|0)+',.55)';
+    x.beginPath();x.arc(Math.random()*s,Math.random()*s,r,0,TAU);x.fill();}
+  x.strokeStyle='rgba(0,0,0,.12)';x.lineWidth=1;
+  for(let i=0;i<=s;i+=64){x.beginPath();x.moveTo(i,0);x.lineTo(i,s);x.stroke();
+    x.beginPath();x.moveTo(0,i);x.lineTo(s,i);x.stroke();}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(140,140);return t;
+}
+
+/* ---------- car mesh ---------- */
+function buildCarMesh(team){
+  const g=new THREE.Group();
+  const hull=new THREE.Mesh(new THREE.BoxBufferGeometry(2.3,0.75,4.5),M.body[team]);
+  hull.position.y=0.95; g.add(hull);
+  const skirt=new THREE.Mesh(new THREE.BoxBufferGeometry(2.5,0.36,4.2),M.dark);
+  skirt.position.y=0.56; g.add(skirt);
+  const cabin=new THREE.Mesh(new THREE.BoxBufferGeometry(1.7,0.62,1.7),M.glass);
+  cabin.position.set(0,1.55,-0.45); g.add(cabin);
+  const bar=new THREE.Mesh(new THREE.BoxBufferGeometry(2.45,0.18,0.18),M.metal);
+  bar.position.set(0,1.28,2.3); g.add(bar);
+  const wg=new THREE.CylinderBufferGeometry(0.56,0.56,0.42,14);
+  [[-1.16,1.5],[1.16,1.5],[-1.16,-1.5],[1.16,-1.5]].forEach(([wx,wz])=>{
+    const w=new THREE.Mesh(wg,M.dark); w.rotation.z=Math.PI/2; w.position.set(wx,0.56,wz); g.add(w);
+  });
+  // turret
+  const tur=new THREE.Group(); tur.position.set(0,1.45,0.6);
+  const ring=new THREE.Mesh(new THREE.CylinderBufferGeometry(0.62,0.72,0.3,16),M.metal);
+  tur.add(ring);
+  const pivot=new THREE.Group(); pivot.position.y=0.22; tur.add(pivot);
+  const brc=new THREE.Mesh(new THREE.BoxBufferGeometry(0.5,0.42,0.6),M.metal); pivot.add(brc);
+  const barrel=new THREE.Mesh(new THREE.CylinderBufferGeometry(0.13,0.16,2.4,12),M.dark);
+  barrel.rotation.x=Math.PI/2; barrel.position.set(0,0.05,1.3); pivot.add(barrel);
+  const flash=new THREE.Mesh(new THREE.SphereBufferGeometry(0.42,8,8),
+    new THREE.MeshBasicMaterial({color:0xffd27a,transparent:true,opacity:0}));
+  flash.position.set(0,0.05,2.6); pivot.add(flash);
+  g.add(tur);
+  const shadow=new THREE.Mesh(new THREE.CircleBufferGeometry(2.1,20),M.shadow);
+  shadow.rotation.x=-Math.PI/2; shadow.position.y=0.03; g.add(shadow);
+  g.userData={turret:tur,pivot,flash,barrel,hull};
+  return g;
+}
+
+/* ---------- world objects ---------- */
+function buildWorld(){
+  G.obstacles.forEach(o=>o.mesh&&scene.remove(o.mesh));
+  G.obstacles=[];
+  const rng=mulberry32(G.seed),W=G.world;
+  const count=Math.floor(W*W/1300);
+  for(let i=0;i<count;i++){
+    const a=rng()*TAU,d=Math.sqrt(rng())*(W*0.49);
+    const x=Math.cos(a)*d,z=Math.sin(a)*d;
+    if(Math.hypot(x,z)<26) continue;
+    if(G.cars.some(c=>Math.hypot(x-c.x,z-c.z)<14)) continue;   // keep the grid clear
+    const roll=rng();
+    let o;
+    if(roll<0.34){ const w=6+rng()*16,dd=6+rng()*16,h=5+rng()*16;
+      o={x,z,r:Math.max(w,dd)*0.52,type:'wall',hard:true};
+      const m=new THREE.Mesh(new THREE.BoxBufferGeometry(w,h,dd),M.wall);
+      m.position.set(x,h/2,z); m.rotation.y=rng()*TAU; o.mesh=m; o.h=h;
+    } else if(roll<0.68){ const r=1.8+rng()*4.2;
+      o={x,z,r:r*0.9,type:'rock',hard:true,h:r*1.6};
+      const m=new THREE.Mesh(new THREE.DodecahedronBufferGeometry(r,0),M.rock);
+      m.position.set(x,r*0.6,z); m.rotation.set(rng(),rng(),rng()); o.mesh=m;
+    } else { const h=6+rng()*7;
+      o={x,z,r:0.9,type:'tree',hard:true,h};
+      const g=new THREE.Group();
+      const tr=new THREE.Mesh(new THREE.CylinderBufferGeometry(0.34,0.5,h,7),M.wreck);
+      tr.position.y=h/2; g.add(tr);
+      const cn=new THREE.Mesh(new THREE.ConeBufferGeometry(2.2+rng()*1.4,4.6,7),M.foliage);
+      cn.position.y=h+1.2; g.add(cn);
+      g.position.set(x,0,z); o.mesh=g;
+    }
+    scene.add(o.mesh); G.obstacles.push(o);
+  }
+  // arena boundary posts
+  for(let i=0;i<96;i++){ const a=i/96*TAU;
+    const p=new THREE.Mesh(new THREE.BoxBufferGeometry(0.5,7,0.5),M.metal);
+    p.position.set(Math.cos(a)*W*0.5,3.5,Math.sin(a)*W*0.5); scene.add(p); }
+}
+
+function attachCarMeshes(){
+  G.cars.forEach(c=>{ if(!c.mesh){ c.mesh=buildCarMesh(c.team); scene.add(c.mesh); } });
+}
+function clearCarMeshes(){ G.cars.forEach(c=>{ if(c.mesh){scene.remove(c.mesh);c.mesh=null;} }); }
+
+/* ---------- crates ---------- */
+function crateMesh(kind){
+  const g=new THREE.Group();
+  const col=kind==='repair'?0x7ee081:kind==='nitro'?0xf5a623:0x35d0d8;
+  const b=new THREE.Mesh(new THREE.BoxBufferGeometry(1.6,1.6,1.6),
+    new THREE.MeshLambertMaterial({color:col}));
+  b.position.y=0.9; g.add(b);
+  const beam=new THREE.Mesh(new THREE.CylinderBufferGeometry(0.5,0.5,26,8,1,true),
+    new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.14,side:THREE.DoubleSide,depthWrite:false}));
+  beam.position.y=13; g.add(beam);
+  return g;
+}
+function spawnCrate(x,z,kind,id){
+  const c={id,x,z,kind,mesh:crateMesh(kind)};
+  c.mesh.position.set(x,0,z); scene.add(c.mesh); G.crates.push(c);
+}
+function removeCrate(id){
+  const i=G.crates.findIndex(c=>c.id===id); if(i<0)return;
+  scene.remove(G.crates[i].mesh); G.crates.splice(i,1);
+}
+function clearCrates(){ G.crates.forEach(c=>scene.remove(c.mesh)); G.crates=[]; }
+
+/* ---------- effects ---------- */
+function fxBurst(x,y,z,color,size,life){
+  const m=new THREE.Mesh(new THREE.SphereBufferGeometry(size,10,10),
+    new THREE.MeshBasicMaterial({color,transparent:true,opacity:0.9,depthWrite:false}));
+  m.position.set(x,y,z); scene.add(m); FX.push({m,t:0,life,grow:size*2.6});
+}
+function fxTracer(ax,ay,az,bx,by,bz,color){
+  let s=TRACERS.find(t=>t.life<=0)||TRACERS[0];
+  const p=s.line.geometry.attributes.position;
+  p.array[0]=ax;p.array[1]=ay;p.array[2]=az;p.array[3]=bx;p.array[4]=by;p.array[5]=bz;
+  p.needsUpdate=true; s.line.material.color.setHex(color);
+  s.line.visible=true; s.life=0.075;
+}
+function stepFX(dt){
+  for(let i=FX.length-1;i>=0;i--){const f=FX[i];f.t+=dt;
+    const k=f.t/f.life;
+    if(k>=1){scene.remove(f.m);f.m.geometry.dispose();f.m.material.dispose();FX.splice(i,1);continue;}
+    f.m.material.opacity=0.9*(1-k); f.m.scale.setScalar(1+k*f.grow);}
+  TRACERS.forEach(t=>{ if(t.life>0){t.life-=dt; if(t.life<=0)t.line.visible=false;
+    else t.line.material.opacity=Math.min(1,t.life*13);} });
+}
+
+/* ---------- camera ---------- */
+const camState={yaw:0,pitch:0,pos:new THREE.Vector3(),look:new THREE.Vector3(),shake:0};
+let freeYaw=0,freePitch=0.12;
+
+function updateCamera(dt){
+  if(G.phase!=='playing'){ attractCamera(dt); return; }
+  const car=spectating?spectateTarget():myCar;
+  if(!car){attractCamera(dt);return;}
+  const seat=spectating?'driver':mySeat;
+  if(seat==='gunner'&&!spectating){
+    const yaw=car.rty, pitch=car.rtp;
+    const ox=Math.sin(car.rh)*0.6, oz=Math.cos(car.rh)*0.6;
+    const px=car.rx+ox, py=2.5, pz=car.rz+oz;
+    const back=2.2;
+    const dx=Math.sin(yaw)*Math.cos(pitch),dy=Math.sin(pitch),dz=Math.cos(yaw)*Math.cos(pitch);
+    camState.pos.set(px-dx*back,py-dy*back+0.65,pz-dz*back);
+    camState.look.set(px+dx*40,py+dy*40,pz+dz*40);
+  } else {
+    const yaw=car.rh+freeYaw;
+    const dist=8.2+Math.min(4,Math.abs(car.fs)*0.13);
+    camState.pos.set(car.rx-Math.sin(yaw)*dist, 4.3+freePitch*8, car.rz-Math.cos(yaw)*dist);
+    camState.look.set(car.rx+Math.sin(yaw)*9, 1.9, car.rz+Math.cos(yaw)*9);
+  }
+  const k=1-Math.pow(0.0008,dt);
+  cam.position.lerp(camState.pos,k);
+  if(cam.position.y<1.2)cam.position.y=1.2;
+  cam.lookAt(camState.look);
+  if(camState.shake>0){
+    const s=camState.shake;
+    cam.position.x+=(Math.random()-0.5)*s; cam.position.y+=(Math.random()-0.5)*s;
+    cam.position.z+=(Math.random()-0.5)*s; camState.shake=Math.max(0,s-dt*2.4);
+  }
+}
+function attractCamera(dt){
+  camState.yaw+=dt*0.13;
+  const r=17;
+  cam.position.set(Math.cos(camState.yaw)*r,7.5,Math.sin(camState.yaw)*r);
+  cam.lookAt(0,1.4,0);
+}
+let specIdx=0;
+function spectateTarget(){
+  const list=aliveCars(); if(!list.length)return myCar;
+  return list[specIdx%list.length];
+}
+
+/* =========================================================================
+   SIMULATION
+   ========================================================================= */
+function stepCar(c,dt){
+  if(!c.alive)return;
+  const i=c.inp;
+  let boost=1;
+  if(i.nx&&c.nitro>0&&i.th>0){boost=C.NITRO_MULT;c.nitro=Math.max(0,c.nitro-C.NITRO_DRAIN*dt);}
+  else c.nitro=Math.min(100,c.nitro+C.NITRO_REGEN*dt);
+
+  const sp=c.fs, dir=sp<0?-1:1;
+  const auth=clamp(Math.abs(sp)/8,0,1);
+  c.h+=i.st*C.STEER*auth*dt*dir;
+
+  let acc=i.th*C.ENGINE*boost;
+  if(i.br)acc-=Math.sign(sp)*C.BRAKE*0.5;
+  acc-=Math.sign(sp)*C.ROLL;
+  acc-=sp*Math.abs(sp)*0.013*C.DRAG;
+  c.fs+=acc*dt;
+  if(!i.th&&Math.abs(c.fs)<0.45)c.fs=0;
+  c.fs=clamp(c.fs,-15,boost>1?54:44);
+
+  const grip=i.br?C.DRIFT_GRIP:C.GRIP;
+  c.ls-=c.ls*Math.min(1,grip*dt);
+  c.ls+=-i.st*auth*Math.abs(sp)*dt*(i.br?2.1:0.6);
+  c.ls=clamp(c.ls,-24,24);
+
+  const fx=Math.sin(c.h),fz=Math.cos(c.h),rx=Math.cos(c.h),rz=-Math.sin(c.h);
+  c.x+=(fx*c.fs+rx*c.ls)*dt;
+  c.z+=(fz*c.fs+rz*c.ls)*dt;
+}
+
+function carVel(c){const s=Math.sin(c.h),o=Math.cos(c.h);
+  return [s*c.fs+o*c.ls, o*c.fs-s*c.ls];}
+function setCarVel(c,vx,vz){const s=Math.sin(c.h),o=Math.cos(c.h);
+  c.fs=vx*s+vz*o; c.ls=vx*o-vz*s;}
+
+function resolveCollisions(c,authoritative){
+  const R=C.CAR_R;
+  for(const o of G.obstacles){
+    const dx=c.x-o.x,dz=c.z-o.z; let d=Math.hypot(dx,dz); const min=R+o.r;
+    if(d>=min)continue;
+    if(d<0.001){d=0.001;}
+    const nx=dx/d,nz=dz/d;
+    c.x+=nx*(min-d); c.z+=nz*(min-d);
+    let v=carVel(c); const vn=v[0]*nx+v[1]*nz;
+    if(vn<0){                                   // only damp motion INTO the surface
+      if(authoritative&&-vn>C.RAM_MIN){
+        damage(c,(-vn-C.RAM_MIN)*C.RAM_DMG,null,'wreck');
+        pushEvent({e:'bump',x:c.x,y:1.2,z:c.z,s:1});
+      }
+      v[0]-=vn*nx*1.25; v[1]-=vn*nz*1.25;       // cancel it, plus a little bounce
+      v[0]*=0.9; v[1]*=0.9;                     // scrape friction on the tangential part
+      setCarVel(c,v[0],v[1]);
+    }
+  }
+  for(const b of G.cars){
+    if(b===c||!b.alive)continue;
+    const dx=c.x-b.x,dz=c.z-b.z; let d=Math.hypot(dx,dz); const min=R*2;
+    if(d>=min)continue;
+    if(d<0.001){d=0.001;}
+    const nx=dx/d,nz=dz/d,push=(min-d)*0.5;
+    c.x+=nx*push;c.z+=nz*push;b.x-=nx*push;b.z-=nz*push;
+    let va=carVel(c),vb=carVel(b);
+    const vn=(va[0]-vb[0])*nx+(va[1]-vb[1])*nz;
+    if(vn<0){
+      if(authoritative&&-vn>C.RAM_MIN){
+        const dmg=(-vn-C.RAM_MIN)*C.RAM_DMG;
+        const cAgg=Math.abs(c.fs)>Math.abs(b.fs);
+        damage(b,dmg*(cAgg?1:0.55),cAgg?c:null,'ram');
+        damage(c,dmg*(cAgg?0.55:1),cAgg?null:b,'ram');
+        pushEvent({e:'bump',x:(c.x+b.x)/2,y:1.3,z:(c.z+b.z)/2,s:1.6});
+      }
+      const j=-(1+0.35)*vn/2;                   // equal-mass impulse along the normal
+      setCarVel(c,va[0]+j*nx,va[1]+j*nz);
+      setCarVel(b,vb[0]-j*nx,vb[1]-j*nz);
+    }
+  }
+  const lim=G.world*0.5-R, dr=Math.hypot(c.x,c.z);
+  if(dr>lim&&dr>0.001){
+    const nx=-c.x/dr,nz=-c.z/dr;
+    c.x*=lim/dr; c.z*=lim/dr;
+    let v=carVel(c); const vn=v[0]*nx+v[1]*nz;
+    if(vn<0){ v[0]-=vn*nx*1.1; v[1]-=vn*nz*1.1; v[0]*=0.92; v[1]*=0.92;
+      setCarVel(c,v[0],v[1]); }
+  }
+}
+
+/* ---------- damage ---------- */
+function damage(c,amount,by,cause){
+  if(!c.alive||amount<=0)return;
+  c.hp-=amount;
+  if(by&&by.team!==c.team)by.dmgDealt+=amount;
+  if(c.hp<=0){
+    c.hp=0;c.alive=false;
+    c.placement=aliveCars().length+1;
+    if(by&&by.team!==c.team)by.kills++;
+    const victim=crewName(c), killer=by?crewName(by):(cause==='storm'?'the storm':'the terrain');
+    pushEvent({e:'kill',car:c.id,x:c.x,z:c.z,victim,killer});
+    checkWin();
+  }
+}
+const TEAM_NAME=['Crimson','Cobalt'];
+function crewName(c){
+  const d=seatedPlayer(c,'driver'),g=seatedPlayer(c,'gunner');
+  const n=(d&&d.name)||(g&&g.name)||TEAM_NAME[c.team];
+  return n+' #'+(c.idx+1);
+}
+
+/* ---------- weapons ---------- */
+function rayCyl(ox,oy,oz,dx,dy,dz,cx,cz,r,h){
+  const mx=ox-cx,mz=oz-cz;
+  const a=dx*dx+dz*dz; if(a<1e-7)return -1;
+  const b=2*(mx*dx+mz*dz),cc=mx*mx+mz*mz-r*r;
+  const disc=b*b-4*a*cc; if(disc<0)return -1;
+  const s=Math.sqrt(disc);
+  let t=(-b-s)/(2*a); if(t<0.2)t=(-b+s)/(2*a); if(t<0.2)return -1;
+  const y=oy+dy*t; if(y<0||y>h)return -1;
+  return t;
+}
+function muzzle(c){
+  const fx=Math.sin(c.h),fz=Math.cos(c.h);
+  return {x:c.x+fx*0.6,y:2.5,z:c.z+fz*0.6};
+}
+function fireStep(c,dt){
+  const W=WEAPONS[c.wep];
+  if(c.fireT>0)c.fireT-=dt;
+  if(c.reloadT>0){c.reloadT-=dt;if(c.reloadT<=0)c.ammo=W.mag;return;}
+  if(!c.inp.fire||!c.alive)return;
+  if(c.ammo<=0){c.reloadT=W.reload;return;}
+  if(c.fireT>0)return;
+  c.fireT=60/W.rpm; c.ammo--;
+
+  const sway=W.spread*(1+Math.abs(c.fs)/22);
+  const yaw=c.ty+(Math.random()-0.5)*sway*2;
+  const pit=c.tp+(Math.random()-0.5)*sway*2;
+  const dx=Math.sin(yaw)*Math.cos(pit),dy=Math.sin(pit),dz=Math.cos(yaw)*Math.cos(pit);
+  const m=muzzle(c);
+  let best=W.range,hit=null;
+  for(const t of G.cars){
+    if(!t.alive||t.id===c.id)continue;
+    const d=rayCyl(m.x,m.y,m.z,dx,dy,dz,t.x,t.z,C.CAR_R,2.9);
+    if(d>0&&d<best){best=d;hit={type:'car',car:t};}
+  }
+  for(const o of G.obstacles){
+    const d=rayCyl(m.x,m.y,m.z,dx,dy,dz,o.x,o.z,o.r,o.h||4);
+    if(d>0&&d<best){best=d;hit={type:'obs'};}
+  }
+  if(dy<-0.001){const g=-m.y/dy;if(g>0.2&&g<best){best=g;hit={type:'ground'};}}
+
+  const ex=m.x+dx*best,ey=m.y+dy*best,ez=m.z+dz*best;
+  pushEvent({e:'shot',x:m.x,y:m.y,z:m.z,ex,ey,ez,col:W.tracer,car:c.id});
+  if(hit&&hit.type==='car'){
+    damage(hit.car,W.dmg,c,'gun');
+    pushEvent({e:'hit',x:ex,y:ey,z:ez,car:hit.car.id,by:c.id});
+  }
+  if(W.splash>0&&hit){
+    for(const t of G.cars){
+      if(!t.alive||t.id===c.id)continue;
+      const d=Math.hypot(t.x-ex,t.z-ez);
+      if(d<W.splash&&!(hit.type==='car'&&hit.car===t))
+        damage(t,W.dmg*0.5*(1-d/W.splash),c,'splash');
+    }
+    pushEvent({e:'boom',x:ex,y:ey,z:ez});
+  }
+}
+
+/* ---------- storm & crates ---------- */
+function stepStorm(dt){
+  const s=G.storm;
+  s.t-=dt;
+  if(s.shrinking){
+    const k=1-clamp(s.t/C.STORM_SHRINK,0,1);
+    s.r=lerp(s.r0,s.tr,k);
+    if(s.t<=0){s.r=s.tr;s.shrinking=false;s.t=C.STORM_HOLD;s.phase++;}
+  } else if(s.t<=0){
+    s.shrinking=true;s.t=C.STORM_SHRINK;s.r0=s.r;
+    s.tr=Math.max(C.STORM_MIN,s.r*0.62);
+    const drift=s.r*0.3;const a=Math.random()*TAU;
+    s.cx=clamp(s.cx+Math.cos(a)*drift,-G.world*0.4,G.world*0.4);
+    s.cz=clamp(s.cz+Math.sin(a)*drift,-G.world*0.4,G.world*0.4);
+  }
+  const dps=4.5+s.phase*3.4;
+  for(const c of G.cars){
+    if(!c.alive)continue;
+    if(Math.hypot(c.x-s.cx,c.z-s.cz)>s.r) damage(c,dps*dt,null,'storm');
+  }
+}
+let crateSeq=0,crateT=4;
+function stepCrates(dt){
+  crateT-=dt;
+  if(crateT<=0&&G.crates.length<10){
+    crateT=C.CRATE_EVERY;
+    const s=G.storm,a=Math.random()*TAU,d=Math.sqrt(Math.random())*s.r*0.85;
+    const x=s.cx+Math.cos(a)*d,z=s.cz+Math.sin(a)*d;
+    const kind=pick(Math.random,['repair','weapon','weapon','nitro']);
+    const id=++crateSeq;
+    spawnCrate(x,z,kind,id); pushEvent({e:'crate',id,x,z,kind});
+  }
+  for(let i=G.crates.length-1;i>=0;i--){
+    const cr=G.crates[i];
+    for(const c of G.cars){
+      if(!c.alive)continue;
+      if(Math.hypot(c.x-cr.x,c.z-cr.z)<3.4){
+        applyCrate(c,cr.kind);
+        pushEvent({e:'grab',id:cr.id,car:c.id,kind:cr.kind});
+        removeCrate(cr.id); break;
+      }
+    }
+  }
+}
+function applyCrate(c,kind){
+  if(kind==='repair')c.hp=Math.min(C.MAX_HP,c.hp+42);
+  else if(kind==='nitro')c.nitro=100;
+  else{ c.wep=pick(Math.random,['cannon','minigun','mg']);
+    c.ammo=WEAPONS[c.wep].mag; c.reloadT=0; }
+}
+
+/* ---------- bots ---------- */
+/* A bot that holds one radius forever reads as brain-dead, so nothing here is a
+   fixed point: standoff breathes, orbit direction flips, and line of sight
+   decides whether the crew presses in or repositions. */
+
+function botSees(c,t){
+  const m=muzzle(c);
+  const dx=t.x-m.x, dy=1.4-m.y, dz=t.z-m.z;
+  const d=Math.hypot(dx,dy,dz);
+  if(d<3)return true;
+  const nx=dx/d,ny=dy/d,nz=dz/d;
+  for(const o of G.obstacles){
+    const q=(o.x-m.x)*nx+(o.z-m.z)*nz;
+    if(q<-o.r||q>d)continue;
+    const h=rayCyl(m.x,m.y,m.z,nx,ny,nz,o.x,o.z,o.r+0.5,o.h||4);
+    if(h>0&&h<d)return false;
+  }
+  return true;
+}
+function freeSide(c){
+  const lx=Math.cos(c.h),lz=-Math.sin(c.h);      // direction the nose swings for st>0
+  let L=0,R=0;
+  for(const o of G.obstacles){
+    const dx=o.x-c.x,dz=o.z-c.z,d2=dx*dx+dz*dz;
+    if(d2>1200)continue;
+    const w=(1200-d2)/1200;
+    if(dx*lx+dz*lz>0)L+=w; else R+=w;
+  }
+  return L<R?1:-1;
+}
+
+/* where the driver wants to be right now */
+function botGoal(c,a){
+  const s=G.storm;
+  if(Math.hypot(c.x-s.cx,c.z-s.cz)>s.r*0.86)
+    return {x:s.cx,z:s.cz,ring:0,mode:'storm'};
+
+  if(c.hp<C.MAX_HP*0.45){                                  // hurt: go find a patch
+    let best=null,bd=150;
+    for(const cr of G.crates){
+      if(cr.kind!=='repair')continue;
+      const d=Math.hypot(cr.x-c.x,cr.z-c.z);
+      if(d<bd){bd=d;best=cr;}
+    }
+    if(best)return {x:best.x,z:best.z,ring:0,mode:'heal'};
+  }
+  for(const cr of G.crates){                               // grab anything on the way
+    if(Math.hypot(cr.x-c.x,cr.z-c.z)<58)
+      return {x:cr.x,z:cr.z,ring:0,mode:'loot'};
+  }
+  const t=a.tgt;
+  if(!t){
+    const gx=s.cx+Math.sin(a.wander)*s.r*0.55, gz=s.cz+Math.cos(a.wander)*s.r*0.55;
+    if(Math.hypot(gx-c.x,gz-c.z)<25)a.wander+=1.9;
+    return {x:gx,z:gz,ring:0,mode:'wander'};
+  }
+
+  const W=WEAPONS[c.wep];
+  const ideal=clamp(W.range*(0.26+0.2*(1-a.aggr)),24,95);
+  let ring=ideal*(0.6+0.5*Math.sin(a.phase));              // breathe in and out
+  if(!a.los)          ring*=0.55;                          // no shot: cut the corner
+  if(c.hp<C.MAX_HP*0.3) ring*=1.7;                         // wounded: open the gap
+  if(t.hp<C.MAX_HP*0.3&&c.hp>C.MAX_HP*0.5) ring=12;        // finish it — ram
+  else ring=clamp(ring,Math.max(20,Math.abs(c.fs)*0.85),125);   // turn radius ~ v/omega
+
+  const bearing=Math.atan2(c.x-t.x,c.z-t.z);
+  const swing=a.orbit*(0.3+0.55*clamp(ring/Math.max(8,a.dist),0,1));
+  let gx=t.x+Math.sin(bearing+swing)*ring;
+  let gz=t.z+Math.cos(bearing+swing)*ring;
+  const gd=Math.hypot(gx-s.cx,gz-s.cz);                    // never circle into the storm
+  if(gd>s.r*0.88){const k=s.r*0.88/gd;gx=s.cx+(gx-s.cx)*k;gz=s.cz+(gz-s.cz)*k;}
+  return {x:gx,z:gz,ring,mode:'engage'};
+}
+
+function stepBot(c,dt){
+  const a=c.ai;
+  const driverBot=!c.driverId, gunnerBot=!c.gunnerId;
+  if(!driverBot&&!gunnerBot)return;
+
+  a.think-=dt; a.losT-=dt; a.flip-=dt;
+  a.phase+=dt*(0.28+a.aggr*0.5);
+  if(a.flip<=0){ a.orbit=-a.orbit; a.flip=3.5+Math.random()*5; }
+
+  if(a.think<=0){
+    a.think=0.3+Math.random()*0.25;
+    let best=null,bd=1e9;
+    for(const t of G.cars){
+      if(!t.alive||t.team===c.team)continue;
+      let d=Math.hypot(t.x-c.x,t.z-c.z);
+      if(t.hp<C.MAX_HP*0.35)d*=0.7;                        // prefer wounded prey
+      if(d<bd){bd=d;best=t;}
+    }
+    if(best!==a.tgt){ a.react=0.2+(1-a.skill)*0.7; a.los=false; }
+    a.tgt=best;
+    const miss=(1-a.skill)*0.05*(1+Math.min(bd,200)/100);
+    a.errY=(Math.random()-0.5)*2*miss;
+    a.errP=(Math.random()-0.5)*miss*0.8;
+  }
+  a.dist=a.tgt?Math.hypot(a.tgt.x-c.x,a.tgt.z-c.z):1e9;
+  if(a.react>0)a.react-=dt;
+  if(a.losT<=0){ a.losT=0.12+Math.random()*0.1; a.los=a.tgt?botSees(c,a.tgt):false; }
+
+  if(driverBot){
+    if(a.recover>0){
+      a.recover-=dt;                                       // committed, no re-aiming at the rock
+      if(a.recover>0.65){ c.inp.th=-1; c.inp.st=a.recDir; }
+      else { c.inp.th=1; c.inp.st=-a.recDir*0.7; }
+      c.inp.br=0; c.inp.nx=0;
+      if(a.recover<=0){ a.lastX=c.x; a.lastZ=c.z; a.stuckT=-0.9; }  // grace, or it loops
+    } else {
+      a.stuckT+=dt;
+      if(a.stuckT>0.6){
+        if(c.inp.th>0.25&&Math.abs(c.fs)<9&&Math.hypot(c.x-a.lastX,c.z-a.lastZ)<2.2){
+          a.recover=1.4+Math.random()*0.5;
+          a.recDir=freeSide(c);                            // back toward open ground
+        }
+        a.lastX=c.x; a.lastZ=c.z; a.stuckT=0;
+      }
+      const g=botGoal(c,a);
+      const look=11+Math.abs(c.fs)*0.62;
+      let avoid=0, blocked=0;
+      for(const o of G.obstacles){
+        const dx=o.x-c.x,dz=o.z-c.z,d=Math.hypot(dx,dz);
+        if(d>look+o.r||d<0.01)continue;
+        const rel=angDiff(c.h,Math.atan2(dx,dz));
+        const half=Math.atan2(o.r+C.CAR_R+1.5,Math.max(3,d));
+        if(Math.abs(rel)>half+0.3)continue;
+        const urgency=1-d/(look+o.r);
+        blocked=Math.max(blocked,urgency);
+        const side=Math.abs(rel)<0.06?a.orbit:(rel>=0?1:-1);
+        avoid-=side*urgency*1.7;
+      }
+      for(const m of G.cars){                              // don't grind on teammates
+        if(m===c||!m.alive||m.team!==c.team)continue;
+        const dx=m.x-c.x,dz=m.z-c.z,d=Math.hypot(dx,dz);
+        if(d>16||d<0.01)continue;
+        const rel=angDiff(c.h,Math.atan2(dx,dz));
+        if(Math.abs(rel)>0.55)continue;
+        avoid-=(rel>=0?1:-1)*(1-d/16)*1.1;
+      }
+      avoid=clamp(avoid,-1.7,1.7);
+      const edge=Math.hypot(c.x,c.z)/(G.world*0.5);
+      if(edge>0.86) avoid+=angDiff(c.h,Math.atan2(-c.x,-c.z))*(edge-0.86)*7;
+
+      const want=Math.atan2(g.x-c.x,g.z-c.z);
+      const turn=clamp(clamp(angDiff(c.h,want),-1,1)+avoid,-1,1);
+      c.inp.st=turn;
+      const sharp=Math.abs(turn);
+      let th=clamp(1-sharp*0.4-blocked*0.4,0.32,1);
+      if(g.mode==='engage'&&a.dist<g.ring*0.7)th*=0.82;    // don't overshoot the pass
+      if(g.mode==='engage'&&c.fs>g.ring*1.3)th=Math.min(th,0.18);  // scrub off for the corner
+      c.inp.th=th;
+      c.inp.br=(sharp>0.78&&c.fs>26)?1:0;                  // rotate the car, keep the guns on
+      c.inp.nx=(sharp<0.3&&blocked<0.2&&c.nitro>28&&
+                (g.mode==='storm'||g.mode==='heal'||a.dist>g.ring*1.7))?1:0;
+    }
+  }
+
+  if(gunnerBot){
+    const t=a.tgt, W=WEAPONS[c.wep];
+    if(t&&a.dist<W.range*0.82){
+      const lead=a.dist/300;
+      const tx=t.x+Math.sin(t.h)*t.fs*lead, tz=t.z+Math.cos(t.h)*t.fs*lead;
+      const wantY=Math.atan2(tx-c.x,tz-c.z)+a.errY;
+      const wantP=clamp(Math.atan2(1.4-2.5,Math.max(5,a.dist)),C.PITCH_MIN,C.PITCH_MAX)+a.errP;
+      const track=C.TURRET_SPEED*(0.3+a.skill*0.55);
+      const dy=angDiff(c.ty,wantY);
+      c.ty+=clamp(dy,-track*dt,track*dt);
+      c.tp+=clamp(wantP-c.tp,-1.6*dt,1.6*dt);
+      if(a.rest>0){ a.rest-=dt; c.inp.fire=0; }
+      else if(a.react>0||!a.los){ c.inp.fire=0; a.burst=0; }   // don't hose a rock
+      else if(Math.abs(dy)<0.04){
+        c.inp.fire=1; a.burst+=dt;
+        if(a.burst>0.45+a.skill){ a.burst=0; a.rest=0.4+(1-a.skill)*0.7; }
+      } else { c.inp.fire=0; a.burst=0; }
+    } else {
+      c.ty+=angDiff(c.ty,c.h)*dt*2.5; c.inp.fire=0; a.burst=0;
+    }
+  }
+}
+
+/* ---------- host tick ---------- */
+function hostTick(dt){
+  for(const c of G.cars){
+    if(!c.alive)continue;
+    if(G.mode.ai) stepBot(c,dt);
+    stepCar(c,dt);
+  }
+  for(const c of G.cars){ if(c.alive) resolveCollisions(c,true); }
+  for(const c of G.cars){ if(c.alive) fireStep(c,dt); }
+  stepStorm(dt); stepCrates(dt);
+  G.tick++;
+}
+function localTick(dt){
+  for(const c of G.cars){ if(c.alive) stepCar(c,dt); }
+  for(const c of G.cars){ if(c.alive) resolveCollisions(c,false); }
+}
+
+/* ---------- snapshots ---------- */
+const r2=v=>Math.round(v*100)/100;
+const r1=v=>Math.round(v*10)/10;
+function buildSnapshot(){
+  shotBudget={};
+  return {t:'s',k:G.tick,
+    c:G.cars.map(c=>[c.id,r1(c.x),r1(c.z),r2(c.h),r1(c.fs),r1(c.ls),r2(c.ty),r2(c.tp),
+       Math.round(c.hp),c.alive?1:0,c.inp.th,c.inp.st,c.inp.br,c.inp.nx,
+       WEP_IDS.indexOf(c.wep),c.ammo]),
+    st:[r1(G.storm.cx),r1(G.storm.cz),r1(G.storm.r),r1(G.storm.t),G.storm.shrinking?1:0,G.storm.phase],
+    ev:G.events.splice(0,G.events.length)};
+}
+function applySnapshot(m){
+  for(const a of m.c){
+    const c=carById(a[0]); if(!c)continue;
+    const iAmDriver=(myCar===c&&mySeat==='driver');
+    const iAmGunner=(myCar===c&&mySeat==='gunner');
+    const dx=a[1]-c.x,dz=a[2]-c.z,err=Math.hypot(dx,dz);
+    if(err>9){c.x=a[1];c.z=a[2];c.h=a[3];c.fs=a[4];c.ls=a[5];}
+    else{c.x+=dx*0.24;c.z+=dz*0.24;c.h+=angDiff(c.h,a[3])*0.24;
+      c.fs=lerp(c.fs,a[4],0.35);c.ls=lerp(c.ls,a[5],0.35);}
+    if(!iAmGunner){c.ty=a[6];c.tp=a[7];}
+    c.hp=a[8];
+    const wasAlive=c.alive; c.alive=!!a[9];
+    if(wasAlive&&!c.alive) onCarDown(c);
+    if(!iAmDriver){c.inp.th=a[10];c.inp.st=a[11];c.inp.br=a[12];c.inp.nx=a[13];}
+    c.wep=WEP_IDS[a[14]]||'mg'; c.ammo=a[15];
+  }
+  const s=m.st;
+  G.storm.cx=s[0];G.storm.cz=s[1];G.storm.r=s[2];G.storm.t=s[3];
+  G.storm.shrinking=!!s[4];G.storm.phase=s[5];
+  if(m.ev)m.ev.forEach(handleEvent);
+}
+let shotBudget={};
+function pushEvent(ev){
+  handleEvent(ev);
+  if(ev.e==='shot'){
+    const n=(shotBudget[ev.car]||0)+1; shotBudget[ev.car]=n;
+    if(n>2)return;                       // extra tracers are visual noise, not worth bandwidth
+    G.events.push({e:'shot',x:r1(ev.x),z:r1(ev.z),ex:r1(ev.ex),ey:r1(ev.ey),ez:r1(ev.ez),
+                   car:ev.car,col:ev.col});
+    return;
+  }
+  if(ev.e==='hit'||ev.e==='boom'||ev.e==='bump')
+    { G.events.push({...ev,x:r1(ev.x),y:r1(ev.y||0),z:r1(ev.z)}); return; }
+  G.events.push(ev);
+}
+
+/* =========================================================================
+   EVENTS -> presentation
+   ========================================================================= */
+function handleEvent(ev){
+  switch(ev.e){
+    case 'shot':{
+      fxTracer(ev.x,ev.y!==undefined?ev.y:2.5,ev.z,ev.ex,ev.ey,ev.ez,ev.col);
+      fxBurst(ev.ex,ev.ey,ev.ez,0xbfae8a,0.2,0.13);
+      const c=carById(ev.car);
+      if(c&&c.mesh){c.mesh.userData.flash.material.opacity=0.85;}
+      if(myCar&&ev.car===myCar.id&&mySeat==='gunner')camState.shake=0.09;
+      break;}
+    case 'hit':
+      fxBurst(ev.x,ev.y,ev.z,0xffb36b,0.34,0.18);
+      if(myCar&&ev.by===myCar.id)hitMark();
+      if(myCar&&ev.car===myCar.id)flashDamage();
+      break;
+    case 'boom':  fxBurst(ev.x,ev.y,ev.z,0xff9a3c,1.5,0.4); break;
+    case 'bump':  fxBurst(ev.x,ev.y,ev.z,0xd8c9ae,0.5*(ev.s||1),0.25);
+      if(myCar&&Math.hypot(myCar.rx-ev.x,myCar.rz-ev.z)<6)camState.shake=0.3; break;
+    case 'kill':{
+      fxBurst(ev.x,2,ev.z,0xff6a3c,3.2,0.7);
+      fxBurst(ev.x,3,ev.z,0x2a2622,5.0,1.3);
+      addFeed(ev.killer+' wrecked '+ev.victim);
+      const c=carById(ev.car); if(c)onCarDown(c);
+      break;}
+    case 'crate': if(!G.isHost)spawnCrate(ev.x,ev.z,ev.kind,ev.id); break;
+    case 'grab':{
+      if(!G.isHost)removeCrate(ev.id);
+      const c=carById(ev.car);
+      if(c&&myCar&&c.id===myCar.id)toast(ev.kind==='repair'?'Chassis patched':ev.kind==='nitro'?'Nitro topped up':'New weapon mounted',
+        ev.kind==='repair'?'--ok':'--gunner');
+      break;}
+    case 'leave': addFeed('A crew disconnected'); break;
+  }
+}
+function onCarDown(c){
+  c.alive=false;
+  if(c.mesh){ c.mesh.userData.hull.material=M.wreck; c.mesh.rotation.z=0.14; }
+  if(myCar&&c.id===myCar.id){ spectating=true; toast('Crew down','--danger'); }
+}
+
+/* ---------- HUD helpers ---------- */
+const $=id=>document.getElementById(id);
+let hitTimer=0;
+function hitMark(){ $('hitmark').style.opacity=1; hitTimer=0.12; }
+function flashDamage(){ $('dmg').style.boxShadow='inset 0 0 130px rgba(255,59,78,.42)';
+  setTimeout(()=>{$('dmg').style.boxShadow='inset 0 0 120px rgba(255,59,78,0)';},170); }
+function addFeed(text){
+  const d=document.createElement('div'); d.className='feed-item'; d.textContent=text.toUpperCase();
+  $('feed').appendChild(d);
+  setTimeout(()=>d.remove(),5200);
+  while($('feed').children.length>5)$('feed').firstChild.remove();
+}
+let toastT=0;
+function toast(text,varname){
+  const t=$('toast'); t.textContent=text;
+  t.style.color=varname?'var('+varname+')':'var(--bone)';
+  t.style.opacity=1; toastT=1.6;
+}
+
+/* ---------- input ---------- */
+const keys={};
+addEventListener('keydown',e=>{
+  if(e.repeat)return;
+  keys[e.code]=1;
+  if(G.phase!=='playing')return;
+  if(e.code==='KeyV')requestSwap();
+  if(e.code==='KeyE'&&spectating){specIdx++;}
+  if(e.code==='Space')e.preventDefault();
+});
+addEventListener('keyup',e=>{keys[e.code]=0;});
+addEventListener('blur',()=>{for(const k in keys)keys[k]=0;});
+
+const glc=document.getElementById('gl');
+function lockPointer(){ try{ if(!document.pointerLockElement&&glc.requestPointerLock)glc.requestPointerLock(); }catch(_){} }
+glc.addEventListener('click',()=>{ if(G.phase==='playing')lockPointer(); });
+addEventListener('mousemove',e=>{
+  if(G.phase!=='playing'||!document.pointerLockElement)return;
+  const sx=e.movementX*0.0022, sy=e.movementY*0.0022;
+  if(mySeat==='gunner'&&myCar&&myCar.alive&&!spectating){
+    myCar.ty-=sx; myCar.tp=clamp(myCar.tp-sy,C.PITCH_MIN,C.PITCH_MAX);
+  } else { freeYaw=clamp(freeYaw-sx,-1.5,1.5); freePitch=clamp(freePitch-sy,-0.35,0.7); }
+});
+addEventListener('mousedown',e=>{ if(e.button===0)keys.Fire=1; });
+addEventListener('mouseup',e=>{ if(e.button===0)keys.Fire=0; });
+
+function applyLocalInput(){
+  if(!myCar||!myCar.alive||spectating)return;
+  if(mySeat==='driver'){
+    const th=(keys.KeyW?1:0)-(keys.KeyS?1:0);
+    const st=(keys.KeyA?1:0)-(keys.KeyD?1:0);   // inp.st is a heading delta, not "rightness"
+    const br=keys.Space?1:0, nx=(keys.ShiftLeft||keys.ShiftRight)?1:0;
+    if(G.isHost){ myCar.inp.th=th;myCar.inp.st=st;myCar.inp.br=br;myCar.inp.nx=nx; }
+    else pending={t:'in',th,st,br,nx};
+    if(!keys.KeyA&&!keys.KeyD)freeYaw*=0.9;
+  } else {
+    const f=keys.Fire?1:0;
+    if(G.isHost)myCar.inp.fire=f;
+    else pending={t:'in',ty:myCar.ty,tp:myCar.tp,f};
+  }
+}
+let pending=null;
+function sendInput(){ if(pending)Net.toHost(pending); }
+function requestSwap(){
+  if(!myCar)return;
+  const other=mySeat==='driver'?myCar.gunnerId:myCar.driverId;
+  if(other){toast('Seat occupied','--mute');return;}
+  if(G.isHost){
+    const p=G.players[G.me];
+    if(mySeat==='driver'){myCar.driverId=null;myCar.gunnerId=G.me;}
+    else{myCar.gunnerId=null;myCar.driverId=G.me;}
+    const seat=mySeat==='driver'?'gunner':'driver';
+    if(p)p.seat=seat;
+    Net.broadcast({t:'seatchg',pid:G.me,car:myCar.id,seat});
+    applySeatChange(G.me,myCar.id,seat);
+  } else Net.toHost({t:'swap'});
+}
+
+/* ---------- HUD render ---------- */
+function updateHUD(dt){
+  if(hitTimer>0){hitTimer-=dt;if(hitTimer<=0)$('hitmark').style.opacity=0;}
+  if(toastT>0){toastT-=dt;if(toastT<=0)$('toast').style.opacity=0;}
+  const car=spectating?spectateTarget():myCar;
+  const gun=mySeat==='gunner'&&!spectating;
+  $('drive-panel').classList.toggle('on',!gun);
+  $('gun-panel').classList.toggle('on',gun);
+  $('reticle').classList.toggle('on',gun&&car&&car.alive);
+  if(car){
+    $('hp-bar').style.width=(car.hp/C.MAX_HP*100)+'%';
+    $('hp-bar').style.background=car.hp<35?'var(--danger)':car.hp<70?'var(--driver)':'var(--ok)';
+    if(gun){
+      const W=WEAPONS[car.wep];
+      $('ammo-n').textContent=car.ammo; $('ammo-m').textContent=W.mag;
+      $('wep-name').textContent=W.name;
+      $('reload-tag').classList.toggle('on',car.reloadT>0);
+      $('reticle').classList.toggle('wide',Math.abs(car.fs)>18||car.wep==='minigun');
+    } else {
+      $('spd').textContent=Math.round(Math.abs(car.fs)*3.6);
+      $('nitro-bar').style.width=car.nitro+'%';
+    }
+  }
+  $('alive-n').textContent=aliveCars().length;
+  const s=G.storm;
+  $('storm-t').textContent=(s.shrinking?'CLOSING ':'HOLDS ')+Math.max(0,Math.ceil(s.t))+'s';
+  $('storm-line').style.color=s.shrinking?'var(--danger)':'var(--mute)';
+  drawRadar(car);
+}
+function drawRadar(car){
+  const cv=$('radar'),x=cv.getContext('2d'),S=cv.width,R=S/2,RANGE=130;
+  x.clearRect(0,0,S,S);
+  if(!car)return;
+  const sh=Math.sin(car.rh),ch=Math.cos(car.rh);
+  const P=(wx,wz)=>{
+    const dx=wx-car.rx,dz=wz-car.rz;
+    const px=-dx*ch+dz*sh;      // component along screen-right
+    const pz= dx*sh+dz*ch;      // component along car forward
+    return [R+px/RANGE*R, R-pz/RANGE*R];
+  };
+  x.save(); x.beginPath(); x.arc(R,R,R-2,0,TAU); x.clip();
+  // storm
+  const s=G.storm, sc=P(s.cx,s.cz);
+  x.strokeStyle='rgba(255,59,78,.75)'; x.lineWidth=3;
+  x.beginPath(); x.arc(sc[0],sc[1],s.r/RANGE*R,0,TAU); x.stroke();
+  x.fillStyle='rgba(255,59,78,.09)';
+  x.beginPath(); x.rect(0,0,S,S); x.arc(sc[0],sc[1],s.r/RANGE*R,0,TAU,true); x.fill();
+  // crates
+  x.fillStyle='rgba(126,224,129,.85)';
+  G.crates.forEach(cr=>{const p=P(cr.x,cr.z);x.fillRect(p[0]-3,p[1]-3,6,6);});
+  // cars
+  G.cars.forEach(c=>{
+    if(!c.alive||c===car)return;
+    const p=P(c.rx,c.rz);
+    x.fillStyle=c.team===car.team?'#7ee081':'#ff3b4e';
+    x.beginPath();x.arc(p[0],p[1],5,0,TAU);x.fill();
+  });
+  x.restore();
+  // self
+  x.fillStyle='#e9e5da';
+  x.beginPath();x.moveTo(R,R-9);x.lineTo(R-6,R+7);x.lineTo(R+6,R+7);x.closePath();x.fill();
+}
+function updateCrewStrip(){
+  if(!myCar){$('crew-d').textContent='—';$('crew-g').textContent='—';return;}
+  const d=seatedPlayer(myCar,'driver'),g=seatedPlayer(myCar,'gunner');
+  $('crew-d').textContent=d?d.name:(G.mode.ai?'BOT':'empty');
+  $('crew-g').textContent=g?g.name:(G.mode.ai?'BOT':'empty');
+  const other=mySeat==='driver'?myCar.gunnerId:myCar.driverId;
+  $('crew-hint').textContent=other?'crewed up':'V to swap seat';
+}
+
+/* ---------- mesh sync ---------- */
+function updateMeshes(dt){
+  const k=Math.min(1,dt*24);
+  for(const c of G.cars){
+    if(!c.mesh)continue;
+    c.rx+= (c.x-c.rx)*k; c.rz+=(c.z-c.rz)*k;
+    c.rh+= angDiff(c.rh,c.h)*k;
+    c.rty+=angDiff(c.rty,c.ty)*Math.min(1,dt*18);
+    c.rtp+=(c.tp-c.rtp)*Math.min(1,dt*18);
+    c.mesh.position.set(c.rx,0,c.rz);
+    c.mesh.rotation.y=c.rh;
+    const u=c.mesh.userData;
+    u.turret.rotation.y=c.rty-c.rh;
+    u.pivot.rotation.x=-c.rtp;
+    if(u.flash.material.opacity>0)u.flash.material.opacity=Math.max(0,u.flash.material.opacity-dt*9);
+    c.mesh.visible=true;
+  }
+  G.crates.forEach(cr=>{cr.mesh.rotation.y+=dt*1.1;
+    cr.mesh.position.y=Math.sin(performance.now()*0.002+cr.id)*0.22;});
+}
+function updateStormMesh(){
+  const on=G.phase==='playing';
+  stormMesh.visible=stormRing.visible=on;
+  if(!on)return;
+  const s=G.storm;
+  stormMesh.position.set(s.cx,88,s.cz); stormMesh.scale.set(s.r,1,s.r);
+  stormRing.position.set(s.cx,0.6,s.cz); stormRing.scale.set(s.r,s.r,1);
+}
+
+/* =========================================================================
+   MATCH FLOW
+   ========================================================================= */
+function startPacket(){
+  return {t:'start',seed:G.seed,world:G.world,size:G.teamSize,mode:G.mode.id,
+    players:Object.values(G.players).map(p=>({id:p.id,name:p.name,carId:p.carId,seat:p.seat})),
+    cars:G.cars.map(c=>({id:c.id,team:c.team,idx:c.idx,x:r2(c.x),z:r2(c.z),h:r2(c.h),
+      driverId:c.driverId,gunnerId:c.gunnerId})),
+    storm:{cx:G.storm.cx,cz:G.storm.cz,r:G.storm.r,t:G.storm.t,phase:0}};
+}
+function startMatch(){
+  if(!G.isHost)return;
+  const seated=G.cars.filter(c=>c.driverId||c.gunnerId);
+  if(!seated.length){ $('lobby-status').textContent='Claim a seat first.'; return; }
+  if(!G.mode.ai){
+    const teams=new Set(seated.map(c=>c.team));
+    if(teams.size<2){ $('lobby-status').textContent='Humans-only modes need crews on both sides.'; return; }
+    G.cars=seated;
+  }
+  G.seed=(Math.random()*1e9)|0;
+  G.world=clamp(300+G.teamSize*46,300,720);
+  G.storm={cx:0,cz:0,r:G.world*0.5,tr:G.world*0.5,phase:0,t:C.STORM_HOLD,shrinking:false,r0:G.world*0.5};
+  const rng=mulberry32(G.seed);
+  G.cars.forEach((c,i)=>{
+    const side=c.team===0?-1:1;
+    const spread=(c.idx-(G.teamSize-1)/2)*16;
+    c.x=side*G.world*0.36+rng()*8-4; c.z=spread+rng()*8-4;
+    c.h=side<0?Math.PI/2:-Math.PI/2;
+    c.hp=C.MAX_HP;c.alive=true;c.fs=0;c.ls=0;c.nitro=100;c.wep='mg';
+    c.ammo=WEAPONS.mg.mag;c.reloadT=0;c.fireT=0;c.ty=c.h;c.tp=0.1;
+    c.dmgDealt=0;c.kills=0;c.placement=0;
+    c.inp={th:0,st:0,br:0,nx:0,fire:0};
+    c.ai.lastX=c.x;c.ai.lastZ=c.z;c.ai.stuckT=-1.2;c.ai.recover=0;c.ai.tgt=null;c.ai.think=0;c.ai.los=false;c.ai.losT=0;c.ai.phase=Math.random()*TAU;
+    c.rx=c.x;c.rz=c.z;c.rh=c.h;c.rty=c.h;c.rtp=0.1;
+  });
+  crateSeq=0;crateT=5;
+  Net.broadcast(startPacket());
+  enterMatch();
+}
+function receiveStart(m){
+  G.seed=m.seed;G.world=m.world;G.teamSize=m.size;
+  G.mode=MODES.find(x=>x.id===m.mode)||MODES[0];
+  G.players={};m.players.forEach(p=>G.players[p.id]={...p,bot:false});
+  clearCarMeshes(); G.cars=[];
+  m.cars.forEach(cm=>{
+    const c=newCar(cm.id,cm.team,cm.idx);
+    c.x=c.rx=cm.x;c.z=c.rz=cm.z;c.h=c.rh=c.ty=c.rty=cm.h;
+    c.driverId=cm.driverId;c.gunnerId=cm.gunnerId;
+    G.cars.push(c);
+  });
+  G.storm={...m.storm,tr:m.storm.r,shrinking:false,r0:m.storm.r};
+  enterMatch();
+}
+function enterMatch(){
+  clearCrates(); buildWorld(); clearCarMeshes(); attachCarMeshes();
+  refreshMySeat(); spectating=!myCar; G.tick=0; G.events.length=0;
+  G.phase='playing'; G.started=performance.now();
+  showScreen(null); $('hud').classList.add('on');
+  updateCrewStrip();
+  if(!myCar) toast('Spectating — E cycles crews','--mute');
+  else toast(mySeat==='gunner'?'You are the gunner':'You are the driver',
+        mySeat==='gunner'?'--gunner':'--driver');
+  if(myCar)freeYaw=0;
+  setTimeout(()=>{ if(G.phase==='playing')lockPointer(); },250);
+}
+function checkWin(){
+  if(!G.isHost||G.phase!=='playing')return;
+  const t=teamsAlive();
+  if(t.length<=1) setTimeout(()=>endMatch(t.length?t[0]:-1),900);
+}
+function endMatch(winner){
+  if(G.phase!=='playing')return;
+  const rows=G.cars.map(c=>({team:c.team,name:'Crew #'+(c.idx+1),
+    d:(seatedPlayer(c,'driver')||{}).name||(G.mode.ai?'Bot':'—'),
+    g:(seatedPlayer(c,'gunner')||{}).name||(G.mode.ai?'Bot':'—'),
+    dmg:Math.round(c.dmgDealt),k:c.kills,p:c.alive?1:(c.placement||G.cars.length)}))
+    .sort((a,b)=>a.p-b.p||b.dmg-a.dmg);
+  Net.broadcast({t:'end',winner,rows});
+  showResults(winner,rows);
+}
+function showResults(winner,rows){
+  G.phase='over';
+  document.exitPointerLock&&document.exitPointerLock();
+  $('hud').classList.remove('on');
+  const mine=myCar?myCar.team:-1;
+  $('over-verdict').textContent = winner<0?'MUTUAL WRECK'
+    : (winner===0?'CRIMSON HOLDS':'COBALT HOLDS');
+  $('over-verdict').style.color = winner<0?'var(--bone)':(winner===0?'var(--red)':'var(--blue)');
+  $('over-eyebrow').textContent = winner===mine?'Your crew took the field':'Match over';
+  const tb=$('over-body'); tb.innerHTML='';
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML='<td class="t'+r.team+'">'+r.name+'</td><td>'+r.d+'</td><td>'+r.g+
+      '</td><td>'+r.dmg+'</td><td>'+r.k+'</td><td>#'+r.p+'</td>';
+    tb.appendChild(tr);
+  });
+  $('over-status').textContent=G.isHost?'Everyone returns to the pit lane together.':'Waiting for the host.';
+  $('btn-again').style.display=G.isHost?'block':'none';
+  showScreen('over');
+}
+
+/* =========================================================================
+   SCREENS + MENU WIRING
+   ========================================================================= */
+function showScreen(name){
+  ['menu','lobby','over'].forEach(n=>$('screen-'+n).classList.toggle('on',n===name));
+  if(name)$('hud').classList.remove('on');
+}
+function toMenu(msg){
+  G.phase='menu'; G.cars.forEach(c=>{if(c.mesh)scene.remove(c.mesh);c.mesh=null;});
+  G.cars=[]; clearCrates(); myCar=null; mySeat=null; spectating=false;
+  buildAttract(); showScreen('menu');
+  if(msg)$('menu-note').textContent=msg;
+}
+
+function buildMenuUI(){
+  const ml=$('mode-list');
+  MODES.forEach(m=>{
+    const b=document.createElement('button');
+    b.innerHTML='<span class="mode-key">'+m.key+'</span><span><span class="mode-name">'+m.name+
+      '</span><span class="mode-desc">'+m.desc+'</span></span>';
+    b.onclick=()=>{G.mode=m;[...ml.children].forEach(x=>x.classList.remove('sel'));b.classList.add('sel');};
+    if(m===G.mode)b.classList.add('sel');
+    ml.appendChild(b);
+  });
+  const seg=$('size-seg');
+  for(let n=1;n<=8;n++){
+    const b=document.createElement('button');
+    b.textContent=n+'v'+n;
+    b.onclick=()=>{G.teamSize=n;[...seg.children].forEach(x=>x.classList.remove('sel'));b.classList.add('sel');};
+    if(n===G.teamSize)b.classList.add('sel');
+    seg.appendChild(b);
+  }
+  $('in-name').value='Rookie'+(100+Math.floor(Math.random()*899));
+
+  $('btn-host').onclick=()=>{
+    G.name=($('in-name').value||'Host').slice(0,12);
+    $('btn-host').disabled=true; $('menu-note').textContent='Opening a lobby…';
+    Net.host(code=>{
+      G.players[G.me]={id:G.me,name:G.name,carId:null,seat:null,bot:false};
+      makeCars(); G.phase='lobby'; showScreen('lobby'); renderLobby(); $('btn-host').disabled=false;
+    },err=>{ $('btn-host').disabled=false; $('menu-note').textContent=err; });
+  };
+  $('btn-join').onclick=()=>{
+    const code=($('in-code').value||'').toUpperCase().trim();
+    if(code.length!==4){$('menu-note').textContent='Room codes are four characters.';return;}
+    G.name=($('in-name').value||'Rookie').slice(0,12);
+    $('btn-join').disabled=true; $('menu-note').textContent='Knocking on '+code+'…';
+    Net.join(code,()=>{ $('btn-join').disabled=false; },err=>{
+      $('btn-join').disabled=false; $('menu-note').textContent=err; Net.shutdown(); });
+  };
+  $('btn-leave').onclick=()=>{ Net.shutdown(); G.players={}; toMenu('Left the lobby.'); };
+  $('btn-start').onclick=startMatch;
+  $('btn-again').onclick=()=>{
+    if(!G.isHost)return;
+    G.cars.forEach(c=>{if(c.mesh)scene.remove(c.mesh);c.mesh=null;});
+    makeCarsPreserving(); G.phase='lobby'; pushLobby(); showScreen('lobby');
+    Net.broadcast(lobbySnapshot());
+  };
+  $('in-code').addEventListener('keydown',e=>{if(e.key==='Enter')$('btn-join').click();});
+}
+function makeCarsPreserving(){
+  const seats=G.cars.map(c=>({id:c.id,d:c.driverId,g:c.gunnerId}));
+  makeCars();
+  seats.forEach(s=>{const c=carById(s.id);if(c){c.driverId=s.d;c.gunnerId=s.g;}});
+}
+
+function renderLobby(){
+  $('lobby-code').textContent=G.code;
+  $('lobby-mode').textContent=G.mode.name;
+  $('lobby-sub').textContent=G.mode.desc+' — '+G.teamSize+' car'+(G.teamSize>1?'s':'')+' per team.';
+  $('btn-start').style.display=G.isHost?'block':'none';
+  for(let team=0;team<2;team++){
+    const wrap=$('rows'+team); wrap.innerHTML='';
+    let crew=0;
+    G.cars.filter(c=>c.team===team).forEach(c=>{
+      const row=document.createElement('div'); row.className='chassis';
+      const liv=document.createElement('div'); liv.className='livery';
+      liv.textContent=String(c.idx+1).padStart(2,'0'); row.appendChild(liv);
+      ['driver','gunner'].forEach(seat=>{
+        const p=seatedPlayer(c,seat);
+        const b=document.createElement('button');
+        b.className='bay'+(p?' filled':'')+(p&&p.id===G.me?' mine':'')+(!p&&G.mode.ai?' bot':'');
+        b.dataset.seat=seat;
+        b.innerHTML='<span class="bay-role">'+seat+'</span><span class="bay-name">'+
+          (p?p.name:(G.mode.ai?'Bot fills in':'Open'))+'</span>';
+        b.onclick=()=>{ if(G.isHost)takeSeat(G.me,c.id,seat); else Net.toHost({t:'seat',car:c.id,seat}); };
+        row.appendChild(b);
+        if(p)crew++;
+      });
+      wrap.appendChild(row);
+    });
+    $('cnt'+team).textContent=crew+' crew';
+  }
+  const n=Object.keys(G.players).length;
+  $('lobby-status').textContent=G.isHost
+    ? n+' player'+(n===1?'':'s')+' connected. Share code '+G.code+'.'
+    : 'Connected. Waiting for the host to drop the flag.';
+}
+
+/* ---------- attract scene ---------- */
+let attractCar=null;
+function buildAttract(){
+  G.seed=7; G.world=210; buildWorld();
+  if(attractCar)scene.remove(attractCar);
+  attractCar=buildCarMesh(0); attractCar.position.set(0,0,0);
+  attractCar.rotation.y=-0.6; scene.add(attractCar);
+}
+
+/* =========================================================================
+   MAIN LOOP
+   ========================================================================= */
+let acc=0,snapAcc=0,inAcc=0,last=performance.now();
+function frame(now){
+  requestAnimationFrame(frame);
+  let dt=(now-last)/1000; last=now; if(dt>0.1)dt=0.1;
+  if(G.phase==='playing'){
+    applyLocalInput();
+    acc+=dt;
+    let guard=0;
+    while(acc>=C.TICK&&guard++<6){ G.isHost?hostTick(C.TICK):localTick(C.TICK); acc-=C.TICK; }
+    if(acc>C.TICK*6)acc=0;
+    if(G.isHost){ snapAcc+=dt; if(snapAcc>=1/C.SNAP_HZ){snapAcc=0;
+      const s=buildSnapshot(); if(Net.conns.size)Net.broadcast(s); } }
+    else { inAcc+=dt; if(inAcc>=1/C.INPUT_HZ){inAcc=0;sendInput();} }
+    updateHUD(dt);
+  } else if(attractCar){ attractCar.rotation.y+=dt*0.12; }
+  stepFX(dt); updateMeshes(dt); updateStormMesh(); updateCamera(dt);
+  renderer.render(scene,cam);
+}
+
+/* ---------- boot ---------- */
+(function boot(){
+  if(!window.THREE){ document.getElementById('boot').innerHTML=
+    '<p class="eyebrow" style="color:var(--danger)">three.js failed to load — check your connection</p>'; return; }
+  initGL(); buildMenuUI(); buildAttract(); showScreen('menu');
+  document.getElementById('boot').remove();
+  requestAnimationFrame(frame);
+  if(!window.Peer) $('menu-note').textContent='PeerJS failed to load — online play is unavailable.';
+})();
+</script>
+</body>
+</html>

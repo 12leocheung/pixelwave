@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Truthblade: The Lie Detector Quest</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background: linear-gradient(145deg, #0a1f1e 0%, #0c2a2a 100%);
+            font-family: 'Segoe UI', 'Cinema', 'Courier New', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* Adventure UI panel */
+        .game-container {
+            max-width: 1300px;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.55);
+            border-radius: 64px;
+            padding: 20px;
+            backdrop-filter: blur(2px);
+            box-shadow: 0 20px 35px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.1);
+            border: 1px solid #dbb87c;
+        }
+
+        .adventure-header {
+            text-align: center;
+            margin-bottom: 20px;
+            background: #231f1bb3;
+            border-radius: 60px;
+            padding: 12px;
+            border-bottom: 3px solid #e9b35f;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            letter-spacing: 4px;
+            background: linear-gradient(135deg, #f9e0a0, #c78c3a);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 2px 3px black;
+        }
+
+        .sub {
+            color: #bdd4ce;
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+
+        /* players grid */
+        .players-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 35px;
+        }
+
+        .player-card {
+            background: #2c241ce0;
+            backdrop-filter: blur(4px);
+            border-radius: 32px;
+            padding: 15px;
+            width: 250px;
+            transition: 0.2s;
+            border: 1px solid #ab8e54;
+            box-shadow: 0 8px 12px rgba(0,0,0,0.3);
+            position: relative;
+        }
+
+        .player-name {
+            font-size: 1.7rem;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 2px dashed #c4a35a;
+            margin-bottom: 10px;
+            color: #fbe6a2;
+        }
+
+        .truth-bar-container {
+            background: #3e2b1c;
+            border-radius: 20px;
+            height: 18px;
+            margin: 12px 0;
+            overflow: hidden;
+        }
+
+        .truth-fill {
+            background: linear-gradient(90deg, #f5b042, #ffdd88);
+            width: 100%;
+            height: 100%;
+            border-radius: 20px;
+            transition: width 0.3s ease;
+        }
+
+        .truth-value {
+            font-size: 0.9rem;
+            text-align: center;
+            font-weight: bold;
+            color: #ffe2b5;
+        }
+
+        .quest-actions {
+            margin-top: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        button {
+            background: #332419;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 40px;
+            font-family: monospace;
+            font-weight: bold;
+            color: #ffeaac;
+            cursor: pointer;
+            transition: 0.1s linear;
+            font-size: 0.8rem;
+            border-bottom: 2px solid #7e623b;
+        }
+
+        button:active {
+            transform: scale(0.97);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            transform: none;
+            cursor: not-allowed;
+        }
+
+        .quest-btn {
+            background: #3f2c1a;
+            border-left: 4px solid #e5b567;
+        }
+
+        .danger-btn {
+            background: #4a2a2a;
+            border-left: 4px solid #d9534f;
+        }
+
+        .log-area {
+            background: #0f0f0bd9;
+            border-radius: 40px;
+            padding: 15px 20px;
+            margin: 20px 0;
+            height: 180px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #d4d2b2;
+            border: 1px solid #bb974e;
+        }
+
+        .quest-pool {
+            background: #1f2a1bc9;
+            border-radius: 32px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #efcd82;
+            margin-bottom: 12px;
+            display: flex;
+            gap: 15px;
+            align-items: baseline;
+        }
+
+        .quest-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .quest-tag {
+            background: #00000066;
+            border-radius: 30px;
+            padding: 5px 14px;
+            font-size: 0.8rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border-left: 6px solid;
+        }
+
+        .truth-quest {
+            border-left-color: #7ccf5c;
+        }
+        .lie-quest {
+            border-left-color: #e66a3a;
+        }
+
+        .timer-badge {
+            background: #0a0c08;
+            border-radius: 50px;
+            padding: 6px 12px;
+            font-size: 0.7rem;
+            font-family: monospace;
+            color: #ffaa66;
+        }
+
+        .inline-code {
+            background: #2d241c;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+        }
+
+        footer {
+            text-align: center;
+            font-size: 0.7rem;
+            color: #a58e64;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <div class="adventure-header">
+        <h1>⚔️ TRUTHBLADE ⚔️</h1>
+        <div class="sub">「 Lie Detector Social Quest — trust is a weapon 」</div>
+    </div>
+
+    <div class="players-panel" id="playersPanel"></div>
+
+    <div class="log-area" id="gameLog">
+        🏕️ Welcome, adventurers!<br>
+        ▶ Give TRUE quests → you lose TRUTH (spent to teach)<br>
+        ▶ Give LIE quests → if victim completes it, you STEAL their TRUTH!<br>
+        ⚠️ But lies can backfire if they refuse...<br>
+        🎭 Complete quests to maintain your truth bar. Stay above zero!
+    </div>
+
+    <div class="quest-pool">
+        <div class="section-title">
+            <span>📜 QUEST CHART (Adventure Deeds)</span>
+            <span class="timer-badge" id="globalTimer">⏱️ bluff timer: --</span>
+        </div>
+        <div id="questLibrary"></div>
+        <div style="margin-top: 12px; font-size: 0.75rem; color:#c7b27b;">✨ Click on any quest below to assign to a player (choose target first)</div>
+        <div id="selectedTargetMsg" style="margin-top: 8px; font-weight: bold; color:#f5bc70;"></div>
+    </div>
+    <footer>🧠 psychological warfare: truth is currency. each completed quest changes the realm.</footer>
+</div>
+
+<script>
+    // ---------- ADVENTURE THEMED QUEST DATABASE ----------
+    const TRUE_QUESTS = [
+        { id: "t1", text: "🛡️ Slay a rock mimic (find a stone & draw sword pose)", type: "truth", rewardTruthToTarget: 12, costToGiver: 8 },
+        { id: "t2", text: "🧭 Scavenge 3 shiny trinkets (coins/rings)", type: "truth", rewardTruthToTarget: 10, costToGiver: 7 },
+        { id: "t3", text: "📜 Recite an ancient oath (say 'By the Sunstone, I speak no lies')", type: "truth", rewardTruthToTarget: 8, costToGiver: 6 },
+        { id: "t4", text: "🌿 Harvest Moonpetal (send a pic of any leaf)", type: "truth", rewardTruthToTarget: 9, costToGiver: 7 },
+        { id: "t5", text: "⚔️ Defeat training dummy (10 jumping jacks)", type: "truth", rewardTruthToTarget: 11, costToGiver: 8 }
+    ];
+
+    const LIE_QUESTS = [
+        { id: "l1", text: "🌀 Lie: 'Drink a potion of dragon breath' (actually just hot sauce sip)", type: "lie", stealAmount: 14, penaltyToTarget: 14 },
+        { id: "l2", text: "🔮 Lie: 'Capture a ghost in a jar' — describe a 'spooky encounter'", type: "lie", stealAmount: 12, penaltyToTarget: 12 },
+        { id: "l3", text: "🐉 Lie: 'Find a dragon scale' (take a pic of a random reptile toy)", type: "lie", stealAmount: 13, penaltyToTarget: 13 },
+        { id: "l4", text: "💀 Lie: 'Steal from the Lich King’s altar' (draw a skull)", type: "lie", stealAmount: 10, penaltyToTarget: 10 },
+        { id: "l5", text: "🔥 Lie: 'Tame a fire salamander' (record 5s hissing sound)", type: "lie", stealAmount: 15, penaltyToTarget: 15 }
+    ];
+
+    // ---------- GAME STATE ----------
+    let players = [
+        { id: 0, name: "Rogue", truth: 70, maxTruth: 100 },
+        { id: 1, name: "Mage", truth: 70, maxTruth: 100 },
+        { id: 2, name: "Warrior", truth: 70, maxTruth: 100 },
+        { id: 3, name: "Cleric", truth: 70, maxTruth: 100 }
+    ];
+
+    let activeTimers = {};      // store interval per pending quest { targetId, questId, type, giverId, lieData }
+    let nextQuestId = 1000;
+    let pendingQuests = [];      // list of active bluff challenges: { id, giverId, targetId, quest, expiresAt, isLie, stealAmount }
+    let selectedTargetId = null; // which player we are assigning quest to
+
+    // helper: update all UI
+    function renderPlayers() {
+        const panel = document.getElementById('playersPanel');
+        panel.innerHTML = players.map(p => `
+            <div class="player-card" style="cursor:pointer; ${selectedTargetId === p.id ? 'border: 3px solid #f5bc70; box-shadow:0 0 12px gold;' : ''}" onclick="selectTarget(${p.id})">
+                <div class="player-name">
+                    ${p.name}
+                    <span>🎭 ${Math.floor(p.truth)}</span>
+                </div>
+                <div class="truth-bar-container">
+                    <div class="truth-fill" style="width: ${(p.truth / p.maxTruth) * 100}%"></div>
+                </div>
+                <div class="truth-value">Truth: ${Math.floor(p.truth)} / ${p.maxTruth}</div>
+                <div class="quest-actions">
+                    <button class="quest-btn" onclick="event.stopPropagation(); completeRandomQuest(${p.id})">✅ Complete Random Quest (IRL/Digital)</button>
+                </div>
+                ${activeTimers[p.id] ? `<div class="timer-badge" style="margin-top:6px;">⏳ Pending lie verdict...</div>` : ''}
+            </div>
+        `).join('');
+        const targetMsg = document.getElementById('selectedTargetMsg');
+        if (selectedTargetId !== null) {
+            const target = players.find(p => p.id === selectedTargetId);
+            targetMsg.innerHTML = `🎯 TARGET: ${target?.name} — click any quest below to assign.`;
+        } else {
+            targetMsg.innerHTML = `⚠️ Click on any player card to target them for a quest!`;
+        }
+    }
+
+    function addLog(msg) {
+        const logDiv = document.getElementById('gameLog');
+        const timestamp = new Date().toLocaleTimeString();
+        logDiv.innerHTML += `<div>⏲️ ${timestamp} — ${msg}</div>`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    // adjust truth & prevent negatives/cap
+    function modifyTruth(playerId, delta, reason) {
+        const p = players.find(p => p.id === playerId);
+        if (!p) return;
+        let newTruth = p.truth + delta;
+        if (newTruth > p.maxTruth) newTruth = p.maxTruth;
+        if (newTruth < 0) newTruth = 0;
+        p.truth = newTruth;
+        addLog(`${p.name} ${delta >= 0 ? 'gained' : 'lost'} ${Math.abs(delta)} truth. (${reason}) → ${Math.floor(p.truth)}`);
+        if (p.truth <= 0) {
+            addLog(`💀 ${p.name} has ZERO truth! They are shattered — but can regain by completing quests!`);
+        }
+        renderPlayers();
+    }
+
+    // complete a quest (call when a player does the deed IRL/digitally)
+    function completeQuestInternal(targetPlayerId, quest, giverId, isLie, stealAmount, penaltyAmount) {
+        const target = players.find(p => p.id === targetPlayerId);
+        const giver = players.find(p => p.id === giverId);
+        if (!target || !giver) return false;
+
+        if (!isLie) {
+            // TRUE QUEST: giver loses truth (cost), target gains rewardTruth
+            const cost = quest.costToGiver;
+            const reward = quest.rewardTruthToTarget;
+            if (giver.truth < cost && giver.truth < 0) {
+                addLog(`⚠️ ${giver.name} doesn't have enough truth to sponsor true quest! Quest fails.`);
+                return false;
+            }
+            modifyTruth(giverId, -cost, `spent truth to give true quest: "${quest.text}"`);
+            modifyTruth(targetPlayerId, reward, `completed true quest: ${quest.text}`);
+            addLog(`✨ ${target.name} completed TRUE quest! +${reward} truth. ${giver.name} lost ${cost} truth as sacrifice.`);
+        } 
+        else {
+            // LIE QUEST: target believed lie -> giver steals truth from target
+            const steal = stealAmount;
+            if (target.truth < steal) {
+                // partial steal if not enough? we steal all remaining
+                const actualSteal = target.truth;
+                modifyTruth(giverId, actualSteal, `stole remaining truth from ${target.name} via LIE quest: ${quest.text}`);
+                modifyTruth(targetPlayerId, -actualSteal, `believed lie, lost truth to ${giver.name}`);
+                addLog(`💔 ${target.name} fell for the lie but had only ${actualSteal} truth to lose! Ruthless.`);
+            } else {
+                modifyTruth(giverId, steal, `stole truth by deceiving ${target.name} (${quest.text})`);
+                modifyTruth(targetPlayerId, -steal, `punished for believing lie: ${quest.text}`);
+                addLog(`🎭 DECEPTION! ${giver.name} LIED and ${target.name} completed it. ${giver.name} gains +${steal} truth from target!`);
+            }
+        }
+        return true;
+    }
+
+    // bluff timer: when a player receives a lie quest, they have TIME to complete it or it auto fails (they dodge penalty)
+    function assignLieQuestWithTimer(giverId, targetId, lieQuest, stealAmount, penaltyAmount) {
+        // if target already has pending bluff, cancel old (only one active deception at a time per player)
+        if (activeTimers[targetId]) {
+            clearTimeout(activeTimers[targetId]);
+            addLog(`⏰ previous pending lie for ${players.find(p=>p.id===targetId)?.name} expired/overridden.`);
+        }
+        const expireSeconds = 25; // 25 seconds to decide IRL completion
+        const expiryTime = Date.now() + expireSeconds * 1000;
+        const timerId = setTimeout(() => {
+            // time's up: target did NOT complete the lie quest -> they escape punishment, lie backfires (giver gains nothing)
+            addLog(`⌛ LIE QUEST EXPIRED: ${players.find(p=>p.id===targetId)?.name} did not complete the deception "${lieQuest.text}". Bluff fizzles! No truth stolen.`);
+            if (activeTimers[targetId]) delete activeTimers[targetId];
+            renderPlayers();
+        }, expireSeconds * 1000);
+        
+        activeTimers[targetId] = timerId;
+        // store in pending state so that when target clicks "Complete Random Quest" we match pending lie.
+        // We create a pending object.
+        const pendingId = nextQuestId++;
+        const pendingLie = {
+            id: pendingId,
+            giverId: giverId,
+            targetId: targetId,
+            quest: lieQuest,
+            expiresAt: expiryTime,
+            isLie: true,
+            stealAmount: stealAmount,
+            penaltyAmount: penaltyAmount
+        };
+        pendingQuests.push(pendingLie);
+        addLog(`⚠️ ${players.find(p=>p.id===targetId)?.name} received LIE QUEST: "${lieQuest.text}". You have ${expireSeconds}s to complete it IRL/digitally! If completed, you believe lie → truth stolen! If not, you dodge. Click "Complete Random Quest" to attempt.`);
+        renderPlayers();
+    }
+
+    // assign a truth quest (no timer, but instant effect on complete)
+    function assignTruthQuest(giverId, targetId, truthQuest) {
+        const giver = players.find(p => p.id === giverId);
+        if (!giver) return false;
+        if (giver.truth < truthQuest.costToGiver) {
+            addLog(`❌ ${giver.name} cannot afford truth quest (need ${truthQuest.costToGiver} truth).`);
+            return false;
+        }
+        // pending truth: not a bluff, just record so that when target completes, effect triggers.
+        const pendingId = nextQuestId++;
+        pendingQuests.push({
+            id: pendingId,
+            giverId: giverId,
+            targetId: targetId,
+            quest: truthQuest,
+            isLie: false,
+            expiresAt: null,
+            stealAmount: 0
+        });
+        addLog(`📜 ${giver.name} assigned TRUE QUEST: "${truthQuest.text}" to ${players.find(p=>p.id===targetId)?.name}. Complete it to earn rewards!`);
+        renderPlayers();
+        return true;
+    }
+
+    // called when a player clicks "Complete Random Quest" - they resolve the oldest pending quest targeted to them (FIFO)
+    function completeRandomQuest(playerId) {
+        // find any pending quest where targetId === playerId
+        const myPendingIndex = pendingQuests.findIndex(pq => pq.targetId === playerId);
+        if (myPendingIndex === -1) {
+            addLog(`🧙 ${players.find(p=>p.id===playerId)?.name} has no active quests! Ask others to give you quests.`);
+            return;
+        }
+        const pending = pendingQuests[myPendingIndex];
+        // remove from pending list
+        pendingQuests.splice(myPendingIndex, 1);
+        
+        // If this was a lie quest with active timer, clear the timer
+        if (pending.isLie && activeTimers[playerId]) {
+            clearTimeout(activeTimers[playerId]);
+            delete activeTimers[playerId];
+        }
+        
+        // resolve completion
+        if (pending.isLie) {
+            // Lie quest: target believed -> completeLieEffect
+            completeQuestInternal(playerId, pending.quest, pending.giverId, true, pending.stealAmount, pending.penaltyAmount);
+        } else {
+            // Truth quest: reward & cost
+            completeQuestInternal(playerId, pending.quest, pending.giverId, false, 0, 0);
+        }
+        renderPlayers();
+        // after resolve, check if any other pending remains? not needed.
+    }
+
+    // GIVE QUEST from selected target perspective: we call this with chosen quest (truth/lie)
+    function giveQuestToTarget(quest, isLie) {
+        if (selectedTargetId === null) {
+            addLog("👑 First click on a player card to target them!");
+            return;
+        }
+        const giverId = selectedTargetId; // wait, careful: the giver is the CURRENT player using interface? but the game logic says "you give other players quests" and you spend truth.
+        // But in our UI, you select a target, then pick quest: the "giver" is the acting user? Since multiplayer by sharing device, we treat all players as NPCs.
+        // We'll implement: The person giving quest is the one who clicks. But we need to know which player is the "giver". Let's assume the browser is omnipotent: BUT to simulate social game, the current active "giver" is the player that you are logged as? Let's add a simple dropdown? Actually easier: we add a "Giver Selector". To be fair, I will add a radio style: choose which player issues quest. More elegant.
+        // Refactor: add small selection for "acting as". Better UX.
+        if (!window.activeGiverId) {
+            addLog("⚙️ Please select the 'Giver' (the player issuing the quest) from buttons below the player list.");
+            return;
+        }
+        const giver = players.find(p => p.id === window.activeGiverId);
+        const target = players.find(p => p.id === selectedTargetId);
+        if (!giver || !target) return;
+        if (giver.id === target.id) {
+            addLog("Can't give quest to yourself! Choose another player.");
+            return;
+        }
+        
+        if (!isLie) {
+            // Truth quest: cost validation
+            if (giver.truth < quest.costToGiver) {
+                addLog(`💢 ${giver.name} doesn't have enough truth (${Math.floor(giver.truth)} < ${quest.costToGiver}) to give true quest.`);
+                return;
+            }
+            assignTruthQuest(giver.id, target.id, quest);
+        } else {
+            // Lie quest: no upfront cost, but the giver risks nothing except potential reputation? but we need no cost, just assign bluff
+            assignLieQuestWithTimer(giver.id, target.id, quest, quest.stealAmount, quest.penaltyToTarget);
+        }
+    }
+    
+    function selectTarget(id) {
+        selectedTargetId = id;
+        renderPlayers();
+    }
+    
+    function setActiveGiver(id) {
+        window.activeGiverId = id;
+        addLog(`🎭 Now playing as ${players.find(p=>p.id===id)?.name} — you will issue quests as this character.`);
+        renderPlayers();
+    }
+    
+    function renderQuestLibrary() {
+        const container = document.getElementById('questLibrary');
+        const trueList = TRUE_QUESTS.map(q => `
+            <div class="quest-tag truth-quest" onclick="giveQuestToTarget(${JSON.stringify(q).replace(/"/g, '&quot;')}, false)">
+                ✅ TRUTH: ${q.text} <span class="inline-code">(-${q.costToGiver} truth | target +${q.rewardTruthToTarget})</span>
+            </div>
+        `).join('');
+        const lieList = LIE_QUESTS.map(q => `
+            <div class="quest-tag lie-quest" onclick="giveQuestToTarget(${JSON.stringify(q).replace(/"/g, '&quot;')}, true)">
+                🗡️ LIE: ${q.text} <span class="inline-code">(steal ${q.stealAmount} truth if believed!)</span>
+            </div>
+        `).join('');
+        container.innerHTML = `<div style="margin-bottom:8px;">✨ Truth Quests (self-sacrifice)</div><div class="quest-grid">${trueList}</div>
+        <div style="margin:15px 0 8px 0;">🌀 Deception Quests (bluff warfare)</div><div class="quest-grid">${lieList}</div>`;
+    }
+    
+    // reset timers for global consistency, plus interval to clean expired pending (optional)
+    function cleanExpiredPending() {
+        const now = Date.now();
+        let changed = false;
+        for (let i=0; i<pendingQuests.length; i++) {
+            const pq = pendingQuests[i];
+            if (pq.isLie && pq.expiresAt && pq.expiresAt < now) {
+                // expired quest removal: but timer already triggers separately. We'll just remove if timer already cleared
+                if (activeTimers[pq.targetId]) {
+                    // but timer would have fired already. So we ensure no duplicates
+                }
+                pendingQuests.splice(i,1);
+                changed=true;
+                i--;
+            }
+        }
+        if(changed) renderPlayers();
+    }
+    
+    // extra UI for giver selection
+    function renderGiverSelector() {
+        const panel = document.getElementById('playersPanel');
+        const existing = document.getElementById('giverSelectorRow');
+        if(existing) existing.remove();
+        const selectorDiv = document.createElement('div');
+        selectorDiv.id = 'giverSelectorRow';
+        selectorDiv.style.display = 'flex';
+        selectorDiv.style.gap = '10px';
+        selectorDiv.style.justifyContent = 'center';
+        selectorDiv.style.marginBottom = '16px';
+        selectorDiv.style.flexWrap = 'wrap';
+        selectorDiv.innerHTML = `<div style="color:#efcd82;">👑 ACT AS (GIVER): </div>` + 
+            players.map(p => `<button class="quest-btn" style="background:${window.activeGiverId===p.id?'#c78c3a':'#332419'}" onclick="setActiveGiver(${p.id})">🎭 ${p.name}</button>`).join('');
+        const playersPanel = document.getElementById('playersPanel');
+        playersPanel.parentNode.insertBefore(selectorDiv, playersPanel);
+    }
+    
+    // Update global timer display
+    function updateGlobalTimerDisplay() {
+        const timerSpan = document.getElementById('globalTimer');
+        let activeLieCount = pendingQuests.filter(pq => pq.isLie && activeTimers[pq.targetId]).length;
+        timerSpan.innerHTML = `⏱️ active lies: ${activeLieCount} (25s to complete)`;
+    }
+    
+    setInterval(() => {
+        cleanExpiredPending();
+        updateGlobalTimerDisplay();
+    }, 1000);
+    
+    // initial render
+    function init() {
+        renderQuestLibrary();
+        window.activeGiverId = 0; // default Rogue
+        renderPlayers();
+        renderGiverSelector();
+        setActiveGiver(0);
+        // extra style for global functions
+        window.selectTarget = selectTarget;
+        window.setActiveGiver = setActiveGiver;
+        window.giveQuestToTarget = giveQuestToTarget;
+        window.completeRandomQuest = completeRandomQuest;
+        addLog("🌟 Truthblade Awakens! Target a player, pick a quest. Truth decays? No, but complete quests to stay afloat. Lie to gain power... if they bite.");
+    }
+    
+    init();
+</script>
+</body>
+</html>

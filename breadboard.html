@@ -1,0 +1,1593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Circuit Sandbox - Educational EE Voxel Game</title>
+<style>
+  /* ============================================================
+     GLOBAL / RESET
+     ============================================================ */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #000;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    user-select: none;
+  }
+  canvas { display: block; }
+
+  /* ============================================================
+     CROSSHAIR
+     ============================================================ */
+  #crosshair {
+    position: fixed;
+    top: 50%; left: 50%;
+    width: 10px; height: 10px;
+    margin: -5px 0 0 -5px;
+    pointer-events: none;
+    z-index: 50;
+  }
+  #crosshair::before, #crosshair::after {
+    content: '';
+    position: absolute;
+    background: rgba(255,255,255,0.85);
+    box-shadow: 0 0 2px rgba(0,0,0,0.8);
+  }
+  #crosshair::before { left: 4px; top: 0; width: 2px; height: 10px; }
+  #crosshair::after  { top: 4px; left: 0; width: 10px; height: 2px; }
+
+  /* ============================================================
+     BLOCKER / START SCREEN
+     ============================================================ */
+  #blocker {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(10,14,20,0.85);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+  }
+  #blocker.hidden { display: none; }
+  #instructions {
+    text-align: center;
+    color: #d7e3f0;
+    padding: 30px 40px;
+    border: 1px solid #2b6cb0;
+    border-radius: 10px;
+    background: rgba(15,22,32,0.9);
+    max-width: 520px;
+  }
+  #instructions h1 {
+    color: #4fd1c5;
+    margin-bottom: 12px;
+    font-size: 28px;
+    letter-spacing: 1px;
+  }
+  #instructions p { margin: 6px 0; font-size: 14px; line-height: 1.5; color: #a9c0d8; }
+  #instructions .key {
+    display: inline-block;
+    background: #1e2a38;
+    border: 1px solid #3a5170;
+    border-radius: 4px;
+    padding: 1px 7px;
+    margin: 0 2px;
+    font-weight: bold;
+    color: #fff;
+  }
+  #instructions .start-btn {
+    margin-top: 18px;
+    display: inline-block;
+    background: #2b6cb0;
+    color: #fff;
+    padding: 10px 26px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  #instructions .start-btn:hover { background: #3a82d6; }
+
+  /* ============================================================
+     TOP-LEFT HUD (status info)
+     ============================================================ */
+  #hud {
+    position: fixed;
+    top: 12px; left: 12px;
+    color: #cfe3f5;
+    font-size: 13px;
+    background: rgba(10,16,24,0.55);
+    border: 1px solid rgba(79,209,197,0.3);
+    border-radius: 8px;
+    padding: 10px 14px;
+    z-index: 40;
+    line-height: 1.6;
+    pointer-events: none;
+  }
+  #hud b { color: #4fd1c5; }
+  #hud .dim { color: #7d93ab; }
+
+  /* ============================================================
+     HELD ITEM PREVIEW (bottom-right, attached visually to camera area)
+     ============================================================ */
+  #heldItemViewport {
+    position: fixed;
+    bottom: 0; right: 0;
+    width: 230px; height: 230px;
+    pointer-events: none;
+    z-index: 45;
+  }
+
+  /* ============================================================
+     HOTBAR
+     ============================================================ */
+  #hotbarWrap {
+    position: fixed;
+    bottom: 0; left: 0; width: 100%;
+    z-index: 60;
+    display: flex;
+    justify-content: center;
+    pointer-events: none; /* re-enabled on children when unlocked */
+  }
+  #hotbar {
+    pointer-events: auto;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    max-width: 92vw;
+    margin: 0 0 14px 0;
+    padding: 10px 12px;
+    background: rgba(12,18,26,0.78);
+    border: 1px solid rgba(79,209,197,0.35);
+    border-radius: 12px;
+    backdrop-filter: blur(3px);
+  }
+  #hotbar::-webkit-scrollbar { height: 6px; }
+  #hotbar::-webkit-scrollbar-thumb { background: #2b6cb0; border-radius: 4px; }
+
+  .hotbar-slot {
+    flex: 0 0 auto;
+    width: 78px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    background: rgba(255,255,255,0.04);
+    border: 2px solid transparent;
+    border-radius: 8px;
+    padding: 6px 4px 5px 4px;
+    cursor: pointer;
+    transition: border-color 0.12s, background 0.12s;
+  }
+  .hotbar-slot:hover { background: rgba(255,255,255,0.09); }
+  .hotbar-slot.selected {
+    border-color: #4fd1c5;
+    background: rgba(79,209,197,0.15);
+  }
+  .hotbar-slot canvas {
+    width: 56px; height: 56px;
+    pointer-events: none;
+  }
+  .hotbar-slot .label {
+    color: #d7e3f0;
+    font-size: 10px;
+    text-align: center;
+    margin-top: 2px;
+    white-space: nowrap;
+  }
+  .hotbar-slot .key-num {
+    position: absolute;
+    top: 2px; left: 5px;
+    font-size: 9px;
+    color: #6f8aa6;
+  }
+  .hotbar-slot { position: relative; }
+
+  /* ============================================================
+     COMPONENT INFO TOOLTIP (top-center, shows facts about hovered part)
+     ============================================================ */
+  #infoPanel {
+    position: fixed;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    max-width: 380px;
+    background: rgba(10,16,24,0.78);
+    border: 1px solid rgba(79,209,197,0.35);
+    border-radius: 8px;
+    padding: 8px 16px;
+    color: #cfe3f5;
+    font-size: 13px;
+    text-align: center;
+    z-index: 40;
+    pointer-events: none;
+    display: none;
+  }
+  #infoPanel.show { display: block; }
+  #infoPanel b { color: #4fd1c5; }
+
+  /* ============================================================
+     ESC MENU HINT (shown only while pointer unlocked, not first launch)
+     ============================================================ */
+  #pausedHint {
+    position: fixed;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    color: #ffd166;
+    background: rgba(10,16,24,0.8);
+    border: 1px solid rgba(255,209,102,0.4);
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 13px;
+    z-index: 70;
+    display: none;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= START / PAUSE BLOCKER ================= -->
+<div id="blocker">
+  <div id="instructions">
+    <h1>⚡ CIRCUIT SANDBOX</h1>
+    <div id="instructionsBody">
+      <p>A first-person educational electrical engineering playground.</p>
+      <p><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> Move &nbsp;&nbsp; <span class="key">Space</span> Jump &nbsp;&nbsp; <span class="key">Mouse</span> Look</p>
+      <p><span class="key">Left Click</span> Place component &nbsp;&nbsp; <span class="key">Right Click</span> Remove component</p>
+      <p><span class="key">1</span>-<span class="key">0</span> Quick select &nbsp;&nbsp; <span class="key">Esc</span> Release mouse / open hotbar</p>
+    </div>
+    <p class="start-btn" id="startBtn">Click to Start</p>
+  </div>
+</div>
+
+<div id="pausedHint">Mouse unlocked — click a component below, then click the screen to resume building</div>
+
+<!-- ================= CROSSHAIR ================= -->
+<div id="crosshair"></div>
+
+<!-- ================= HUD ================= -->
+<div id="hud">
+  <div><b>Holding:</b> <span id="hudHeld">Wire</span></div>
+  <div class="dim">Grid size: 16 units &nbsp;|&nbsp; Components placed: <span id="hudCount">0</span></div>
+</div>
+
+<!-- ================= COMPONENT INFO PANEL ================= -->
+<div id="infoPanel"></div>
+
+<!-- ================= HELD ITEM 3D PREVIEW ================= -->
+<div id="heldItemViewport"></div>
+
+<!-- ================= HOTBAR ================= -->
+<div id="hotbarWrap">
+  <div id="hotbar"></div>
+</div>
+
+<!-- ================= THREE.JS (r128 via CDN) ================= -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+/* ================================================================================================
+   PointerLockControls (inlined)
+   ================================================================================================ */
+(function () {
+  function PointerLockControls(camera, domElement) {
+    domElement = domElement || document.body;
+    this.domElement = domElement;
+    this.isLocked = false;
+
+    const yawObject = new THREE.Object3D();
+    yawObject.position.copy(camera.position);
+    yawObject.add(camera);
+    camera.rotation.set(0, 0, 0);
+    camera.position.set(0, 0, 0);
+
+    const PI_2 = Math.PI / 2;
+    const self = this;
+    const listeners = {};
+
+    this.getObject = function () { return yawObject; };
+
+    this.moveForward = function (distance) {
+      const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(yawObject.quaternion);
+      dir.y = 0; dir.normalize();
+      yawObject.position.addScaledVector(dir, distance);
+    };
+
+    this.moveRight = function (distance) {
+      const dir = new THREE.Vector3(1, 0, 0).applyQuaternion(yawObject.quaternion);
+      dir.y = 0; dir.normalize();
+      yawObject.position.addScaledVector(dir, distance);
+    };
+
+    function onMouseMove(event) {
+      if (!self.isLocked) return;
+      const movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+      const movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+
+      yawObject.rotation.y -= movementX * 0.0022;
+
+      camera.rotation.x -= movementY * 0.0022;
+      camera.rotation.x = Math.max(-PI_2, Math.min(PI_2, camera.rotation.x));
+    }
+
+    function onPointerLockChange() {
+      if (document.pointerLockElement === domElement) {
+        self.isLocked = true;
+        self.dispatchEvent('lock');
+      } else {
+        self.isLocked = false;
+        self.dispatchEvent('unlock');
+      }
+    }
+
+    function onPointerLockError() {
+      console.error('PointerLockControls: Unable to use Pointer Lock API');
+      self.dispatchEvent('error');
+    }
+
+    this.connect = function () {
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('pointerlockchange', onPointerLockChange);
+      document.addEventListener('pointerlockerror', onPointerLockError);
+    };
+
+    this.disconnect = function () {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('pointerlockchange', onPointerLockChange);
+      document.removeEventListener('pointerlockerror', onPointerLockError);
+    };
+
+    this.dispose = function () { this.disconnect(); };
+
+    this.lock = function () { domElement.requestPointerLock(); };
+    this.unlock = function () { document.exitPointerLock(); };
+
+    this.addEventListener = function (type, fn) {
+      (listeners[type] = listeners[type] || []).push(fn);
+    };
+    this.dispatchEvent = function (type) {
+      (listeners[type] || []).forEach((fn) => fn());
+    };
+
+    this.connect();
+  }
+
+  THREE.PointerLockControls = PointerLockControls;
+})();
+</script>
+
+<script>
+/* ================================================================================================
+   CIRCUIT SANDBOX
+   ================================================================================================ */
+
+(function () {
+  'use strict';
+
+  /* ============================================================
+     CONSTANTS
+     ============================================================ */
+  const GRID_SIZE = 16;
+  const WORLD_HALF_EXTENT = 4000;
+  const PLAYER_HEIGHT = 28;
+  const PLAYER_RADIUS = 6;
+  const GRAVITY = 760;
+  const JUMP_SPEED = 260;
+  const MOVE_SPEED = 420;
+  const PLACE_DISTANCE = 5 * GRID_SIZE;
+
+  /* ============================================================
+     SCENE / CAMERA / RENDERER
+     ============================================================ */
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0b1118);
+  scene.fog = new THREE.Fog(0x0b1118, GRID_SIZE * 20, GRID_SIZE * 70);
+
+  const camera = new THREE.PerspectiveCamera(
+    72, window.innerWidth / window.innerHeight, 0.1, 5000
+  );
+  camera.position.set(0, PLAYER_HEIGHT, 0);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  document.body.appendChild(renderer.domElement);
+
+  /* ============================================================
+     LIGHTING
+     ============================================================ */
+  const hemiLight = new THREE.HemisphereLight(0xbfd8ff, 0x1a1f24, 0.9);
+  scene.add(hemiLight);
+
+  const sunLight = new THREE.DirectionalLight(0xfff2d6, 0.9);
+  sunLight.position.set(300, 500, 200);
+  sunLight.castShadow = true;
+  sunLight.shadow.mapSize.set(2048, 2048);
+  sunLight.shadow.camera.left = -600;
+  sunLight.shadow.camera.right = 600;
+  sunLight.shadow.camera.top = 600;
+  sunLight.shadow.camera.bottom = -600;
+  sunLight.shadow.camera.far = 2000;
+  scene.add(sunLight);
+
+  const playerLight = new THREE.PointLight(0xffffff, 0.25, 400);
+  scene.add(playerLight);
+
+  /* ============================================================
+     FLOOR (infinite flat plane) + GRID HELPER
+     ============================================================ */
+  const floorGeo = new THREE.PlaneGeometry(WORLD_HALF_EXTENT * 2, WORLD_HALF_EXTENT * 2);
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0x222a33, roughness: 0.95, metalness: 0.05 });
+  const floor = new THREE.Mesh(floorGeo, floorMat);
+  floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  const gridDivisions = Math.round((WORLD_HALF_EXTENT * 2) / GRID_SIZE);
+  const gridHelper = new THREE.GridHelper(WORLD_HALF_EXTENT * 2, gridDivisions, 0x4fd1c5, 0x2c3744);
+  gridHelper.position.y = 0.05;
+  scene.add(gridHelper);
+
+  /* ============================================================
+     GRID UTILITIES
+     ============================================================ */
+  function worldToCell(x, z) {
+    return {
+      gx: Math.floor(x / GRID_SIZE),
+      gz: Math.floor(z / GRID_SIZE)
+    };
+  }
+  function cellCenter(gx, gz) {
+    return new THREE.Vector3(
+      gx * GRID_SIZE + GRID_SIZE / 2,
+      0,
+      gz * GRID_SIZE + GRID_SIZE / 2
+    );
+  }
+  function cellKey(gx, gz) { return gx + ',' + gz; }
+
+  const placedComponents = new Map();
+
+  /* ============================================================
+     WIRE NETWORK TRACKING
+     ============================================================ */
+  const wireNetworks = [];
+  const cellToNetwork = new Map();
+
+  function getAdjacentCells(gx, gz) {
+    return [
+      { gx: gx + 1, gz },
+      { gx: gx - 1, gz },
+      { gx, gz: gz + 1 },
+      { gx, gz: gz - 1 },
+      { gx: gx + 1, gz: gz + 1 },
+      { gx: gx - 1, gz: gz + 1 },
+      { gx: gx + 1, gz: gz - 1 },
+      { gx: gx - 1, gz: gz - 1 }
+    ];
+  }
+
+  function findWireNetworks() {
+    wireNetworks.length = 0;
+    cellToNetwork.clear();
+    const visited = new Set();
+
+    placedComponents.forEach((entry, key) => {
+      if (entry.type !== 'wire' || visited.has(key)) return;
+
+      const network = [];
+      const queue = [{ gx: entry.gx, gz: entry.gz, key }];
+
+      while (queue.length > 0) {
+        const current = queue.shift();
+        const currentKey = cellKey(current.gx, current.gz);
+
+        if (visited.has(currentKey)) continue;
+        visited.add(currentKey);
+        network.push(current);
+        cellToNetwork.set(currentKey, wireNetworks.length);
+
+        getAdjacentCells(current.gx, current.gz).forEach((neighbor) => {
+          const neighborKey = cellKey(neighbor.gx, neighbor.gz);
+          if (!visited.has(neighborKey)) {
+            const neighborEntry = placedComponents.get(neighborKey);
+            if (neighborEntry && neighborEntry.type === 'wire') {
+              queue.push({ gx: neighbor.gx, gz: neighbor.gz, key: neighborKey });
+            }
+          }
+        });
+      }
+
+      if (network.length > 0) wireNetworks.push(network);
+    });
+  }
+
+  const networkVisualsGroup = new THREE.Group();
+  scene.add(networkVisualsGroup);
+
+  function updateWireNetworkVisuals() {
+    networkVisualsGroup.children.slice().forEach(child => networkVisualsGroup.remove(child));
+
+    wireNetworks.forEach((network) => {
+      network.forEach((cell) => {
+        const entry = placedComponents.get(cellKey(cell.gx, cell.gz));
+        if (entry && entry.mesh) {
+          entry.mesh.children.forEach((child) => {
+            if (child.isMesh && child.material) {
+              child.material.emissive.setHex(0x4fd1c5);
+              child.material.emissiveIntensity = 0.08;
+            }
+          });
+        }
+      });
+    });
+  }
+
+  /* ================================================================================================
+     COMPONENT DEFINITIONS
+     ================================================================================================ */
+  const COMPONENTS = [];
+
+  function registerComponent(def) { COMPONENTS.push(def); }
+
+  function addResistorBands(parent, bodyRadius, bodyLength) {
+    const bandColors = [0x8a5a2b, 0x000000, 0xc7902f, 0xc9a227];
+    const bandWidth = bodyLength * 0.06;
+    const startOffset = -bodyLength * 0.28;
+    for (let i = 0; i < bandColors.length; i++) {
+      const band = new THREE.Mesh(
+        new THREE.CylinderGeometry(bodyRadius * 1.02, bodyRadius * 1.02, bandWidth, 16),
+        new THREE.MeshStandardMaterial({ color: bandColors[i], roughness: 0.4, metalness: 0.3 })
+      );
+      band.rotation.z = Math.PI / 2;
+      band.position.x = startOffset + i * bandWidth * 2.1;
+      parent.add(band);
+    }
+  }
+
+  // Adds a small grounding pad for vertical components so they visually tie into the wires
+  function addConnectingPad(parent) {
+    const padMat = new THREE.MeshStandardMaterial({ color: 0x5a636e, roughness: 0.8, metalness: 0.3 });
+    const w = 2.0; 
+    const h = 0.2;
+    const padX = new THREE.Mesh(new THREE.BoxGeometry(GRID_SIZE, h, w), padMat);
+    padX.position.y = h/2;
+    parent.add(padX);
+    const padZ = new THREE.Mesh(new THREE.BoxGeometry(w, h, GRID_SIZE), padMat);
+    padZ.position.y = h/2;
+    parent.add(padZ);
+  }
+
+  // 1. WIRE -----------------------------------------------------------------
+  registerComponent({
+    id: 'wire',
+    name: 'Wire',
+    desc: 'A conductor (typically copper) that carries electric current with minimal resistance between two points in a circuit.',
+    baseColor: 0xb87333,
+    build(state) {
+      const g = new THREE.Group();
+      const mat = new THREE.MeshStandardMaterial({ color: 0xb87333, roughness: 0.35, metalness: 0.8 });
+      const radius = 0.7;
+
+      const connections = state?.connections || { right: true, left: true, forward: false, back: false };
+
+      // Central joint sphere bridges intersections and corners seamlessly
+      const joint = new THREE.Mesh(new THREE.SphereGeometry(radius, 12, 12), mat);
+      joint.position.set(0, radius + 0.3, 0);
+      joint.castShadow = true;
+      g.add(joint);
+
+      const halfLen = GRID_SIZE / 2;
+
+      // Spawns connecting cylinders reaching exactly out to the cell bounds
+      const addSeg = (axis, dirSign) => {
+        const seg = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, halfLen, 12), mat);
+        if (axis === 'x') {
+          seg.rotation.z = Math.PI / 2;
+          seg.position.set((halfLen / 2) * dirSign, radius + 0.3, 0);
+        } else {
+          seg.rotation.x = Math.PI / 2;
+          seg.position.set(0, radius + 0.3, (halfLen / 2) * dirSign);
+        }
+        seg.castShadow = true;
+        g.add(seg);
+      };
+
+      let count = (connections.right ? 1 : 0) + (connections.left ? 1 : 0) + 
+                  (connections.forward ? 1 : 0) + (connections.back ? 1 : 0);
+
+      if (count === 0) {
+        addSeg('x', 1);
+        addSeg('x', -1);
+      } else {
+        if (connections.right) addSeg('x', 1);
+        if (connections.left) addSeg('x', -1);
+        if (connections.forward) addSeg('z', 1);
+        if (connections.back) addSeg('z', -1);
+
+        // Visually complete the line if it's placed next to just one thing
+        if (count === 1) {
+          if (connections.right) addSeg('x', -1);
+          else if (connections.left) addSeg('x', 1);
+          else if (connections.forward) addSeg('z', -1);
+          else if (connections.back) addSeg('z', 1);
+        }
+      }
+
+      return g;
+    }
+  });
+
+  // 2. RESISTOR ---------------------------------------------------------------
+  registerComponent({
+    id: 'resistor',
+    name: 'Resistor',
+    desc: 'Resists current flow, dropping voltage according to Ohm\'s Law (V = IR). Color bands encode resistance value.',
+    baseColor: 0xe8d2a6,
+    build() {
+      const g = new THREE.Group();
+      const bodyMat = new THREE.MeshStandardMaterial({ color: 0xe8d2a6, roughness: 0.6, metalness: 0.1 });
+      const leadMat = new THREE.MeshStandardMaterial({ color: 0xc0c0c0, roughness: 0.3, metalness: 0.9 });
+      
+      const bodyLen = GRID_SIZE * 0.4;
+      const bodyRadius = 2.4;
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(bodyRadius, bodyRadius, bodyLen, 16), bodyMat);
+      body.rotation.z = Math.PI / 2;
+      body.position.y = bodyRadius + 1;
+      body.castShadow = true;
+      g.add(body);
+      addResistorBands(body, bodyRadius, bodyLen);
+
+      // Extending lead lengths so it touches perfectly to adjoining grid boundaries
+      const leadLen = (GRID_SIZE - bodyLen) / 2;
+      [-1, 1].forEach((side) => {
+        const lead = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, leadLen, 8), leadMat);
+        lead.rotation.z = Math.PI / 2;
+        lead.position.set(side * (bodyLen / 2 + leadLen / 2), bodyRadius + 1, 0);
+        g.add(lead);
+      });
+      return g;
+    }
+  });
+
+  // 3. CAPACITOR ---------------------------------------------------------------
+  registerComponent({
+    id: 'capacitor',
+    name: 'Capacitor',
+    desc: 'Stores energy in an electric field between two conductive plates, used for filtering, timing, and energy storage.',
+    baseColor: 0x2b6cb0,
+    build() {
+      const g = new THREE.Group();
+      addConnectingPad(g);
+      
+      const canMat = new THREE.MeshStandardMaterial({ color: 0x1d4f8a, roughness: 0.4, metalness: 0.5 });
+      const radius = 3.2, height = 7.5;
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, 20), canMat);
+      body.position.y = height / 2;
+      body.castShadow = true;
+      g.add(body);
+      
+      const stripe = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.2, height * 0.9),
+        new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide })
+      );
+      stripe.position.set(0, height / 2, radius + 0.02);
+      g.add(stripe);
+      
+      const legMat = new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.9, roughness: 0.25 });
+      [-1, 1].forEach((side) => {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 4, 6), legMat);
+        leg.position.set(side * radius * 0.5, 2, radius * 0.6);
+        g.add(leg);
+      });
+      return g;
+    }
+  });
+
+  // 4. INDUCTOR ---------------------------------------------------------------
+  registerComponent({
+    id: 'inductor',
+    name: 'Inductor',
+    desc: 'A coil that stores energy in a magnetic field when current flows through it; resists changes in current.',
+    baseColor: 0x4a4a52,
+    build() {
+      const g = new THREE.Group();
+      const coreMat = new THREE.MeshStandardMaterial({ color: 0x3a3a40, roughness: 0.6, metalness: 0.2 });
+      const coilMat = new THREE.MeshStandardMaterial({ color: 0xb87333, roughness: 0.3, metalness: 0.85 });
+      const coreLen = GRID_SIZE * 0.45;
+      const coreRadius = 1.6;
+      const core = new THREE.Mesh(new THREE.CylinderGeometry(coreRadius, coreRadius, coreLen, 12), coreMat);
+      core.rotation.z = Math.PI / 2;
+      core.position.y = coreRadius + 2;
+      g.add(core);
+
+      const turns = 9;
+      for (let i = 0; i < turns; i++) {
+        const t = (i / (turns - 1)) - 0.5;
+        const ring = new THREE.Mesh(
+          new THREE.TorusGeometry(coreRadius + 0.6, 0.45, 8, 16),
+          coilMat
+        );
+        ring.rotation.y = Math.PI / 2;
+        ring.position.set(t * coreLen * 0.92, coreRadius + 2, 0);
+        ring.castShadow = true;
+        g.add(ring);
+      }
+      
+      const leadMat = new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.9, roughness: 0.25 });
+      const leadLen = (GRID_SIZE - coreLen) / 2;
+      [-1, 1].forEach((side) => {
+        const lead = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, leadLen, 6), leadMat);
+        lead.rotation.z = Math.PI / 2;
+        lead.position.set(side * (coreLen / 2 + leadLen / 2), coreRadius + 2, 0);
+        g.add(lead);
+      });
+
+      return g;
+    }
+  });
+
+  // 5. BATTERY / POWER SOURCE ---------------------------------------------------------------
+  registerComponent({
+    id: 'battery',
+    name: 'Battery',
+    desc: 'A power source that converts chemical energy into electrical energy, providing voltage to drive current through a circuit.',
+    baseColor: 0xcc3333,
+    build() {
+      const g = new THREE.Group();
+      const redMat = new THREE.MeshStandardMaterial({ color: 0xcc3333, roughness: 0.5, metalness: 0.2 });
+      const blackMat = new THREE.MeshStandardMaterial({ color: 0x161616, roughness: 0.5, metalness: 0.2 });
+      
+      const w = GRID_SIZE * 0.55, h = 6, d = GRID_SIZE * 0.32;
+      const redHalf = new THREE.Mesh(new THREE.BoxGeometry(w / 2, h, d), redMat);
+      redHalf.position.set(-w / 4, h / 2, 0);
+      redHalf.castShadow = true;
+      g.add(redHalf);
+      const blackHalf = new THREE.Mesh(new THREE.BoxGeometry(w / 2, h, d), blackMat);
+      blackHalf.position.set(w / 4, h / 2, 0);
+      blackHalf.castShadow = true;
+      g.add(blackHalf);
+      
+      // Extending terminals to perfectly touch bounds
+      const termMat = new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.9, roughness: 0.2 });
+      const termLen = (GRID_SIZE - w) / 2;
+      const plusTerm = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, termLen, 8), termMat);
+      plusTerm.position.set(-w / 2 - termLen / 2, h / 2, 0);
+      plusTerm.rotation.z = Math.PI / 2;
+      g.add(plusTerm);
+      const minusTerm = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, termLen, 8), termMat);
+      minusTerm.position.set(w / 2 + termLen / 2, h / 2, 0);
+      minusTerm.rotation.z = Math.PI / 2;
+      g.add(minusTerm);
+      return g;
+    }
+  });
+
+  // 6. SWITCH ---------------------------------------------------------------
+  registerComponent({
+    id: 'switch',
+    name: 'Switch',
+    desc: 'Manually opens or closes a circuit path, allowing the user to start or stop current flow. Click again to toggle state.',
+    baseColor: 0x556b2f,
+    build(state) {
+      const g = new THREE.Group();
+      const isOn = state && state.on;
+      const baseMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.6 });
+      const leverMat = new THREE.MeshStandardMaterial({ color: isOn ? 0x55c46a : 0xc44545, roughness: 0.4, metalness: 0.3 });
+      
+      const baseLen = GRID_SIZE * 0.4;
+      const base = new THREE.Mesh(new THREE.BoxGeometry(baseLen, 2.5, GRID_SIZE * 0.25), baseMat);
+      base.position.y = 1.25;
+      base.castShadow = true;
+      g.add(base);
+      
+      const lever = new THREE.Mesh(new THREE.BoxGeometry(1.4, 6, 1.4), leverMat);
+      lever.position.set(0, 2.5 + 3, 0);
+      lever.rotation.z = isOn ? 0.1 : Math.PI * 0.32;
+      lever.position.x = isOn ? 0 : -1.2;
+      lever.castShadow = true;
+      g.add(lever);
+
+      const leadMat = new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.9, roughness: 0.2 });
+      const leadLen = (GRID_SIZE - baseLen) / 2;
+      [-1, 1].forEach((side) => {
+        const lead = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, leadLen, 6), leadMat);
+        lead.rotation.z = Math.PI / 2;
+        lead.position.set(side * (baseLen / 2 + leadLen / 2), 1.25, 0);
+        g.add(lead);
+      });
+
+      g.userData.isSwitch = true;
+      return g;
+    }
+  });
+
+  // 7. LED ---------------------------------------------------------------
+  registerComponent({
+    id: 'led',
+    name: 'LED',
+    desc: 'Light Emitting Diode: emits light when current flows through it in the forward direction. Only conducts one way.',
+    baseColor: 0xff4d4d,
+    build(state) {
+      const g = new THREE.Group();
+      const color = (state && state.color) || 0xff3030;
+      addConnectingPad(g);
+
+      const leadMat = new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.9, roughness: 0.2 });
+      const leadHeight = 5.5;
+      [-1.1, 1.1].forEach((x) => {
+        const lead = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, leadHeight, 8), leadMat);
+        lead.position.set(x, leadHeight / 2, 0);
+        g.add(lead);
+      });
+
+      const baseRadius = 3.2;
+      const baseHeight = 2.2;
+      const baseMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.6 });
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(baseRadius, baseRadius, baseHeight, 16), baseMat);
+      base.position.y = leadHeight + baseHeight / 2;
+      base.castShadow = true;
+      g.add(base);
+
+      const bulbMat = new THREE.MeshPhysicalMaterial({
+        color: color, transparent: true, opacity: 0.75, roughness: 0.08,
+        transmission: 0.35, emissive: color, emissiveIntensity: 0
+      });
+      const bulbRadius = 3.4;
+      const bulb = new THREE.Mesh(
+        new THREE.SphereGeometry(bulbRadius, 20, 20, 0, Math.PI * 2, 0, Math.PI * 0.6),
+        bulbMat
+      );
+      bulb.position.y = leadHeight + baseHeight;
+      bulb.castShadow = true;
+      g.add(bulb);
+
+      const neck = new THREE.Mesh(new THREE.CylinderGeometry(bulbRadius * 0.85, baseRadius, 1.2, 16), bulbMat);
+      neck.position.y = leadHeight + baseHeight + 0.6;
+      g.add(neck);
+
+      const glow = new THREE.PointLight(color, 0, 22);
+      glow.position.y = leadHeight + baseHeight + bulbRadius * 0.4;
+      g.add(glow);
+
+      g.userData.isLED = true;
+      g.userData.ledColor = color;
+      return g;
+    }
+  });
+
+  // 8. TRANSISTOR ---------------------------------------------------------------
+  registerComponent({
+    id: 'transistor',
+    name: 'Transistor',
+    desc: 'A semiconductor device used to amplify or switch electronic signals; the foundation of modern digital electronics.',
+    baseColor: 0x111111,
+    build() {
+      const g = new THREE.Group();
+      addConnectingPad(g);
+
+      const bodyMat = new THREE.MeshStandardMaterial({ color: 0x121212, roughness: 0.55, metalness: 0.2 });
+      const radius = 3;
+      const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius, 6, 16, 1, false, 0, Math.PI),
+        bodyMat
+      );
+      body.position.y = 3;
+      body.castShadow = true;
+      g.add(body);
+      const flatBack = new THREE.Mesh(new THREE.BoxGeometry(radius * 2, 6, 0.4), bodyMat);
+      flatBack.position.set(0, 3, -0.0);
+      g.add(flatBack);
+
+      const pinMat = new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.9, roughness: 0.2 });
+      const pinXs = [-2, 0, 2];
+      pinXs.forEach((x) => {
+        const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 5, 6), pinMat);
+        pin.position.set(x, 0.0, radius * 0.4);
+        g.add(pin);
+      });
+      return g;
+    }
+  });
+
+  // 9. DIODE ---------------------------------------------------------------
+  registerComponent({
+    id: 'diode',
+    name: 'Diode',
+    desc: 'Allows current to flow in only one direction. The silver band marks the cathode (negative) end.',
+    baseColor: 0x161616,
+    build() {
+      const g = new THREE.Group();
+      const bodyMat = new THREE.MeshStandardMaterial({ color: 0x161616, roughness: 0.4, metalness: 0.3 });
+      const bandMat = new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.85, roughness: 0.2 });
+      const radius = 1.5, length = 6;
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, length, 14), bodyMat);
+      body.rotation.z = Math.PI / 2;
+      body.position.y = radius + 1;
+      body.castShadow = true;
+      g.add(body);
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(radius * 1.05, radius * 1.05, 0.8, 14), bandMat);
+      band.rotation.z = Math.PI / 2;
+      band.position.set(length * 0.32, radius + 1, 0);
+      g.add(band);
+      
+      const leadMat = bandMat;
+      const leadLen = (GRID_SIZE - length) / 2;
+      [-1, 1].forEach((side) => {
+        const lead = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, leadLen, 6), leadMat);
+        lead.rotation.z = Math.PI / 2;
+        lead.position.set(side * (length / 2 + leadLen / 2), radius + 1, 0);
+        g.add(lead);
+      });
+      return g;
+    }
+  });
+
+  // 10. GROUND ---------------------------------------------------------------
+  registerComponent({
+    id: 'ground',
+    name: 'Ground',
+    desc: 'A reference point of zero voltage; provides a common return path for current and a safety reference for the circuit.',
+    baseColor: 0x2f7d3a,
+    build() {
+      const g = new THREE.Group();
+      addConnectingPad(g);
+
+      const mat = new THREE.MeshStandardMaterial({ color: 0x2f7d3a, roughness: 0.7, metalness: 0.1 });
+      const block = new THREE.Mesh(new THREE.BoxGeometry(GRID_SIZE * 0.4, 3, GRID_SIZE * 0.4), mat);
+      block.position.y = 1.5;
+      block.castShadow = true;
+      g.add(block);
+      
+      const barMat = new THREE.MeshStandardMaterial({ color: 0x163a1a, roughness: 0.6 });
+      const widths = [5.5, 3.8, 2.1];
+      widths.forEach((w, i) => {
+        const bar = new THREE.Mesh(new THREE.BoxGeometry(w, 0.5, 0.6), barMat);
+        bar.position.set(0, 3.2 - i * 1.1, GRID_SIZE * 0.2 + 0.31);
+        g.add(bar);
+      });
+      
+      const lead = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 2.2, 6), barMat);
+      lead.position.set(0, 4.3, GRID_SIZE * 0.2 + 0.31);
+      g.add(lead);
+      return g;
+    }
+  });
+
+  /* ============================================================
+     COMPONENT LOOKUP MAP
+     ============================================================ */
+  const COMPONENT_MAP = {};
+  COMPONENTS.forEach((c) => { COMPONENT_MAP[c.id] = c; });
+
+  /* ============================================================
+     FACTORY: build a fresh mesh instance for a component id
+     ============================================================ */
+  function createComponentMesh(id, state) {
+    const def = COMPONENT_MAP[id];
+    if (!def) return null;
+    const group = def.build(state || {});
+    group.traverse((obj) => {
+      if (obj.isMesh) {
+        obj.castShadow = true;
+        obj.receiveShadow = false;
+      }
+    });
+    group.userData.componentId = id;
+    return group;
+  }
+
+  /* ============================================================
+     PLAYER MOVEMENT STATE
+     ============================================================ */
+  const move = { forward: false, backward: false, left: false, right: false };
+  let canJump = false;
+  let verticalVelocity = 0;
+  const velocity = new THREE.Vector3();
+
+  const controls = new THREE.PointerLockControls(camera, renderer.domElement);
+  scene.add(controls.getObject());
+
+  const blocker = document.getElementById('blocker');
+  const pausedHint = document.getElementById('pausedHint');
+  const startBtn = document.getElementById('startBtn');
+  let hasStartedOnce = false;
+
+  function lockPointer() { controls.lock(); }
+  startBtn.addEventListener('click', lockPointer);
+  blocker.addEventListener('click', (e) => {
+    if (e.target === blocker) lockPointer();
+  });
+  pausedHint.addEventListener('click', lockPointer);
+  renderer.domElement.addEventListener('click', () => {
+    if (!controls.isLocked && hasStartedOnce) lockPointer();
+  });
+
+  controls.addEventListener('lock', () => {
+    blocker.classList.add('hidden');
+    pausedHint.style.display = 'none';
+    hasStartedOnce = true;
+  });
+  controls.addEventListener('unlock', () => {
+    blocker.classList.add('hidden');
+    if (hasStartedOnce) {
+      pausedHint.style.display = 'block';
+    } else {
+      blocker.classList.remove('hidden');
+    }
+  });
+
+  controls.addEventListener('error', () => {
+    const inIframe = window.self !== window.top;
+    document.getElementById('instructionsBody').innerHTML =
+      '<p style="color:#ff8888;">Your browser blocked the mouse-lock request' +
+      (inIframe
+        ? ' because this page is running inside an embedded frame. Open this file directly in its own browser tab (not inside a preview/iframe) and try again.'
+        : '. Make sure this browser tab is focused, then click the button below again.') +
+      '</p>';
+    blocker.classList.remove('hidden');
+  });
+
+  document.addEventListener('keydown', (e) => {
+    switch (e.code) {
+      case 'KeyW': case 'ArrowUp': move.forward = true; break;
+      case 'KeyS': case 'ArrowDown': move.backward = true; break;
+      case 'KeyA': case 'ArrowLeft': move.left = true; break;
+      case 'KeyD': case 'ArrowRight': move.right = true; break;
+      case 'Space':
+        if (canJump) { verticalVelocity = JUMP_SPEED; canJump = false; }
+        break;
+      default:
+        if (e.code.startsWith('Digit')) {
+          const n = parseInt(e.code.replace('Digit', ''), 10);
+          const index = n === 0 ? 9 : n - 1;
+          if (COMPONENTS[index]) selectComponent(COMPONENTS[index].id);
+        }
+        break;
+    }
+  });
+  document.addEventListener('keyup', (e) => {
+    switch (e.code) {
+      case 'KeyW': case 'ArrowUp': move.forward = false; break;
+      case 'KeyS': case 'ArrowDown': move.backward = false; break;
+      case 'KeyA': case 'ArrowLeft': move.left = false; break;
+      case 'KeyD': case 'ArrowRight': move.right = false; break;
+    }
+  });
+
+  /* ============================================================
+     RAYCASTER (center-of-screen) FOR PLACEMENT / BREAKING / HIGHLIGHT
+     ============================================================ */
+  const raycaster = new THREE.Raycaster();
+  const screenCenter = new THREE.Vector2(0, 0);
+
+  const highlightGeo = new THREE.BoxGeometry(GRID_SIZE * 0.98, 0.4, GRID_SIZE * 0.98);
+  const highlightEdges = new THREE.EdgesGeometry(highlightGeo);
+  const highlightMat = new THREE.LineBasicMaterial({ color: 0x4fd1c5, linewidth: 2 });
+  const highlightBox = new THREE.LineSegments(highlightEdges, highlightMat);
+  highlightBox.visible = false;
+  scene.add(highlightBox);
+
+  const highlightFillGeo = new THREE.PlaneGeometry(GRID_SIZE * 0.96, GRID_SIZE * 0.96);
+  const highlightFillMat = new THREE.MeshBasicMaterial({
+    color: 0x4fd1c5, transparent: true, opacity: 0.18, side: THREE.DoubleSide
+  });
+  const highlightFill = new THREE.Mesh(highlightFillGeo, highlightFillMat);
+  highlightFill.rotation.x = -Math.PI / 2;
+  highlightFill.visible = false;
+  scene.add(highlightFill);
+
+  let currentTarget = null; 
+
+  function updateTargeting() {
+    raycaster.setFromCamera(screenCenter, camera);
+    const existingMeshes = [];
+    placedComponents.forEach((entry) => existingMeshes.push(entry.mesh));
+    const hitsExisting = existingMeshes.length ? raycaster.intersectObjects(existingMeshes, true) : [];
+    const hitsFloor = raycaster.intersectObject(floor, false);
+
+    let best = null;
+    if (hitsExisting.length && hitsExisting[0].distance <= PLACE_DISTANCE) {
+      best = { point: hitsExisting[0].point, isExisting: true, object: hitsExisting[0].object };
+    } else if (hitsFloor.length && hitsFloor[0].distance <= PLACE_DISTANCE) {
+      best = { point: hitsFloor[0].point, isExisting: false };
+    }
+
+    if (!best) {
+      currentTarget = null;
+      highlightBox.visible = false;
+      highlightFill.visible = false;
+      hideInfoPanel();
+      return;
+    }
+
+    const { gx, gz } = worldToCell(best.point.x, best.point.z);
+    const center = cellCenter(gx, gz);
+    const key = cellKey(gx, gz);
+    const occupied = placedComponents.has(key);
+
+    currentTarget = { gx, gz, occupied };
+
+    highlightBox.position.set(center.x, 0.25, center.z);
+    highlightBox.visible = true;
+    highlightFill.position.set(center.x, 0.06, center.z);
+    highlightFill.visible = true;
+    highlightFill.material.color.set(occupied ? 0xff5050 : 0x4fd1c5);
+    highlightMat.color.set(occupied ? 0xff5050 : 0x4fd1c5);
+
+    if (occupied) {
+      showInfoPanel(placedComponents.get(key).type, gx, gz);
+    } else {
+      hideInfoPanel();
+    }
+  }
+
+  /* ============================================================
+     INFO PANEL
+     ============================================================ */
+  const infoPanel = document.getElementById('infoPanel');
+  function showInfoPanel(componentId, gx, gz) {
+    const def = COMPONENT_MAP[componentId];
+    if (!def) { hideInfoPanel(); return; }
+    
+    let info = '<b>' + def.name + '</b> — ' + def.desc;
+    if (componentId === 'wire') {
+      const key = cellKey(gx, gz);
+      const netIdx = cellToNetwork.get(key);
+      if (netIdx !== undefined) {
+        const network = wireNetworks[netIdx];
+        info += '<br/><span class="dim">Network: ' + (netIdx + 1) + ' (' + network.length + ' wires connected)</span>';
+      }
+    }
+    
+    infoPanel.innerHTML = info;
+    infoPanel.classList.add('show');
+  }
+  function hideInfoPanel() {
+    infoPanel.classList.remove('show');
+  }
+
+  /* ============================================================
+     PLACEMENT / BREAKING LOGIC
+     ============================================================ */
+  function getFacingRotationY() {
+    const yawRad = controls.getObject().rotation.y;
+    const yawDeg = THREE.MathUtils.radToDeg(yawRad);
+    const snapped = Math.round(yawDeg / 90) * 90;
+    return THREE.MathUtils.degToRad(snapped);
+  }
+
+  function calculateWireState(gx, gz) {
+    const checkConnect = (dx, dz) => placedComponents.has(cellKey(gx + dx, gz + dz));
+    return {
+      connections: {
+        right: checkConnect(1, 0),
+        left: checkConnect(-1, 0),
+        forward: checkConnect(0, 1),
+        back: checkConnect(0, -1)
+      }
+    };
+  }
+
+  function placeComponent() {
+    if (!currentTarget || currentTarget.occupied) return;
+    const { gx, gz } = currentTarget;
+    const id = selectedComponentId;
+    if (!id) return;
+
+    let state = defaultStateFor(id);
+    if (id === 'wire') {
+      state = calculateWireState(gx, gz);
+    }
+
+    const mesh = createComponentMesh(id, state);
+    const center = cellCenter(gx, gz);
+    mesh.position.set(center.x, 0, center.z);
+    
+    // Wire geometry intrinsically aligns to world axes in its new connection logic
+    mesh.rotation.y = (id === 'wire') ? 0 : getFacingRotationY();
+    scene.add(mesh);
+
+    placedComponents.set(cellKey(gx, gz), {
+      mesh, type: id, gx, gz, rotationY: mesh.rotation.y, state: state
+    });
+
+    updateAdjacentWires(gx, gz);
+
+    if (id === 'wire') {
+      findWireNetworks();
+      updateWireNetworkVisuals();
+    } else if (id === 'battery' || id === 'led') {
+      updateLEDPowerStates();
+    }
+
+    updateHudCount();
+  }
+
+  function updateAdjacentWires(gx, gz) {
+    getAdjacentCells(gx, gz).forEach((n) => {
+      const key = cellKey(n.gx, n.gz);
+      const entry = placedComponents.get(key);
+      if (entry && entry.type === 'wire') {
+        const newState = calculateWireState(n.gx, n.gz);
+        if (JSON.stringify(entry.state) !== JSON.stringify(newState)) {
+          entry.state = newState;
+          const newMesh = createComponentMesh('wire', entry.state);
+          newMesh.position.copy(entry.mesh.position);
+          newMesh.rotation.y = 0; // Ensure world alignment for wires is kept
+          scene.remove(entry.mesh);
+          disposeGroup(entry.mesh);
+          scene.add(newMesh);
+          entry.mesh = newMesh;
+        }
+      }
+    });
+  }
+
+  function breakComponent() {
+    if (!currentTarget || !currentTarget.occupied) return;
+    const key = cellKey(currentTarget.gx, currentTarget.gz);
+    const entry = placedComponents.get(key);
+    if (!entry) return;
+    
+    const wasWire = entry.type === 'wire';
+    const wasBattery = entry.type === 'battery';
+    const gx = entry.gx;
+    const gz = entry.gz;
+    
+    scene.remove(entry.mesh);
+    disposeGroup(entry.mesh);
+    placedComponents.delete(key);
+    
+    updateAdjacentWires(gx, gz);
+
+    if (wasWire) {
+      findWireNetworks();
+      updateWireNetworkVisuals();
+    } else if (wasBattery) {
+      updateLEDPowerStates();
+    }
+    
+    updateHudCount();
+  }
+
+  function tryToggleSwitch() {
+    if (!currentTarget || !currentTarget.occupied) return false;
+    const key = cellKey(currentTarget.gx, currentTarget.gz);
+    const entry = placedComponents.get(key);
+    if (!entry || entry.type !== 'switch') return false;
+    entry.state.on = !entry.state.on;
+    const newMesh = createComponentMesh('switch', entry.state);
+    newMesh.position.copy(entry.mesh.position);
+    newMesh.rotation.y = entry.rotationY;
+    scene.remove(entry.mesh);
+    disposeGroup(entry.mesh);
+    scene.add(newMesh);
+    entry.mesh = newMesh;
+    return true;
+  }
+
+  function defaultStateFor(id) {
+    if (id === 'wire') return { connections: { right: true, left: true, forward: false, back: false } };
+    if (id === 'switch') return { on: false };
+    if (id === 'led') return { color: 0xff3030 };
+    return {};
+  }
+
+  function disposeGroup(group) {
+    group.traverse((obj) => {
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) {
+        if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
+        else obj.material.dispose();
+      }
+    });
+  }
+
+  function updateHudCount() {
+    document.getElementById('hudCount').textContent = placedComponents.size;
+  }
+
+  /* ============================================================
+     MOUSE INPUT
+     ============================================================ */
+  document.addEventListener('mousedown', (e) => {
+    if (!controls.isLocked) return;
+    if (e.button === 0) { 
+      const toggled = tryToggleSwitch();
+      if (!toggled) placeComponent();
+    } else if (e.button === 2) { 
+      breakComponent();
+    }
+  });
+  document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  /* ============================================================
+     HOTBAR UI
+     ============================================================ */
+  let selectedComponentId = COMPONENTS[0].id;
+  const hotbarEl = document.getElementById('hotbar');
+
+  function renderIconToCanvas(componentId, canvasEl) {
+    const size = 112;
+    const iconScene = new THREE.Scene();
+    iconScene.background = null;
+    const iconCamera = new THREE.PerspectiveCamera(35, 1, 0.1, 1000);
+    iconCamera.position.set(14, 12, 16);
+    iconCamera.lookAt(0, 3, 0);
+    const iconLight = new THREE.DirectionalLight(0xffffff, 1.1);
+    iconLight.position.set(5, 10, 7);
+    iconScene.add(iconLight);
+    iconScene.add(new THREE.AmbientLight(0xffffff, 0.55));
+
+    const mesh = createComponentMesh(componentId, defaultStateFor(componentId));
+    iconScene.add(mesh);
+
+    const iconRenderer = new THREE.WebGLRenderer({ canvas: canvasEl, alpha: true, antialias: true });
+    iconRenderer.setSize(size, size, false);
+    iconRenderer.render(iconScene, iconCamera);
+
+    disposeGroup(mesh);
+  }
+
+  function buildHotbar() {
+    hotbarEl.innerHTML = '';
+    COMPONENTS.forEach((def, index) => {
+      const slot = document.createElement('div');
+      slot.className = 'hotbar-slot';
+      slot.dataset.id = def.id;
+
+      const keyLabel = document.createElement('div');
+      keyLabel.className = 'key-num';
+      keyLabel.textContent = (index === 9) ? '0' : String(index + 1);
+      slot.appendChild(keyLabel);
+
+      const canvasEl = document.createElement('canvas');
+      canvasEl.width = 112; canvasEl.height = 112;
+      slot.appendChild(canvasEl);
+
+      const label = document.createElement('div');
+      label.className = 'label';
+      label.textContent = def.name;
+      slot.appendChild(label);
+
+      slot.addEventListener('click', () => selectComponent(def.id));
+      hotbarEl.appendChild(slot);
+
+      requestAnimationFrame(() => renderIconToCanvas(def.id, canvasEl));
+    });
+    refreshHotbarSelection();
+  }
+
+  function refreshHotbarSelection() {
+    document.querySelectorAll('.hotbar-slot').forEach((el) => {
+      el.classList.toggle('selected', el.dataset.id === selectedComponentId);
+    });
+  }
+
+  function selectComponent(id) {
+    selectedComponentId = id;
+    refreshHotbarSelection();
+    document.getElementById('hudHeld').textContent = COMPONENT_MAP[id].name;
+    rebuildHeldItemPreview();
+  }
+
+  /* ============================================================
+     HELD-ITEM 3D PREVIEW
+     ============================================================ */
+  const heldViewportEl = document.getElementById('heldItemViewport');
+  const heldScene = new THREE.Scene();
+  const heldCamera = new THREE.PerspectiveCamera(40, 1, 0.1, 500);
+  heldCamera.position.set(0, 14, 22);
+  heldCamera.lookAt(0, 4, 0);
+  const heldLight1 = new THREE.DirectionalLight(0xffffff, 1.2);
+  heldLight1.position.set(6, 12, 10);
+  heldScene.add(heldLight1);
+  heldScene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+  const heldRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+  heldRenderer.setSize(230, 230);
+  heldViewportEl.appendChild(heldRenderer.domElement);
+
+  let heldMesh = null;
+  function rebuildHeldItemPreview() {
+    if (heldMesh) { heldScene.remove(heldMesh); disposeGroup(heldMesh); }
+    heldMesh = createComponentMesh(selectedComponentId, defaultStateFor(selectedComponentId));
+    heldScene.add(heldMesh);
+  }
+
+  function renderHeldPreview(t) {
+    if (heldMesh) {
+      heldMesh.rotation.y = t * 0.0006;
+      heldMesh.position.y = Math.sin(t * 0.002) * 0.6;
+    }
+    heldRenderer.render(heldScene, heldCamera);
+  }
+
+  /* ============================================================
+     POWER DETECTION FOR LEDs AND CURRENT FLOW
+     ============================================================ */
+  function hasNetworkPowerSource(networkIdx) {
+    const network = wireNetworks[networkIdx];
+    if (!network) return false;
+    
+    for (const cell of network) {
+      const neighbors = getAdjacentCells(cell.gx, cell.gz);
+      for (const neighbor of neighbors) {
+        const entry = placedComponents.get(cellKey(neighbor.gx, neighbor.gz));
+        if (entry && entry.type === 'battery') {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  function updateLEDPowerStates() {
+    placedComponents.forEach((entry) => {
+      if (entry.type === 'led') {
+        const gx = entry.gx, gz = entry.gz;
+        const neighbors = getAdjacentCells(gx, gz);
+        
+        let powerConnections = 0;
+        let connectedNetworks = new Set();
+        let directBatteryContact = false;
+        
+        for (const neighbor of neighbors) {
+          const neighborEntry = placedComponents.get(cellKey(neighbor.gx, neighbor.gz));
+          if (!neighborEntry) continue;
+          
+          if (neighborEntry.type === 'battery') directBatteryContact = true;
+          
+          if (neighborEntry.type === 'wire') {
+            const netIdx = cellToNetwork.get(cellKey(neighbor.gx, neighbor.gz));
+            if (netIdx !== undefined) {
+              connectedNetworks.add(netIdx);
+              if (hasNetworkPowerSource(netIdx)) {
+                powerConnections++;
+              }
+            }
+          }
+        }
+        
+        const isPowered = directBatteryContact || (powerConnections > 0 && connectedNetworks.size >= 2);
+        
+        entry.mesh.children.forEach((child) => {
+          if (child.isMesh && child.material && child.material.emissive) {
+            child.material.emissiveIntensity = isPowered ? 1.1 : 0;
+          }
+          if (child.isLight) {
+            child.intensity = isPowered ? 1.1 : 0;
+          }
+        });
+      }
+    });
+  }
+
+  /* ============================================================
+     CURRENT FLOW VISUALIZATION
+     ============================================================ */
+  const currentFlowGroup = new THREE.Group();
+  scene.add(currentFlowGroup);
+
+  function updateCurrentFlow(t) {
+    currentFlowGroup.children.slice().forEach(child => currentFlowGroup.remove(child));
+
+    wireNetworks.forEach((network, netIdx) => {
+      if (!hasNetworkPowerSource(netIdx)) return;
+      if (network.length === 0) return;
+
+      const path = [];
+      const visited = new Set();
+      let current = network[0];
+      path.push(current);
+      visited.add(cellKey(current.gx, current.gz));
+
+      while (visited.size < network.length && path.length < network.length) {
+        const neighbors = getAdjacentCells(current.gx, current.gz);
+        let found = false;
+
+        for (const neighbor of neighbors) {
+          const key = cellKey(neighbor.gx, neighbor.gz);
+          if (!visited.has(key) && placedComponents.has(key)) {
+            const entry = placedComponents.get(key);
+            if (entry.type === 'wire') {
+              visited.add(key);
+              path.push(neighbor);
+              current = neighbor;
+              found = true;
+              break;
+            }
+          }
+        }
+        if (!found) break;
+      }
+
+      const segmentCount = path.length - 1;
+      if (segmentCount > 0) {
+        for (let i = 0; i < segmentCount; i++) {
+          const from = cellCenter(path[i].gx, path[i].gz);
+          const to = cellCenter(path[i + 1].gx, path[i + 1].gz);
+
+          const phase = ((t * 0.0015 + (i / segmentCount) * 2 * Math.PI) % (2 * Math.PI));
+          const progress = Math.sin(phase) * 0.5 + 0.5;
+          const pos = new THREE.Vector3().lerpVectors(from, to, progress);
+
+          const sphereGeo = new THREE.SphereGeometry(0.8, 8, 8);
+          const sphereMat = new THREE.MeshBasicMaterial({
+            color: 0xffff00, emissive: 0xffff00, transparent: true, opacity: 0.7
+          });
+          const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+          sphere.position.copy(pos);
+          currentFlowGroup.add(sphere);
+        }
+      }
+    });
+    updateLEDPowerStates();
+  }
+
+  /* ============================================================
+     WINDOW RESIZE HANDLING
+     ============================================================ */
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  /* ============================================================
+     MAIN ANIMATION LOOP
+     ============================================================ */
+  const clock = new THREE.Clock();
+
+  function animate() {
+    requestAnimationFrame(animate);
+    const delta = Math.min(clock.getDelta(), 0.05);
+    const t = performance.now();
+
+    if (controls.isLocked) {
+      velocity.x -= velocity.x * 10.0 * delta;
+      velocity.z -= velocity.z * 10.0 * delta;
+
+      const dirZ = Number(move.forward) - Number(move.backward);
+      const dirX = Number(move.right) - Number(move.left);
+
+      if (dirZ !== 0) velocity.z -= dirZ * MOVE_SPEED * delta;
+      if (dirX !== 0) velocity.x -= dirX * MOVE_SPEED * delta;
+
+      controls.moveRight(-velocity.x * delta);
+      controls.moveForward(-velocity.z * delta);
+
+      verticalVelocity -= GRAVITY * delta;
+      controls.getObject().position.y += verticalVelocity * delta;
+
+      if (controls.getObject().position.y < PLAYER_HEIGHT) {
+        verticalVelocity = 0;
+        controls.getObject().position.y = PLAYER_HEIGHT;
+        canJump = true;
+      }
+
+      playerLight.position.copy(camera.position);
+      updateTargeting();
+    } else {
+      highlightBox.visible = false;
+      highlightFill.visible = false;
+    }
+
+    updateCurrentFlow(t);
+    renderHeldPreview(t);
+    renderer.render(scene, camera);
+  }
+
+  /* ============================================================
+     INITIALIZATION
+     ============================================================ */
+  buildHotbar();
+  selectComponent(COMPONENTS[0].id);
+  updateHudCount();
+  animate();
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Hub</title>
+<script>window.puter = { config: { autoPopup: false, autoLogin: false, disableLogin: false } }</script>
+<script src="https://js.puter.com/v2/"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0b0f1a; --sidebar:#0f1623; --accent:#6366f1; --accent2:#4f46e5;
+    --fg:#f1f5f9; --muted:#64748b; --border:#1e293b; --border2:#273044;
+    --user:#1e1b4b; --ai:#0d1424;
+    --leo:#a855f7; --leo2:#7c3aed; --leo-glow:rgba(168,85,247,0.2);
+    --leo-bg:rgba(168,85,247,0.06); --leo-br:rgba(168,85,247,0.3);
+    --green:#10b981; --yellow:#f59e0b; --red:#ef4444;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--fg);font-family:Inter,-apple-system,sans-serif;display:flex;height:100vh;overflow:hidden}
+  #sidebar{width:260px;min-width:260px;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+  #sidebar-header{padding:16px 14px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+  #sidebar-header h1{font-size:0.9rem;font-weight:700;color:#fff;display:flex;align-items:center;gap:7px}
+  #auth-pill{margin-top:6px;font-size:0.67rem;color:#94a3b8;display:flex;align-items:center;gap:5px}
+  #model-scroll{flex:1;overflow-y:auto;padding-bottom:12px}
+  #leo-tab{margin:10px 8px 4px;padding:11px 13px;background:var(--leo-bg);border:1px solid var(--leo-br);border-radius:9px;cursor:pointer;transition:all 0.2s;flex-shrink:0}
+  #leo-tab:hover{background:rgba(168,85,247,0.11);box-shadow:0 0 14px var(--leo-glow)}
+  #leo-tab.active{background:rgba(168,85,247,0.16);border-color:var(--leo);box-shadow:0 0 20px var(--leo-glow)}
+  .leo-title{font-size:0.85rem;font-weight:700;color:#e9d5ff;display:flex;align-items:center;gap:6px}
+  .divider{height:1px;background:var(--border);margin:6px 0}
+  .group-label{padding:10px 14px 3px;font-size:0.59rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.09rem;font-weight:600}
+  .model{margin:1px 6px;padding:7px 10px;cursor:pointer;font-size:0.79rem;border-radius:6px;transition:background 0.12s;color:#b8c4d4;display:flex;align-items:center;gap:6px}
+  .model:hover{background:rgba(255,255,255,0.04)}
+  .model.active{background:rgba(99,102,241,0.25);color:#fff;font-weight:500}
+  .model-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);flex-shrink:0}
+  .model.active .model-dot{background:var(--accent)}
+  #main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+  #chat-header{padding:12px 20px;background:rgba(11,15,26,0.97);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;gap:12px}
+  #model-name{font-size:0.88rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #header-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+  #token-count{font-size:0.67rem;color:var(--muted)}
+  #clear-btn{font-size:0.72rem;color:var(--muted);background:none;border:1px solid var(--border2);padding:3px 9px;border-radius:5px;cursor:pointer;transition:all 0.15s}
+  #clear-btn:hover{color:#fff;border-color:var(--border)}
+  #sys-bar{padding:6px 20px;background:rgba(13,18,32,0.9);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0}
+  #sys-bar label{font-size:0.66rem;color:var(--muted);white-space:nowrap;font-weight:500}
+  #sys-input{flex:1;background:transparent;border:none;color:#94a3b8;font-size:0.74rem;font-family:inherit;outline:none;padding:2px 0}
+  #sys-input::placeholder{color:#374151}
+  #chat{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:12px}
+  .msg{padding:11px 15px;border-radius:10px;max-width:86%;line-height:1.68;font-size:0.86rem;position:relative}
+  .user{background:var(--user);align-self:flex-end;border:1px solid rgba(99,102,241,0.2)}
+  .ai{background:var(--ai);align-self:flex-start;border:1px solid var(--border);min-width:120px}
+  .ai img,.ai video{max-width:100%;border-radius:6px;margin-top:8px;display:block}
+  .msg-actions{position:absolute;top:6px;right:8px;display:none;gap:4px}
+  .msg:hover .msg-actions{display:flex}
+  .msg-btn{background:rgba(255,255,255,0.07);border:none;color:#94a3b8;padding:2px 6px;border-radius:4px;cursor:pointer;font-size:0.65rem;transition:all 0.15s}
+  .msg-btn:hover{background:rgba(255,255,255,0.13);color:#fff}
+  .cursor{display:inline-block;width:2px;height:0.9em;background:var(--fg);margin-left:1px;animation:blink 0.7s step-end infinite;vertical-align:text-bottom}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+  #input-wrap{padding:14px 20px;background:var(--bg);flex-shrink:0;border-top:1px solid var(--border)}
+  #input-bar{display:flex;background:#111827;border:1px solid var(--border2);border-radius:11px;padding:6px;transition:border-color 0.2s;align-items:flex-end}
+  #input-bar:focus-within{border-color:rgba(99,102,241,0.5)}
+  #input-bar.leo:focus-within,#input-bar.leo{border-color:var(--leo-br)}
+  textarea{flex:1;background:transparent;border:none;color:#fff;padding:8px 10px;resize:none;outline:none;font-size:0.9rem;font-family:inherit;max-height:160px;overflow-y:auto}
+  #send{background:var(--accent);border:none;color:#fff;width:36px;height:36px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.2s;flex-shrink:0}
+  #send:hover{background:var(--accent2)}
+  #send.leo{background:var(--leo2)}
+  #send.leo:hover{background:var(--leo)}
+  ::-webkit-scrollbar{width:4px}
+  ::-webkit-scrollbar-thumb{background:#1e2d45;border-radius:6px}
+  .leo-wrap{background:var(--ai);border:1px solid var(--leo-br);border-radius:12px;padding:15px;max-width:90%;align-self:flex-start}
+  .leo-header{padding:9px 11px;background:var(--leo-bg);border:1px solid var(--leo-br);border-radius:8px;margin-bottom:11px}
+  .leo-label{font-size:0.58rem;color:var(--leo);text-transform:uppercase;letter-spacing:0.09em;font-weight:600;margin-bottom:3px}
+  .pill{padding:2px 7px;border-radius:99px;font-size:0.63rem;font-weight:600;white-space:nowrap}
+  .hi{background:rgba(16,185,129,0.13);color:var(--green);border:1px solid rgba(16,185,129,0.22)}
+  .med{background:rgba(245,158,11,0.13);color:var(--yellow);border:1px solid rgba(245,158,11,0.22)}
+  .lo{background:rgba(239,68,68,0.13);color:var(--red);border:1px solid rgba(239,68,68,0.22)}
+  .leo-body{font-size:0.85rem;line-height:1.72;color:#d8dde8;margin-bottom:11px}
+  .leo-toggle{cursor:pointer;color:#5c5490;font-size:0.72rem;padding:5px 0;display:flex;align-items:center;gap:4px;user-select:none;border-top:1px solid var(--border);margin-top:2px;transition:color 0.2s}
+  .leo-toggle:hover{color:var(--leo)}
+  .ctable{width:100%;border-collapse:collapse;margin-top:7px;font-size:0.7rem}
+  .ctable th{text-align:left;padding:6px 8px;background:#080d18;color:var(--muted);text-transform:uppercase;font-size:0.58rem;letter-spacing:0.06em;font-weight:600}
+  .ctable td{padding:5px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
+  .ctable tr.winner td{background:rgba(168,85,247,0.06)}
+  .ctable tr:hover td{background:rgba(255,255,255,0.015)}
+  .preview{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:0.66rem}
+  .leo-welcome{background:var(--leo-bg)!important;border:1px solid var(--leo-br)!important;max-width:460px}
+  .loader{font-size:0.78rem;color:#94a3b8;display:flex;align-items:center;gap:7px;padding:10px 13px!important;border-color:var(--leo-br)!important}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .spin{display:inline-block;animation:spin 1s linear infinite}
+  .skipped{font-size:0.66rem;color:var(--muted);margin-top:4px;border-top:1px dashed var(--border);padding-top:6px}
+  .welcome{align-self:center;text-align:center;padding:40px 20px;max-width:400px}
+  .welcome h2{font-size:1.1rem;font-weight:600;margin-bottom:8px;color:#e2e8f0}
+  .welcome p{font-size:0.82rem;color:var(--muted);line-height:1.6}
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <div id="sidebar-header">
+    <h1>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      AI Hub
+    </h1>
+    <div id="auth-pill"><span class="spin" style="font-size:0.7rem">⟳</span> <span id="auth-txt">Connecting…</span></div>
+  </div>
+  <div id="model-scroll">
+    <div id="leo-tab" onclick="pickLeo()">
+      <div class="leo-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--leo)" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Leo — Synthesis Mode
+      </div>
+      <div style="font-size:0.63rem;color:#a78bfa;margin-top:3px">Queries all models · fuses best answer</div>
+    </div>
+    <div class="divider"></div>
+    <div id="model-list"></div>
+  </div>
+</div>
+<div id="main">
+  <div id="chat-header">
+    <div id="model-name">GPT-4o</div>
+    <div id="header-right">
+      <span id="token-count"></span>
+      <button id="clear-btn" onclick="clearChat()">Clear</button>
+    </div>
+  </div>
+  <div id="sys-bar">
+    <label for="sys-input">System</label>
+    <input type="text" id="sys-input" placeholder="Optional system prompt…" spellcheck="false">
+  </div>
+  <div id="chat"></div>
+  <div id="input-wrap">
+    <div id="input-bar">
+      <textarea id="msg" rows="1" placeholder="Ask anything…"></textarea>
+      <button id="send" onclick="send()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+<script>
+const MODELS = [
+  {id:'gpt-4o',                                        name:'GPT-4o',             group:'OpenAI',    type:'text'},
+  {id:'gpt-4o-mini',                                   name:'GPT-4o Mini',        group:'OpenAI',    type:'text'},
+  {id:'gpt-4-turbo',                                   name:'GPT-4 Turbo',        group:'OpenAI',    type:'text'},
+  {id:'gpt-3.5-turbo',                                 name:'GPT-3.5 Turbo',      group:'OpenAI',    type:'text'},
+  {id:'anthropic/claude-sonnet-4-6',                   name:'Claude Sonnet 4.6',  group:'Anthropic', type:'text'},
+  {id:'anthropic/claude-opus-4-5',                     name:'Claude Opus 4.5',    group:'Anthropic', type:'text'},
+  {id:'anthropic/claude-sonnet-4-5',                   name:'Claude Sonnet 4.5',  group:'Anthropic', type:'text'},
+  {id:'anthropic/claude-haiku-4-5',                    name:'Claude Haiku 4.5',   group:'Anthropic', type:'text'},
+  {id:'anthropic/claude-3-7-sonnet',                   name:'Claude 3.7 Sonnet',  group:'Anthropic', type:'text'},
+  {id:'anthropic/claude-3-5-sonnet',                   name:'Claude 3.5 Sonnet',  group:'Anthropic', type:'text'},
+  {id:'anthropic/claude-3-haiku',                      name:'Claude 3 Haiku',     group:'Anthropic', type:'text'},
+  {id:'google/gemini-1.5-pro',                         name:'Gemini 1.5 Pro',     group:'Google',    type:'text'},
+  {id:'google/gemini-1.5-flash',                       name:'Gemini 1.5 Flash',   group:'Google',    type:'text'},
+  {id:'google/gemini-2.0-flash',                       name:'Gemini 2.0 Flash',   group:'Google',    type:'text'},
+  {id:'meta-llama/llama-3-70b-instruct',               name:'Llama 3 70B',        group:'Meta',      type:'text'},
+  {id:'meta-llama/llama-3-8b-instruct',                name:'Llama 3 8B',         group:'Meta',      type:'text'},
+  {id:'mistralai/mistral-large',                       name:'Mistral Large',      group:'Mistral',   type:'text'},
+  {id:'mistralai/mixtral-8x7b-instruct',               name:'Mixtral 8x7B',       group:'Mistral',   type:'text'},
+  {id:'cohere/command-r-plus',                         name:'Command R+',         group:'Cohere',    type:'text'},
+  {id:'cohere/command-r',                              name:'Command R',          group:'Cohere',    type:'text'},
+  {id:'deepseek/deepseek-chat',                        name:'DeepSeek V3',        group:'Reasoning', type:'text'},
+  {id:'deepseek/deepseek-coder',                       name:'DeepSeek Coder',     group:'Reasoning', type:'text'},
+  {id:'qwen/qwen-2.5-72b-instruct',                    name:'Qwen 2.5 72B',       group:'Reasoning', type:'text'},
+  {id:'microsoft/phi-4',                               name:'Phi-4',              group:'Reasoning', type:'text'},
+  {id:'x-ai/grok-beta',                               name:'Grok Beta',          group:'xAI',       type:'text'},
+  {id:'google/imagen-4.0-generate-preview-06-06',      name:'Imagen 4 Preview',   group:'Image',     type:'image'},
+  {id:'google/imagen-4.0-fast-generate-preview-06-06', name:'Imagen 4 Fast',      group:'Image',     type:'image'},
+  {id:'openai/gpt-image-1',                            name:'GPT Image 1',        group:'Image',     type:'image'},
+  {id:'ideogram-ai/ideogram-v3-balanced',              name:'Ideogram 3',         group:'Image',     type:'image'},
+  {id:'black-forest-labs/flux-1.1-pro',                name:'FLUX 1.1 Pro',       group:'Image',     type:'image'},
+  {id:'sora',                                          name:'Sora',               group:'Video',     type:'video'},
+];
+
+let current=null, leoMode=false, history=[], busy=false, totalTokens=0;
+
+// ── Create a brand new temp account via REST API directly ────────────────────
+// This bypasses the SDK entirely so it can't reuse the old session
+async function createFreshTempAccount(){
+  const resp=await fetch('https://api.puter.com/signup',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({is_temp:true})
+  });
+  if(!resp.ok)throw new Error('signup failed: '+resp.status);
+  const data=await resp.json();
+  // The token comes back as data.token or data.auth_token
+  const token=data.token??data.auth_token??data.result?.token;
+  if(!token)throw new Error('no token in signup response');
+  return{token, username:data.username??data.user?.username??'anon'};
+}
+
+// ── Wipe ALL Puter SDK in-memory + stored state ───────────────────────────────
+function nukePuterAuth(){
+  try{
+    // Clear entire localStorage (not just puter keys — be thorough)
+    localStorage.clear();
+    sessionStorage.clear();
+    // Expire all cookies
+    document.cookie.split(';').forEach(c=>{
+      const name=c.trim().split('=')[0];
+      document.cookie=`${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+    });
+    // Reset puter SDK in-memory token state
+    try{puter.authToken=null;}catch{}
+    try{puter.auth.token=null;}catch{}
+    try{puter.auth.authToken=null;}catch{}
+    // Walk all puter internal properties and null any that look like tokens
+    try{
+      for(const k of Object.keys(puter)){
+        if(typeof puter[k]==='string'&&puter[k].length>20)puter[k]=null;
+      }
+    }catch{}
+  }catch(e){console.warn('nukePuterAuth:',e);}
+}
+
+// ── Inject a token directly into the Puter SDK ───────────────────────────────
+function injectToken(token){
+  try{puter.authToken=token;}catch{}
+  try{puter.auth.token=token;}catch{}
+  try{puter.auth.authToken=token;}catch{}
+  // Also persist it so the SDK picks it up on next internal check
+  try{localStorage.setItem('puter.auth.token',token);}catch{}
+  try{localStorage.setItem('puter_auth_token',token);}catch{}
+}
+
+// ── Rotate to a genuinely fresh temp account ──────────────────────────────────
+let rotating=false;
+async function rotateAccount(){
+  if(rotating)return;
+  rotating=true;
+  try{
+    // 1. Sign out via SDK
+    try{if(puter.auth.isSignedIn())await puter.auth.signOut();}catch{}
+    // 2. Nuke all stored state
+    nukePuterAuth();
+    await new Promise(r=>setTimeout(r,200));
+
+    // 3. Try REST API first — creates a genuinely new account every time
+    let name='anon';
+    try{
+      const{token,username}=await createFreshTempAccount();
+      injectToken(token);
+      name=username;
+      console.log('REST signup → new account:',name);
+    }catch(restErr){
+      // 4. Fallback to SDK method
+      console.warn('REST signup failed, trying SDK:',restErr);
+      await puter.auth.signIn({attempt_temp_user_creation:true});
+      try{const u=await puter.auth.getUser();name=u.username;}catch{}
+    }
+
+    setAuthPill(name,'(new)');
+    console.log('Rotated to:',name);
+    return true;
+  }catch(e){
+    console.warn('rotateAccount failed:',e);
+    setAuthPill(null,null,true);
+    return false;
+  }finally{rotating=false;}
+}
+
+function setAuthPill(name,note,failed=false){
+  const pill=document.getElementById('auth-pill');
+  if(failed){
+    pill.innerHTML=`<span style="color:var(--red);font-size:0.75rem">●</span>
+      <button onclick="puter.auth.signIn()" style="background:var(--accent);border:none;color:#fff;padding:2px 9px;border-radius:4px;cursor:pointer;font-size:0.68rem">Sign in manually</button>`;
+  }else{
+    pill.innerHTML=`<span style="color:var(--green);font-size:0.75rem">●</span>
+      <span style="color:#a78bfa">${name}</span>
+      ${note?`<span style="color:var(--muted);font-size:0.62rem">${note}</span>`:''}`;
+  }
+}
+
+// ── Balance/quota error detection ─────────────────────────────────────────────
+function isQuotaError(e){
+  const m=(e?.message??e?.error??String(e??'')).toLowerCase();
+  return m.includes('balance')||m.includes('credit')||m.includes('quota')
+    ||m.includes('insufficient')||m.includes('limit exceeded')||m.includes('funds')
+    ||m.includes('rate limit')||m.includes('too many');
+}
+
+// ── Wrap any AI call with auto-rotate-on-quota ────────────────────────────────
+async function aiCall(fn){
+  try{
+    return await fn();
+  }catch(e){
+    if(isQuotaError(e)){
+      console.log('Quota hit — rotating account…');
+      const ok=await rotateAccount();
+      if(ok){
+        try{return await fn();}
+        catch(e2){throw e2;}
+      }
+    }
+    throw e;
+  }
+}
+
+// ── Text extraction ───────────────────────────────────────────────────────────
+function extractText(resp){
+  if(resp==null)return'';
+  if(typeof resp==='string')return resp;
+  const c=resp?.message?.content;
+  if(typeof c==='string')return c;
+  if(Array.isArray(c))return c.map(x=>typeof x==='string'?x:(x?.text??'')).join('');
+  if(typeof resp?.content==='string')return resp.content;
+  return'';
+}
+
+function fmt(raw){
+  const s=raw==null?'':String(raw);
+  return s
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.*?)\*\*/g,'<b>$1</b>')
+    .replace(/`(.*?)`/g,'<code style="background:#0a0f1c;padding:1px 5px;border-radius:3px;font-size:0.82em;color:#7dd3fc">$1</code>')
+    .replace(/\n/g,'<br>');
+}
+
+function errMsg(e){
+  if(e==null)return'Unknown error';
+  if(typeof e==='string')return e;
+  return e?.message??e?.error??JSON.stringify(e);
+}
+
+function countTokens(t){return Math.ceil((t||'').split(/\s+/).length*1.3);}
+function updateTokens(){
+  const t=history.reduce((n,m)=>n+countTokens(m.content),0);
+  document.getElementById('token-count').textContent=t>0?`~${t.toLocaleString()} tokens`:'';
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+function renderSidebar(){
+  const list=document.getElementById('model-list');
+  const groups=[...new Set(MODELS.map(m=>m.group))];
+  list.innerHTML=groups.map(g=>`
+    <div class="group-label">${g}</div>
+    ${MODELS.filter(m=>m.group===g).map(m=>`
+      <div class="model${!leoMode&&current?.id===m.id?' active':''}" onclick="pick('${m.id}')">
+        <span class="model-dot"></span>${m.type==='image'?'🖼 ':m.type==='video'?'🎬 ':''}${m.name}
+      </div>`).join('')}
+  `).join('');
+  document.getElementById('leo-tab').className=leoMode?'active':'';
+}
+
+function pick(id){
+  leoMode=false; current=MODELS.find(m=>m.id===id); history=[];
+  document.getElementById('model-name').textContent=current.name;
+  document.getElementById('input-bar').className='';
+  document.getElementById('send').className='';
+  document.getElementById('msg').placeholder=current.type!=='text'?'Describe what you want…':'Ask anything…';
+  renderSidebar(); updateTokens();
+  const chat=document.getElementById('chat');
+  chat.innerHTML='';
+  const w=document.createElement('div');
+  w.className='welcome';
+  w.innerHTML=`<h2>${current.name}</h2><p>${current.type==='text'?'Start a conversation below.':current.type==='image'?'Describe an image to generate.':'Describe a video to generate.'}</p>`;
+  chat.appendChild(w);
+}
+
+function pickLeo(){
+  leoMode=true; current=null; history=[];
+  const n=MODELS.filter(m=>m.type==='text').length;
+  document.getElementById('model-name').innerHTML=`<span style="color:var(--leo)">✦ Leo</span> · ${n} models`;
+  document.getElementById('input-bar').className='leo';
+  document.getElementById('send').className='leo';
+  document.getElementById('msg').placeholder=`Ask all ${n} models…`;
+  renderSidebar(); updateTokens();
+  document.getElementById('chat').innerHTML='';
+  const d=document.createElement('div');
+  d.className='msg ai leo-welcome';
+  d.innerHTML=`<span style="color:var(--leo)">✦</span> <b>Leo Synthesis Mode</b><br>
+    <span style="color:#a78bfa;font-size:0.79rem">Queries <b>${n} models</b> simultaneously · scores each · fuses the best into one answer</span>`;
+  document.getElementById('chat').appendChild(d);
+}
+
+function clearChat(){history=[];leoMode?pickLeo():pick(current.id);}
+
+// ── Message helpers ───────────────────────────────────────────────────────────
+function addMsg(role,html,extra=null){
+  const d=document.createElement('div');
+  d.className='msg '+(role==='user'?'user':'ai');
+  const inner=document.createElement('div');
+  inner.innerHTML=html; d.appendChild(inner);
+  if(extra)d.appendChild(extra);
+  const actions=document.createElement('div');
+  actions.className='msg-actions';
+  const cb=document.createElement('button');
+  cb.className='msg-btn'; cb.textContent='Copy';
+  cb.onclick=()=>{navigator.clipboard.writeText(inner.innerText);cb.textContent='✓';setTimeout(()=>cb.textContent='Copy',1500);};
+  actions.appendChild(cb); d.appendChild(actions);
+  const chat=document.getElementById('chat');
+  chat.appendChild(d); chat.scrollTop=chat.scrollHeight;
+  return{el:d,inner};
+}
+function scrollBottom(){const c=document.getElementById('chat');c.scrollTop=c.scrollHeight;}
+function sysPrompt(){return document.getElementById('sys-input').value.trim();}
+
+// ── Normal send (streaming) ───────────────────────────────────────────────────
+async function sendNormal(){
+  if(!current||busy)return;
+  const inp=document.getElementById('msg');
+  const t=inp.value.trim(); if(!t)return;
+  inp.value=''; autoResize(); addMsg('user',fmt(t)); busy=true;
+
+  if(current.type==='image'){
+    const {inner}=addMsg('ai','<span class="spin">⟳</span> Generating…');
+    try{
+      const img=await aiCall(()=>puter.ai.txt2img(t,false,{model:current.id}));
+      inner.innerHTML=''; inner.appendChild(img);
+    }catch(e){
+      try{const img=await aiCall(()=>puter.ai.txt2img(t,false));inner.innerHTML='';inner.appendChild(img);}
+      catch(e2){inner.innerHTML=`⚠ ${fmt(errMsg(e2))}`;}
+    }
+    busy=false; return;
+  }
+  if(current.type==='video'){
+    const {inner}=addMsg('ai','<span class="spin">⟳</span> Generating…');
+    try{const v=await aiCall(()=>puter.ai.txt2vid(t,false));inner.innerHTML='';inner.appendChild(v);}
+    catch(e){inner.innerHTML=`⚠ ${fmt(errMsg(e))}`;}
+    busy=false; return;
+  }
+
+  const sys=sysPrompt();
+  const messages=[...(sys?[{role:'system',content:sys}]:[]),...history,{role:'user',content:t}];
+  history.push({role:'user',content:t});
+
+  const {inner}=addMsg('ai','');
+  const cursor=document.createElement('span');
+  cursor.className='cursor'; inner.appendChild(cursor);
+
+  async function doStream(){
+    const stream=await puter.ai.chat(messages,false,{model:current.id,stream:true});
+    let full='';
+    for await(const chunk of stream){
+      full+=chunk?.text??'';
+      inner.innerHTML=fmt(full);
+      inner.appendChild(cursor);
+      scrollBottom();
+    }
+    cursor.remove();
+    if(!full.trim())inner.innerHTML='(no response)';
+    history.push({role:'assistant',content:full});
+    updateTokens();
+  }
+
+  try{
+    await doStream();
+  }catch(err){
+    if(isQuotaError(err)){
+      inner.innerHTML='<span class="spin">⟳</span> Refreshing session…';
+      const ok=await rotateAccount();
+      if(ok){
+        inner.innerHTML=''; inner.appendChild(cursor);
+        try{await doStream();}
+        catch(e2){cursor.remove();inner.innerHTML=`⚠ ${fmt(errMsg(e2))}`;history.pop();}
+      }else{
+        cursor.remove();inner.innerHTML=`⚠ ${fmt(errMsg(err))}`;history.pop();
+      }
+    }else{
+      cursor.remove();inner.innerHTML=`⚠ <b>${current.name}</b>: ${fmt(errMsg(err))}`;history.pop();
+    }
+  }
+  busy=false;
+}
+
+// ── Leo send — batched with account rotation between batches ─────────────────
+async function leoSend(){
+  if(busy)return;
+  const inp=document.getElementById('msg');
+  const prompt=inp.value.trim(); if(!prompt)return;
+  inp.value=''; autoResize(); busy=true; addMsg('user',fmt(prompt));
+
+  const textModels=MODELS.filter(m=>m.type==='text');
+  const pw=document.createElement('div');
+  pw.className='msg ai loader';
+  pw.innerHTML=`<span class="spin" style="color:var(--leo)">⟳</span><span id="lstatus">Querying models…</span>`;
+  document.getElementById('chat').appendChild(pw); scrollBottom();
+
+  const sys=sysPrompt();
+  const TIMEOUT=10000;
+  const responses=[],failed=[];
+
+  // Split into batches of 4 — rotate account between each batch to avoid credit drain
+  const BATCH=4;
+  const batches=[];
+  for(let i=0;i<textModels.length;i+=BATCH) batches.push(textModels.slice(i,i+BATCH));
+
+  for(let bi=0;bi<batches.length;bi++){
+    const batch=batches[bi];
+    document.getElementById('lstatus').textContent=
+      `Batch ${bi+1}/${batches.length} · ${responses.length} responses so far…`;
+
+    // Rotate to a fresh account before each batch
+    await rotateAccount();
+
+    await Promise.allSettled(batch.map(async m=>{
+      const to=new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),TIMEOUT));
+      try{
+        const msgs=[...(sys?[{role:'system',content:sys}]:[]),{role:'user',content:prompt}];
+        const resp=await Promise.race([
+          puter.ai.chat(msgs,false,{model:m.id}),
+          to
+        ]);
+        const text=extractText(resp);
+        if(!text?.trim())throw new Error('empty');
+        responses.push({model:m.name,id:m.id,text});
+      }catch(e){
+        // If quota hit mid-batch, rotate immediately and retry this model
+        if(isQuotaError(e)){
+          await rotateAccount();
+          try{
+            const msgs=[...(sys?[{role:'system',content:sys}]:[]),{role:'user',content:prompt}];
+            const resp2=await puter.ai.chat(msgs,false,{model:m.id});
+            const text2=extractText(resp2);
+            if(text2?.trim())responses.push({model:m.name,id:m.id,text:text2});
+            else failed.push(m.name);
+          }catch{failed.push(m.name);}
+        }else{failed.push(m.name);}
+      }
+    }));
+  }
+
+  const valid=responses.filter(r=>r.text?.trim());
+  if(!valid.length){pw.remove();addMsg('ai','⚠ All models timed out or failed.');busy=false;return;}
+
+  document.getElementById('lstatus').textContent=`Scoring ${valid.length} responses…`;
+
+  // Rotate once more for the judge/synthesizer calls
+  await rotateAccount();
+  const [scores,synthesis]=await evaluateAndSynthesize(prompt,valid);
+  pw.remove(); renderLeo(synthesis,valid,scores,failed); busy=false;
+}
+
+// ── Evaluate + Synthesize ─────────────────────────────────────────────────────
+async function evaluateAndSynthesize(question,responses){
+  const [scores,synthText]=await Promise.all([judge(question,responses),synthesize(question,responses)]);
+  const ranked=responses.map((r,i)=>({...r,score:scores[i]})).sort((a,b)=>b.score.total-a.score.total);
+  const pool=ranked.filter(r=>r.score.total>=6.5).slice(0,5);
+  const used=pool.length>=2?pool:ranked.slice(0,3);
+  return[scores,{text:synthText,used:used.map(r=>r.model),n:used.length}];
+}
+
+async function callBest(prompt){
+  for(const model of['anthropic/claude-sonnet-4-6','gpt-4o','gpt-4o-mini']){
+    try{
+      const resp=await aiCall(()=>puter.ai.chat([{role:'user',content:prompt}],false,{model}));
+      const t=extractText(resp); if(t?.trim())return t;
+    }catch(e){console.warn(model,'failed:',e);}
+  }
+  return null;
+}
+
+async function judge(question,responses){
+  const MAXLEN=400;
+  const excerpts=responses.map((r,i)=>`[${i+1}] ${r.model}:\n${r.text.substring(0,MAXLEN)}${r.text.length>MAXLEN?'…':''}`).join('\n\n');
+  const p=`You are a brutally honest AI response evaluator. You MUST spread scores widely.
+
+Question: "${question}"
+
+Responses:
+${excerpts}
+
+Score each on relevance, accuracy, clarity, completeness (0–10 each).
+Rules:
+- Best response must score at least 2 points higher total than worst
+- Use full 0–10 range — do NOT cluster at 7
+- Output ONLY raw JSON array, no markdown fences
+
+[{"index":1,"relevance":9,"accuracy":8,"clarity":9,"completeness":7},...]
+(exactly ${responses.length} objects)`;
+
+  const raw=await callBest(p);
+  if(!raw)return responses.map(fallback);
+  const scores=parseScores(raw,responses);
+  const totals=scores.map(s=>s.total);
+  if(totals.every(t=>Math.abs(t-totals[0])<0.5))return heuristic(responses);
+  return scores;
+}
+
+async function synthesize(question,responses){
+  const pool=[...responses].sort((a,b)=>b.text.length-a.text.length).slice(0,6);
+  const MAXLEN=600;
+  const excerpts=pool.map((r,i)=>`[${i+1}] ${r.model}:\n${r.text.substring(0,MAXLEN)}${r.text.length>MAXLEN?'…':''}`).join('\n---\n');
+  const p=`You are an expert synthesizer. Merge the best ideas from these ${pool.length} AI responses into one definitive answer.
+
+Question: ${question}
+
+Responses:
+${excerpts}
+
+Merge strongest points. Favour accuracy on contradictions. Write directly — no "Model X said". Match tone. Be thorough but concise.`;
+  const t=await callBest(p);
+  return t??pool[0].text;
+}
+
+function parseScores(raw,responses){
+  try{
+    const clean=raw.replace(/```[a-z]*\n?/gi,'').trim();
+    const m=clean.match(/\[\s*\{[\s\S]*\}\s*\]/);
+    if(!m)throw new Error('no array');
+    const arr=JSON.parse(m[0]);
+    return responses.map((_,i)=>{
+      const s=arr.find(x=>x.index===i+1)??arr[i]??{};
+      const r=cl(s.relevance),a=cl(s.accuracy),c=cl(s.clarity),p=cl(s.completeness);
+      return{relevance:r,accuracy:a,clarity:c,completeness:p,total:(r+a+c+p)/4};
+    });
+  }catch(e){console.warn('parseScores:',e,raw?.substring(0,200));return responses.map(fallback);}
+}
+function fallback(){return{relevance:7,accuracy:7,clarity:7,completeness:7,total:7};}
+function heuristic(responses){
+  return responses.map(r=>{
+    const w=r.text.split(/\s+/).length;
+    const s=/\n|\*|-|\d\./.test(r.text)?1:0;
+    const b=Math.min(9,Math.max(3,Math.round(3+(w/60))));
+    const rv=cl(b+s),a=cl(b),c=cl(b+s),p2=cl(b);
+    return{relevance:rv,accuracy:a,clarity:c,completeness:p2,total:(rv+a+c+p2)/4};
+  });
+}
+function cl(v){return Math.max(0,Math.min(10,Math.round(Number(v))||7));}
+function pillCls(v){return v>=8?'hi':v>=6?'med':'lo';}
+function scoreCl(v){return v>=8?'10b981':v>=6?'f59e0b':'ef4444';}
+function pill(v){return`<span class="pill ${pillCls(v)}">${v}</span>`;}
+
+function renderLeo(syn,all,scores,failed){
+  const wrap=document.createElement('div'); wrap.className='leo-wrap';
+  const rows=all.map((r,i)=>{
+    const s=scores[i],w=syn.used.includes(r.model);
+    return`<tr class="${w?'winner':''}">
+      <td style="font-weight:${w?600:400};color:${w?'var(--leo)':'inherit'}">${w?'★ ':''}${r.model}</td>
+      <td>${pill(s.relevance)}</td><td>${pill(s.accuracy)}</td>
+      <td>${pill(s.clarity)}</td><td>${pill(s.completeness)}</td>
+      <td style="font-weight:700;color:#${scoreCl(s.total)}">${s.total.toFixed(1)}</td>
+      <td class="preview">${fmt(r.text.substring(0,80))}</td></tr>`;
+  }).join('');
+  const uid='t'+Date.now();
+  const badges=syn.used.map(m=>`<span class="pill hi" style="font-size:0.6rem">${m}</span>`).join(' ');
+  const skipped=failed.length?`<div class="skipped">Skipped: ${failed.join(', ')}</div>`:'';
+  wrap.innerHTML=`
+    <div class="leo-header">
+      <div class="leo-label">✦ Synthesis · ${syn.n} models fused</div>
+      <div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px">${badges}</div>
+    </div>
+    <div class="leo-body">${fmt(syn.text)}</div>
+    <div class="leo-toggle" onclick="
+      var el=document.getElementById('${uid}');
+      var open=el.style.display!=='none';
+      el.style.display=open?'none':'block';
+      this.innerHTML=open?'&#9660; Show all ${all.length} scores':'&#9650; Hide scores';">
+      &#9660; Show all ${all.length} scores
+    </div>
+    <div id="${uid}" style="display:none;overflow-x:auto;margin-top:5px">
+      <table class="ctable">
+        <thead><tr><th>Model</th><th>Rel</th><th>Acc</th><th>Cla</th><th>Cmp</th><th>Total</th><th>Preview</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    ${skipped}`;
+  const cb=document.createElement('button');
+  cb.className='msg-btn'; cb.style.cssText='margin-top:8px;display:inline-block';
+  cb.textContent='Copy answer';
+  cb.onclick=()=>{navigator.clipboard.writeText(syn.text);cb.textContent='✓ Copied';setTimeout(()=>cb.textContent='Copy answer',1500);};
+  wrap.appendChild(cb);
+  document.getElementById('chat').appendChild(wrap); scrollBottom();
+}
+
+function autoResize(){
+  const ta=document.getElementById('msg');
+  ta.style.height='auto';
+  ta.style.height=Math.min(ta.scrollHeight,150)+'px';
+}
+
+// ── Auth init ─────────────────────────────────────────────────────────────────
+async function initAccount(){
+  document.getElementById('auth-pill').innerHTML=
+    `<span class="spin" style="font-size:0.7rem">⟳</span> <span>Connecting…</span>`;
+  try{if(puter.auth.isSignedIn())await puter.auth.signOut();}catch{}
+  nukePuterAuth();
+  await new Promise(r=>setTimeout(r,200));
+  let name='anon';
+  try{
+    const{token,username}=await createFreshTempAccount();
+    injectToken(token);
+    name=username;
+  }catch(e){
+    console.warn('REST signup failed, falling back to SDK:',e);
+    try{
+      await puter.auth.signIn({attempt_temp_user_creation:true});
+      try{const u=await puter.auth.getUser();name=u.username;}catch{}
+    }catch(e2){
+      console.warn('SDK fallback also failed:',e2);
+      setAuthPill(null,null,true);
+      return;
+    }
+  }
+  setAuthPill(name);
+}
+
+async function send(){if(busy)return;leoMode?await leoSend():await sendNormal();}
+
+const ta=document.getElementById('msg');
+ta.addEventListener('input',autoResize);
+ta.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}
+});
+
+pick(MODELS[0].id);
+initAccount();
+</script>
+</body>
+</html>

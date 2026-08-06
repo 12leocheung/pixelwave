@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PIXELWAVE ARCADE — Retro Games Hub</title>
+<meta name="description" content="A retro arcade hub of original browser games, tools and labs, built by Leo.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pink:#ff2bd6;
+    --cyan:#00fff2;
+    --purple:#a742ff;
+    --yellow:#ffe14d;
+    --bg:#0a0014;
+    --bg2:#140026;
+    --card:#170a2c;
+    --text:#e9e2ff;
+    --dim:#9c8bc4;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'VT323', monospace;
+    font-size:20px;
+    overflow-x:hidden;
+    cursor:default;
+  }
+  h1,h2,h3,.pixel{
+    font-family:'Press Start 2P', cursive;
+  }
+
+  /* ---------- backdrop ---------- */
+  .sky{
+    position:fixed; inset:0; z-index:-3;
+    background:
+      radial-gradient(ellipse at 50% 20%, rgba(167,66,255,0.35), transparent 60%),
+      linear-gradient(180deg, #0a0014 0%, #1a0a33 55%, #2a0a3d 100%);
+  }
+  .sun{
+    position:fixed; left:50%; top:14%; width:340px; height:340px;
+    transform:translateX(-50%);
+    border-radius:50%;
+    background:repeating-linear-gradient(
+      180deg, var(--yellow) 0 6%, var(--pink) 6% 12%
+    );
+    box-shadow:0 0 90px 20px rgba(255,43,214,0.55);
+    z-index:-3;
+    opacity:.85;
+  }
+  .grid-floor{
+    position:fixed; left:0; right:0; bottom:0; height:55vh;
+    z-index:-2;
+    background-image:
+      linear-gradient(rgba(0,255,242,0.55) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,242,0.55) 1px, transparent 1px);
+    background-size:60px 60px;
+    transform:perspective(300px) rotateX(60deg);
+    transform-origin:bottom;
+    mask-image:linear-gradient(to top, black, transparent);
+    -webkit-mask-image:linear-gradient(to top, black, transparent);
+    opacity:.5;
+  }
+  .scanlines{
+    position:fixed; inset:0; z-index:50; pointer-events:none;
+    background:repeating-linear-gradient(
+      to bottom, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px,
+      rgba(0,0,0,0.18) 3px, rgba(0,0,0,0) 4px
+    );
+    mix-blend-mode:multiply;
+  }
+  .vignette{
+    position:fixed; inset:0; z-index:49; pointer-events:none;
+    box-shadow:inset 0 0 180px 40px rgba(0,0,0,0.75);
+  }
+
+  /* ---------- header ---------- */
+  header{
+    position:relative; z-index:2;
+    text-align:center;
+    padding:56px 20px 30px;
+  }
+  .logo{
+    font-size:clamp(1.6rem, 6vw, 3.2rem);
+    color:#fff;
+    letter-spacing:2px;
+    text-shadow:
+      0 0 6px var(--cyan),
+      0 0 18px var(--pink),
+      0 0 36px var(--pink);
+    margin:0;
+  }
+  .logo span{color:var(--cyan); text-shadow:0 0 6px var(--cyan), 0 0 18px var(--cyan);}
+  .tagline{
+    color:var(--dim);
+    font-size:1.3rem;
+    margin-top:14px;
+    letter-spacing:1px;
+  }
+
+  nav.tabs{
+    display:flex; justify-content:center; flex-wrap:wrap; gap:12px;
+    margin-top:34px;
+    position:relative; z-index:2;
+  }
+  nav.tabs button{
+    font-family:'Press Start 2P', cursive;
+    font-size:.65rem;
+    background:var(--card);
+    color:var(--cyan);
+    border:2px solid var(--cyan);
+    padding:14px 18px;
+    cursor:pointer;
+    box-shadow:0 0 10px rgba(0,255,242,0.25);
+    transition:all .15s ease;
+    letter-spacing:1px;
+  }
+  nav.tabs button:hover{
+    background:var(--cyan); color:#04000a;
+    box-shadow:0 0 18px var(--cyan);
+  }
+  nav.tabs button.active{
+    background:var(--pink); color:#04000a; border-color:var(--pink);
+    box-shadow:0 0 18px var(--pink);
+  }
+
+  main{
+    position:relative; z-index:2;
+    max-width:1200px;
+    margin:0 auto;
+    padding:40px 24px 100px;
+  }
+
+  .panel{display:none;}
+  .panel.active{display:block; animation:fadeIn .35s ease;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;}}
+
+  .section-title{
+    text-align:center;
+    color:#fff;
+    font-size:clamp(1rem,3vw,1.5rem);
+    margin-bottom:8px;
+    text-shadow:0 0 10px var(--purple);
+  }
+  .section-sub{
+    text-align:center;
+    color:var(--dim);
+    margin-bottom:36px;
+    font-size:1.2rem;
+  }
+
+  /* ---------- cards ---------- */
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));
+    gap:26px;
+  }
+  .card{
+    background:linear-gradient(160deg, var(--card), #0e0620);
+    border:2px solid var(--purple);
+    border-radius:4px;
+    padding:20px;
+    position:relative;
+    box-shadow:0 0 0 rgba(0,0,0,0), 6px 6px 0 rgba(167,66,255,0.25);
+    transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .card:hover{
+    transform:translate(-3px,-3px);
+    border-color:var(--cyan);
+    box-shadow:9px 9px 0 rgba(0,255,242,0.25);
+  }
+  .card .icon{font-size:2.4rem; line-height:1;}
+  .card h3{
+    color:#fff;
+    font-size:.85rem;
+    margin:4px 0 0;
+    letter-spacing:.5px;
+    text-shadow:0 0 8px var(--pink);
+  }
+  .card p.tag{
+    color:var(--cyan);
+    font-size:1.1rem;
+    margin:0;
+    min-height:2.4em;
+  }
+  .card p.desc{
+    color:var(--dim);
+    font-size:1.05rem;
+    margin:0;
+    flex:1;
+  }
+  .play-btn{
+    align-self:flex-start;
+    margin-top:8px;
+    font-family:'Press Start 2P', cursive;
+    font-size:.6rem;
+    color:#04000a;
+    background:var(--yellow);
+    border:none;
+    padding:10px 16px;
+    text-decoration:none;
+    box-shadow:3px 3px 0 rgba(0,0,0,0.4);
+    transition:transform .1s ease;
+  }
+  .play-btn:hover{transform:translateY(-2px);}
+  .tool-card .play-btn{background:var(--cyan);}
+
+  /* ---------- about ---------- */
+  .about-wrap{
+    max-width:780px; margin:0 auto;
+    background:var(--card);
+    border:2px solid var(--cyan);
+    box-shadow:0 0 30px rgba(0,255,242,0.15), inset 0 0 30px rgba(0,255,242,0.05);
+    padding:36px;
+  }
+  .about-wrap h2{color:#fff; font-size:1.2rem; text-align:center; margin-top:0;}
+  .about-row{display:flex; gap:16px; margin-bottom:14px; flex-wrap:wrap;}
+  .about-key{min-width:150px; color:var(--pink); font-size:1.1rem;}
+  .about-val{flex:1; color:var(--text); font-size:1.15rem; min-width:200px;}
+  .about-block{margin-bottom:30px; border-left:2px dashed var(--purple); padding-left:18px;}
+  .about-block h3{color:var(--cyan); font-size:.75rem; margin-bottom:14px;}
+  .about-list{list-style:none; padding:0; margin:0;}
+  .about-list li{margin-bottom:12px; font-size:1.15rem; display:flex; gap:10px;}
+  .about-list li::before{content:">>"; color:var(--pink);}
+  .badge{
+    display:inline-block; background:var(--cyan); color:#04000a;
+    padding:1px 8px; font-weight:bold; font-size:.85rem; margin-right:8px;
+  }
+
+  /* ---------- donate ---------- */
+  .donate-wrap{
+    max-width:640px; margin:0 auto; text-align:center;
+    background:var(--card);
+    border:2px solid var(--pink);
+    box-shadow:0 0 30px rgba(255,43,214,0.2), inset 0 0 30px rgba(255,43,214,0.05);
+    padding:40px 30px;
+  }
+  .donate-wrap h2{color:#fff; font-size:1.2rem; margin-top:0;}
+  .donate-wrap p{color:var(--dim); font-size:1.2rem; line-height:1.5;}
+  .goal-line{
+    display:flex; justify-content:space-between;
+    font-family:'Press Start 2P', cursive;
+    font-size:.7rem;
+    color:var(--yellow);
+    margin:26px 0 10px;
+  }
+  .progress-outer{
+    height:26px; width:100%;
+    border:2px solid var(--cyan);
+    background:#04000a;
+    box-shadow:inset 0 0 10px rgba(0,255,242,0.3);
+    position:relative;
+    overflow:hidden;
+  }
+  .progress-inner{
+    height:100%;
+    width:0%;
+    background:repeating-linear-gradient(45deg, var(--pink) 0 10px, var(--purple) 10px 20px);
+    box-shadow:0 0 14px var(--pink);
+    transition:width 1s ease;
+  }
+  .progress-pct{
+    margin-top:8px;
+    color:var(--cyan);
+    font-size:1.1rem;
+  }
+  .donate-btn{
+    display:inline-block;
+    margin-top:30px;
+    font-family:'Press Start 2P', cursive;
+    font-size:.8rem;
+    background:var(--pink);
+    color:#04000a;
+    padding:18px 30px;
+    text-decoration:none;
+    box-shadow:5px 5px 0 rgba(0,0,0,0.5);
+    transition:transform .12s ease;
+    letter-spacing:1px;
+  }
+  .donate-btn:hover{transform:translateY(-3px);}
+  .donate-note{
+    margin-top:18px;
+    font-size:.95rem;
+    color:var(--dim);
+  }
+
+  footer{
+    position:relative; z-index:2;
+    text-align:center;
+    padding:30px;
+    color:var(--dim);
+    font-size:1.05rem;
+    border-top:1px solid rgba(255,255,255,0.08);
+  }
+
+  @media (max-width:600px){
+    nav.tabs button{font-size:.55rem; padding:12px 12px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="sky"></div>
+<div class="sun"></div>
+<div class="grid-floor"></div>
+<div class="scanlines"></div>
+<div class="vignette"></div>
+
+<header>
+  <h1 class="logo">PIXEL<span>WAVE</span> ARCADE</h1>
+  <div class="tagline">// a hand-built retro games hub — insert coin to continue //</div>
+  <nav class="tabs">
+    <button data-tab="arcade" class="active">🕹 ARCADE</button>
+    <button data-tab="tools">🛠 TOOLS &amp; LABS</button>
+    <button data-tab="about">👤 ABOUT US</button>
+    <button data-tab="donate">💾 DONATE</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ===================== ARCADE ===================== -->
+  <section id="arcade" class="panel active">
+    <h2 class="section-title">THE ARCADE FLOOR</h2>
+    <p class="section-sub">20 original browser games. Pick a cabinet.</p>
+    <div class="grid" id="arcade-grid"></div>
+  </section>
+
+  <!-- ===================== TOOLS ===================== -->
+  <section id="tools" class="panel">
+    <h2 class="section-title">TOOLS &amp; LABS</h2>
+    <p class="section-sub">Simulators, sandboxes and side experiments that didn't fit in the arcade — but are worth a look.</p>
+    <div class="grid" id="tools-grid"></div>
+  </section>
+
+  <!-- ===================== ABOUT ===================== -->
+  <section id="about" class="panel">
+    <h2 class="section-title">ABOUT US</h2>
+    <p class="section-sub">The developer behind PixelWave Arcade.</p>
+    <div class="about-wrap">
+      <h2>&gt; cat dev_profile.dat</h2>
+
+      <div class="about-block">
+        <h3>/// MODULE: INIT_USER_DATA</h3>
+        <div class="about-row"><span class="about-key">NAME:</span><span class="about-val">Leo</span></div>
+        <div class="about-row"><span class="about-key">ROLE:</span><span class="about-val">Multi-disciplinary engineer &amp; developer — the sole dev behind every cabinet in this arcade</span></div>
+        <div class="about-row"><span class="about-key">EXPERIENCE:</span><span class="about-val">~9 years (est. 2017)</span></div>
+        <div class="about-row"><span class="about-key">STATUS:</span><span class="about-val">Operating at the intersection of software and hardware — bringing a holistic approach to building complete, playable systems from scratch.</span></div>
+      </div>
+
+      <div class="about-block">
+        <h3>/// MODULE: TECH_STACK</h3>
+        <ul class="about-list">
+          <li><div><span class="badge">WEB</span>HTML5, CSS3, JavaScript — every game on this site is a single self-contained file, built by hand.</div></li>
+          <li><div><span class="badge">SYSTEMS</span>Python &amp; C# — neural networks, Unity mechanics, and the simulations powering the Tools &amp; Labs section.</div></li>
+          <li><div><span class="badge">HARDWARE</span>Mechanical &amp; electrical engineering — circuit design, breadboarding, and microcontrollers, which is why half this arcade is secretly electronics practice.</div></li>
+        </ul>
+      </div>
+
+      <div class="about-block">
+        <h3>/// MODULE: PHILOSOPHY</h3>
+        <div class="about-row"><span class="about-key">CORE LOGIC:</span><span class="about-val">"Build-it-all" mentality.</span></div>
+        <div class="about-row"><span class="about-key">APPROACH:</span><span class="about-val">Balancing hardware constraints against UI/UX so ideas turn into things people can actually play with.</span></div>
+        <div class="about-row"><span class="about-key">OBJECTIVE:</span><span class="about-val">Translating abstract ideas into functional, integrated reality — one weird little game at a time.</span></div>
+      </div>
+
+      <div class="about-block" style="border-left:none; margin-bottom:0;">
+        <h3>/// MODULE: OFFLINE_PROCESSES</h3>
+        <ul class="about-list">
+          <li><div><span class="badge">PROTOTYPING</span>Breadboarding new circuits and poking at IoT edge cases.</div></li>
+          <li><div><span class="badge">KINETICS</span>Lego Technic gear trains, for the love of watching mechanisms move.</div></li>
+          <li><div><span class="badge">ANALYSIS</span>Picking apart board games and video games for their theory, UI patterns, and competitive mechanics — most of which ends up in this arcade.</div></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== DONATE ===================== -->
+  <section id="donate" class="panel">
+    <h2 class="section-title">SUPPORT THE ARCADE</h2>
+    <p class="section-sub">Keep the cabinets running and new games coming.</p>
+    <div class="donate-wrap">
+      <h2>💾 FUNDING GOAL: £100</h2>
+      <p>PixelWave Arcade is a solo, self-funded project. Every donation goes straight back into hosting, tools, and time spent building the next weird game.</p>
+
+      <div class="goal-line">
+        <span id="donate-raised">£0</span>
+        <span>£100</span>
+      </div>
+      <div class="progress-outer">
+        <div class="progress-inner" id="donate-bar"></div>
+      </div>
+      <div class="progress-pct" id="donate-pct">0% funded</div>
+
+      <!--
+        HOW TO WIRE THIS UP FOR REAL:
+        1. Create your Ko-fi page at https://ko-fi.com and replace "yourusername"
+           in the href below with your actual Ko-fi username.
+        2. A static site has no server, so it can't automatically know how much
+           has been donated. Check your Ko-fi dashboard and update the
+           CURRENT_DONATED constant in the <script> at the bottom of this file
+           whenever you want the progress bar to move.
+        3. Optional upgrade: Ko-fi has a "Goal" widget you can embed as an
+           <iframe> if you'd rather it update itself automatically — see
+           https://ko-fi.com/manage/widgets for the embed code.
+      -->
+      <a class="donate-btn" href="https://ko-fi.com/leocheung314159" target="_blank" rel="noopener">☕ DONATE VIA KO-FI</a>
+      <div class="donate-note">Opens Ko-fi in a new tab. Card, PayPal and Apple/Google Pay all supported.</div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  PIXELWAVE ARCADE — built by Leo — no cookies, no trackers, just games.
+</footer>
+
+<script>
+  // ---------------- tab switching ----------------
+  const buttons = document.querySelectorAll('nav.tabs button');
+  const panels = document.querySelectorAll('.panel');
+  buttons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      buttons.forEach(b=>b.classList.remove('active'));
+      panels.forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.tab).classList.add('active');
+      window.scrollTo({top:0, behavior:'smooth'});
+    });
+  });
+
+  // ---------------- donation progress ----------------
+  // EDIT THIS NUMBER whenever you check your Ko-fi dashboard.
+  const CURRENT_DONATED = 0;
+  const GOAL = 100;
+
+  const pct = Math.max(0, Math.min(100, (CURRENT_DONATED / GOAL) * 100));
+  document.getElementById('donate-bar').style.width = pct + '%';
+  document.getElementById('donate-pct').textContent = pct.toFixed(0) + '% funded';
+  document.getElementById('donate-raised').textContent = '£' + CURRENT_DONATED;
+
+  // ---------------- game / tool data ----------------
+  const games = [
+    {icon:'🔤', name:'ALPHABET ROULETTE', file:'alpha bet.html', tag:'Spin the wheel, spell for score, wild multipliers.', desc:'Build words from a rotating letter rack, chaining combos for score in a Balatro-style scoring loop.'},
+    {icon:'🦠', name:'PAYLOAD.EXE', file:'bug off.html', tag:'Infect the network before antivirus traces you down.', desc:'Spread a virus through a simulated network, balancing spread against a rising detection meter.'},
+    {icon:'🖼️', name:'INFINITE GALLERY WALK', file:'art_museum.html', tag:'An endlessly generated art museum that never repeats.', desc:'Walk a first-person 3D museum where every painting, sculpture and plaque is generated on the fly.'},
+    {icon:'🔋', name:'CIRCUIT VOXEL LAB', file:'breadboard.html', tag:'Wire up real circuits, block by block, first person.', desc:'A Minecraft-style sandbox where you place batteries, wires and switches to build working circuits.'},
+    {icon:'🧩', name:'TICK BY TICK', file:'blocks.html', tag:'Place logic blocks, hit run, watch it tick to life.', desc:'A top-down block-placing sandbox — drop tiles on a grid, then step or run the simulation.'},
+    {icon:'🦴', name:'PRIMORDIAL WATCH', file:'civil.html', tag:'Seed a stone-age world, watch civilization rise.', desc:'An autonomous life sim where tribes form, discover tech, go to war — you just orbit and observe.'},
+    {icon:'🧟', name:'CONWAY PROTOCOL', file:'crawler.html', tag:'Run and gun through terrain alive with cellular automata.', desc:'A side-scrolling shooter where the level itself evolves via Conway’s Game of Life.'},
+    {icon:'🎲', name:'DICE WARS: FACTIONS', file:'dice wars.html', tag:'Roll for territory in a medieval dice-conquest showdown.', desc:'A Risk-like conquest game fought with dice armies and factions — battle friends online.'},
+    {icon:'🔫', name:'ECHO BLACKOUT', file:'FPS.html', tag:'You can’t see a thing — shoot by sound alone.', desc:'A pitch-black FPS where sound is the only light; silence 15 hunters before they find you.'},
+    {icon:'⚫', name:'ROGUE DRAUGHTS', file:'draughts.html', tag:'Checkers with a roguelike shop and a boss fight.', desc:'A run-based checkers gauntlet — win matches, buy upgrades, survive an escalating boss.'},
+    {icon:'🚚', name:'DUSTLINE CONVOY', file:'dustline.html', tag:'One drives, one shoots — survive the wasteland.', desc:'A 2-player co-op vehicle combat game against rival wasteland gangs.'},
+    {icon:'🔷', name:'SHAPES AND BEATS', file:'jsab.html', tag:'Dodge a bullet-hell built entirely from the music.', desc:'A rhythm bullet-hell dodging game, solo or multiplayer, synced to the beat of any track.'},
+    {icon:'🧱', name:'REDSTONE BENCH', file:'minecraft_redstone_sim.html', tag:'Wire redstone contraptions in a pocket voxel world.', desc:'A block sandbox modeled on Minecraft redstone — wires, switches and pistons that actually fire.'},
+    {icon:'🏃', name:'CHAOS MENU RUN', file:'menu_crawler.html', tag:'A booby-trapped platformer disguised as a settings menu.', desc:'A speedrun platformer through six deranged levels, complete with a stopwatch timer.'},
+    {icon:'🍕', name:'P FOR PIZZA PARTY', file:'pforpizza.html', tag:'Scattergories with slices — beat the clock.', desc:'Real-time multiplayer word game — race to name items in a category, then vote on the answers.'},
+    {icon:'♠️', name:'PIXEL HOLD’EM', file:'poker.html', tag:'8-bit Texas Hold’em with friends, from your browser.', desc:'A pixel-art multiplayer poker table with lobbies, chip stacks, and peer-to-peer play.'},
+    {icon:'🤖', name:'ARENA OF DESTRUCTION', file:'robotwars.html', tag:'Build a killer bot, smash it into rivals in 3D.', desc:'A 3D robot combat arena with physics destruction, weapon loadouts, and online multiplayer.'},
+    {icon:'🎵', name:'BEATSLOTS', file:'rhythm game.html', tag:'Kill on the beat, loot the sound, build your soundtrack.', desc:'A rhythm-platformer — beat enemies on-beat to fill an 8-slot rack of abilities you sequence yourself.'},
+    {icon:'🗡️', name:'TRUTHBLADE QUEST', file:'trust_game.html', tag:'Catch every lie before your truth meter fails.', desc:'A party deduction game — answer questions, spot the liars, track it all with a truth meter.'},
+    {icon:'💻', name:'NEXUS-7 BREACH', file:'terminal.html', tag:'Hack a fake terminal, crack the CTF challenges.', desc:'A simulated CRT hacking terminal packed with capture-the-flag command-line puzzles.'},
+  ];
+
+  const tools = [
+    {icon:'🎹', name:'MINILAB SIMULATOR', file:'arturia minilab 3.html', tag:'Poke every knob and pad on a virtual MIDI controller.', desc:'An interactive replica of the Arturia MiniLab 3 — play keys, twist encoders, trigger pads.'},
+    {icon:'📸', name:'SNAP CAPTIONS', file:'CAH.html', tag:'Snap, caption and vote on the funniest card combos.', desc:'A feed-style app for photographing card combos, captioning them, and browsing others’.'},
+    {icon:'📊', name:'DICE WARS ANALYTICS', file:'dice-wars-sim.html', tag:'Thousands of AI dice battles, charted live.', desc:'A spectator dashboard that simulates AI-vs-AI Dice Wars matches in bulk and charts the outcomes.'},
+    {icon:'💡', name:'CONCEPT BOARD', file:'game_idea_forums.html', tag:'Pitch your wildest game idea, let the crowd vote.', desc:'A community forum for posting, browsing and voting on original game concepts.'},
+    {icon:'🖥️', name:'LUA CODE ARCADE', file:'game_engine.html', tag:'Write Lua, hit run, watch your mini-game come alive.', desc:'A live code editor and canvas runtime for writing and testing small 2D games in Lua.'},
+    {icon:'🧠', name:'IDEA TERMINAL', file:'game_idea_generator.html', tag:'A retro terminal that spits out a game concept on demand.', desc:'A CRT-styled generator that randomly assembles genre, mechanic and theme into a fresh pitch.'},
+    {icon:'🎧', name:'SONG COMMISSION DESK', file:'hookline.html', tag:'Order a custom song like takeout.', desc:'A storefront page for requesting a custom song by picking genre, mood and lyric direction.'},
+    {icon:'🛡️', name:'VULN PLAYGROUND', file:'lab.html', tag:'Practice classic web vulnerabilities, safely.', desc:'A reference lab of 20+ common web security flaws you can trigger and study live.'},
+    {icon:'⚙️', name:'GEAR DESIGN BENCH', file:'gearworks.html', tag:'Design, mesh and animate real gear trains.', desc:'A CAD-like editor for placing and connecting gears, then simulating the mechanism turning.'},
+    {icon:'🔥', name:'PYTORCH PRIMER', file:'leern_pytorch.html', tag:'A beginner’s guided tour through neural nets and LLMs.', desc:'A long-form illustrated guide from PyTorch fundamentals up to how LLMs work.'},
+    {icon:'🎛️', name:'CIRCUIT GROOVEBOX', file:'novation circuit.html', tag:'A pocket groovebox for sketching beats and basslines.', desc:'An on-screen replica of the Novation Circuit sequencer, synth and drum machine.'},
+    {icon:'🎹', name:'LAUNCHKEY DESKTOP', file:'novation launchkey 25 mk4.html', tag:'Play, sequence and tweak a full virtual MIDI rig.', desc:'An on-screen recreation of the Novation Launchkey Mini MK4 with working keys, pads and display.'},
+    {icon:'🤖', name:'AI CONSOLE HUB', file:'poker_tool.html', tag:'Chat with a lineup of AI models side by side.', desc:'A multi-model AI chat interface with model switching, system prompts and comparison mode.'},
+    {icon:'🐧', name:'LINUX IN A TAB', file:'real_terminal.html', tag:'A real Linux box booting inside your browser tab.', desc:'A full x86 Linux VM emulated client-side, with a genuine boot sequence and working terminal.'},
+    {icon:'📜', name:'RULES TERMINAL', file:'polyhedral rules.html', tag:'Every rule of the game, typed on a glowing CRT.', desc:'A collapsible, typewriter-animated rules reference for a tabletop dice/card game system.'},
+    {icon:'🔌', name:'WIRELAB BENCH', file:'wirelab.html', tag:'Build and probe real DC circuits and logic gates.', desc:'A drag-and-drop electronics lab — wire batteries, resistors and gates, watch signals flow live.'},
+  ];
+
+  function encodeFile(name){
+    return name.split('/').map(encodeURIComponent).join('/');
+  }
+
+  function renderGrid(list, elId, isTool){
+    const el = document.getElementById(elId);
+    el.innerHTML = list.map(g => `
+      <div class="card${isTool ? ' tool-card':''}">
+        <div class="icon">${g.icon}</div>
+        <h3>${g.name}</h3>
+        <p class="tag">${g.tag}</p>
+        <p class="desc">${g.desc}</p>
+        <a class="play-btn" href="${encodeFile(g.file)}">${isTool ? 'OPEN >' : 'PLAY >'}</a>
+      </div>
+    `).join('');
+  }
+
+  renderGrid(games, 'arcade-grid', false);
+  renderGrid(tools, 'tools-grid', true);
+</script>
+
+</body>
+</html>

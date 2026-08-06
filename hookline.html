@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hookline — songs made to order</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#141F63;
+    --ink-deep:#0A1038;
+    --ink-mid:#1E2C82;
+    --paper:#F4EFE2;
+    --pink:#FF4E8C;
+    --yellow:#FFC93B;
+    --mint:#6FD6C0;
+
+    --font-display:"Archivo Black","Helvetica Neue",Impact,sans-serif;
+    --font-body:"Space Grotesk","Helvetica Neue",Arial,sans-serif;
+    --font-mono:"Space Mono","Courier New",monospace;
+
+    --gutter:clamp(18px,4vw,56px);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+
+  body{
+    background:var(--ink);
+    color:var(--paper);
+    font-family:var(--font-body);
+    font-size:16px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+
+  body::after{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:99;
+    opacity:.35;
+    mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  }
+
+  /* ---------- masthead ---------- */
+
+  .masthead{padding:clamp(28px,5vw,64px) var(--gutter) clamp(18px,3vw,34px)}
+
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:.28em;
+    text-transform:uppercase;
+    color:var(--yellow);
+    margin:0 0 14px;
+  }
+
+  .wordmark{
+    position:relative;
+    margin:0;
+    font-family:var(--font-display);
+    font-size:clamp(60px,15.5vw,196px);
+    line-height:.84;
+    letter-spacing:-.045em;
+    text-transform:uppercase;
+    user-select:none;
+  }
+  .wordmark .layer{display:block}
+  .wordmark .ghost{position:absolute;inset:0;z-index:0}
+  .wordmark .ghost-pink{color:var(--pink);transform:translate(-.055em,.022em)}
+  .wordmark .ghost-mint{color:var(--mint);transform:translate(.038em,-.018em)}
+  .wordmark .top{position:relative;z-index:1;color:var(--paper)}
+
+  .tagline{
+    margin:18px 0 0;
+    max-width:34ch;
+    font-size:clamp(15px,1.5vw,18px);
+    opacity:.85;
+  }
+
+  .rule{height:0;border-top:2px solid var(--paper);opacity:.3;margin:0 var(--gutter)}
+
+  /* ---------- layout ---------- */
+
+  .desk{
+    display:grid;
+    grid-template-columns:minmax(320px,1fr) minmax(0,1.15fr);
+    gap:clamp(20px,3vw,40px);
+    padding:clamp(24px,3.5vw,44px) var(--gutter) clamp(60px,8vw,110px);
+    align-items:start;
+  }
+  @media (max-width:900px){ .desk{grid-template-columns:1fr} }
+
+  /* ---------- console ---------- */
+
+  .console{
+    background:var(--ink-deep);
+    border:2px solid var(--paper);
+    padding:clamp(18px,2.4vw,28px);
+    background-image:radial-gradient(var(--ink-mid) 1px, transparent 1.2px);
+    background-size:9px 9px;
+  }
+
+  .field{margin-bottom:26px}
+  .field:last-of-type{margin-bottom:0}
+
+  .field-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:10px;
+  }
+
+  .label{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:.2em;
+    text-transform:uppercase;
+    color:var(--mint);
+  }
+
+  .hint{
+    font-family:var(--font-mono);
+    font-size:11px;
+    opacity:.5;
+  }
+
+  textarea#concept{
+    width:100%;
+    min-height:104px;
+    resize:vertical;
+    background:var(--paper);
+    color:var(--ink-deep);
+    border:none;
+    padding:14px 16px;
+    font-family:var(--font-mono);
+    font-size:15px;
+    line-height:1.5;
+  }
+  textarea#concept::placeholder{color:#7d7666}
+
+  .spin{
+    margin-top:10px;
+    display:inline-flex;
+    align-items:center;
+    gap:9px;
+    background:transparent;
+    color:var(--yellow);
+    border:2px solid var(--yellow);
+    padding:8px 14px;
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    cursor:pointer;
+  }
+  .spin:hover{background:var(--yellow);color:var(--ink-deep)}
+  .spin svg{width:15px;height:15px;display:block}
+  .spin.rolling svg{animation:roll .5s ease-in-out}
+  @keyframes roll{to{transform:rotate(360deg)}}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+
+  .chip{
+    background:transparent;
+    color:var(--paper);
+    border:2px solid rgba(244,239,226,.42);
+    padding:7px 12px;
+    font-family:var(--font-mono);
+    font-size:12px;
+    cursor:pointer;
+    line-height:1.2;
+    text-align:left;
+  }
+  .chip b{display:block;font-weight:700;letter-spacing:.12em}
+  .chip small{display:block;font-size:10px;opacity:.62;margin-top:2px}
+  .chip:hover{border-color:var(--paper)}
+  .chip[aria-pressed="true"]{background:var(--pink);border-color:var(--pink);color:var(--ink-deep)}
+  .chip[aria-pressed="true"] small{opacity:.78}
+  .chips.compact .chip[aria-pressed="true"]{background:var(--mint);border-color:var(--mint)}
+
+  input#customGenre{
+    margin-top:10px;
+    width:100%;
+    background:transparent;
+    border:none;
+    border-bottom:2px solid rgba(244,239,226,.42);
+    color:var(--paper);
+    font-family:var(--font-mono);
+    font-size:13px;
+    padding:8px 2px;
+  }
+  input#customGenre::placeholder{color:rgba(244,239,226,.45)}
+  input#customGenre:focus{border-bottom-color:var(--mint)}
+
+  .write{
+    width:100%;
+    margin-top:30px;
+    background:var(--yellow);
+    color:var(--ink-deep);
+    border:none;
+    padding:20px 18px;
+    font-family:var(--font-display);
+    font-size:clamp(20px,2.4vw,26px);
+    text-transform:uppercase;
+    cursor:pointer;
+    box-shadow:6px 6px 0 var(--pink);
+    transition:transform .08s ease, box-shadow .08s ease;
+  }
+  .write:hover{transform:translate(2px,2px);box-shadow:4px 4px 0 var(--pink)}
+  .write:active{transform:translate(6px,6px);box-shadow:0 0 0 var(--pink)}
+  .write[disabled]{opacity:.55;cursor:wait;transform:none;box-shadow:6px 6px 0 var(--pink)}
+
+  .engine{
+    margin:14px 0 0;
+    padding-top:12px;
+    border-top:1px solid rgba(244,239,226,.2);
+    font-family:var(--font-mono);
+    font-size:10px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    opacity:.6;
+    text-align:center;
+    color:var(--mint);
+  }
+
+  .note{
+    font-family:var(--font-mono);
+    font-size:11px;
+    line-height:1.6;
+    color:rgba(10,16,56,.62);
+    border-left:3px solid var(--yellow);
+    padding-left:12px;
+    margin:0 0 24px;
+    max-width:46ch;
+  }
+
+  .status{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--pink);
+    margin:18px 0 0;
+  }
+  .status::after{content:"";animation:dots 1.2s steps(4,end) infinite}
+  @keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+
+  .shortcut{
+    margin:12px 0 0;
+    font-family:var(--font-mono);
+    font-size:10px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    opacity:.45;
+    text-align:center;
+  }
+
+  /* ---------- sheet ---------- */
+
+  .sheet{
+    background:var(--paper);
+    color:var(--ink-deep);
+    padding:clamp(24px,3vw,42px);
+    min-height:440px;
+    transform:rotate(-.35deg);
+    box-shadow:14px 14px 0 rgba(10,16,56,.55);
+    position:relative;
+  }
+  .sheet::before{
+    content:"";
+    position:absolute;
+    inset:9px;
+    border:1px solid rgba(20,31,99,.22);
+    pointer-events:none;
+  }
+  .sheet-inner{position:relative}
+
+  .stamp{
+    font-family:var(--font-mono);
+    font-size:10px;
+    letter-spacing:.26em;
+    text-transform:uppercase;
+    color:var(--ink);
+    opacity:.6;
+    margin:0 0 22px;
+  }
+
+  .empty{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    min-height:330px;
+    max-width:34ch;
+  }
+  .empty h2{
+    font-family:var(--font-display);
+    font-size:clamp(26px,3.4vw,38px);
+    line-height:1;
+    letter-spacing:-.02em;
+    margin:0 0 14px;
+    color:var(--ink);
+  }
+  .empty p{margin:0;font-size:15px;color:rgba(10,16,56,.72)}
+
+  .song-title{
+    font-family:var(--font-display);
+    font-size:clamp(30px,4.2vw,52px);
+    line-height:.96;
+    letter-spacing:-.03em;
+    text-transform:uppercase;
+    margin:0 0 12px;
+    color:var(--ink-deep);
+  }
+
+  .credits{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px 8px;
+    margin:0 0 26px;
+    padding:0;
+    list-style:none;
+  }
+  .credits li{
+    font-family:var(--font-mono);
+    font-size:10px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    border:1.5px solid rgba(20,31,99,.4);
+    padding:4px 8px;
+  }
+  .credits li.src{background:var(--ink-deep);color:var(--paper);border-color:var(--ink-deep)}
+
+  .section{margin-bottom:24px}
+  .section:last-child{margin-bottom:0}
+
+  .section-label{
+    font-family:var(--font-mono);
+    font-weight:700;
+    font-size:11px;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    color:var(--pink);
+    margin:0 0 8px;
+  }
+  .section.is-chorus .section-label{color:var(--ink)}
+  .section.is-chorus .lines{border-left:3px solid var(--ink);padding-left:14px}
+
+  .lines{margin:0}
+  .line{
+    font-family:var(--font-mono);
+    font-size:15px;
+    line-height:1.75;
+    color:var(--ink-deep);
+    opacity:0;
+    animation:ink .34s ease-out var(--d,0s) forwards;
+  }
+  @keyframes ink{
+    from{opacity:0;transform:translateY(5px);filter:blur(2px)}
+    to{opacity:1;transform:none;filter:blur(0)}
+  }
+
+  .actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:32px;
+    padding-top:20px;
+    border-top:2px solid rgba(20,31,99,.25);
+  }
+  .act{
+    background:transparent;
+    color:var(--ink-deep);
+    border:2px solid var(--ink-deep);
+    padding:9px 14px;
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    cursor:pointer;
+  }
+  .act:hover{background:var(--ink-deep);color:var(--paper)}
+  .act.primary{background:var(--pink);border-color:var(--pink)}
+  .act.primary:hover{background:var(--ink-deep);border-color:var(--ink-deep)}
+
+  .working{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    min-height:330px;
+    gap:22px;
+  }
+  .record{width:88px;height:88px;animation:spinner 1.6s linear infinite}
+  @keyframes spinner{to{transform:rotate(360deg)}}
+  .working p{
+    margin:0;
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:.2em;
+    text-transform:uppercase;
+    color:var(--ink);
+  }
+  .meter{width:min(280px,100%);height:8px;border:2px solid var(--ink-deep);overflow:hidden}
+  .meter i{display:block;height:100%;width:40%;background:var(--pink);animation:slide 1.1s ease-in-out infinite alternate}
+  @keyframes slide{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
+
+  .error{border:2px solid var(--pink);padding:18px;max-width:44ch}
+  .error h2{
+    font-family:var(--font-display);
+    font-size:22px;
+    margin:0 0 8px;
+    text-transform:uppercase;
+    color:var(--ink-deep);
+  }
+  .error p{margin:0 0 14px;font-size:14px;color:rgba(10,16,56,.78)}
+
+  footer{
+    padding:0 var(--gutter) 46px;
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:.06em;
+    opacity:.55;
+    max-width:74ch;
+  }
+
+  :focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+
+  .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001s !important;animation-iteration-count:1 !important;transition:none !important}
+    .line{opacity:1}
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <p class="eyebrow">45 RPM · made to order · one take</p>
+  <h1 class="wordmark">
+    <span class="layer ghost ghost-pink" aria-hidden="true">Hookline</span>
+    <span class="layer ghost ghost-mint" aria-hidden="true">Hookline</span>
+    <span class="layer top">Hookline</span>
+  </h1>
+  <p class="tagline">Tell it what the song is about, pick how it rhymes, pick what it sounds like. It writes the words.</p>
+</header>
+
+<div class="rule"></div>
+
+<main class="desk">
+
+  <section class="console" aria-label="Song controls">
+
+    <div class="field">
+      <div class="field-head">
+        <span class="label" id="lbl-concept">What's it about?</span>
+        <span class="hint" id="count">0 / 240</span>
+      </div>
+      <textarea id="concept" maxlength="240" aria-labelledby="lbl-concept"
+        placeholder="a payphone that only takes calls from 1998"></textarea>
+      <button class="spin" id="spinBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.4" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.4" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1.4" fill="currentColor"/>
+        </svg>
+        Spin one for me
+      </button>
+    </div>
+
+    <div class="field">
+      <div class="field-head"><span class="label" id="lbl-rhyme">Rhyme scheme</span></div>
+      <div class="chips" id="rhymeChips" role="group" aria-labelledby="lbl-rhyme"></div>
+    </div>
+
+    <div class="field">
+      <div class="field-head"><span class="label" id="lbl-genre">Genre</span></div>
+      <div class="chips" id="genreChips" role="group" aria-labelledby="lbl-genre"></div>
+      <label class="sr" for="customGenre">Or name your own genre</label>
+      <input id="customGenre" type="text" placeholder="…or name your own">
+    </div>
+
+    <div class="field">
+      <div class="field-head"><span class="label" id="lbl-len">Length</span></div>
+      <div class="chips compact" id="lenChips" role="group" aria-labelledby="lbl-len"></div>
+    </div>
+
+    <button class="write" id="writeBtn" type="button">Write the song</button>
+    <p class="shortcut">or press Ctrl + Enter</p>
+    <p class="engine" id="engineStatus">Checking for the on-device model…</p>
+  </section>
+
+  <section class="sheet" aria-label="Lyric sheet">
+    <div class="sheet-inner">
+      <p class="stamp" id="stamp">Lyric sheet · side A</p>
+      <div id="out" aria-live="polite">
+        <div class="empty">
+          <h2>Nothing on the sheet yet.</h2>
+          <p>Give it a subject and press write. Every line is generated fresh — no existing songs are copied.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  No key, no account, no network. Lyrics come from Gemini Nano running inside Chrome; where that model isn't available, the built-in writer in this page takes over.
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* =====================================================================
+     1. CONTROL DATA
+     ===================================================================== */
+
+  var RHYMES = [
+    {code:"AABB", desc:"couplets",       pattern:[0,0,1,1], brief:"AABB — rhymed couplets: lines 1&2 rhyme, lines 3&4 rhyme."},
+    {code:"ABAB", desc:"alternating",    pattern:[0,1,0,1], brief:"ABAB — alternating rhyme: lines 1&3 rhyme, lines 2&4 rhyme."},
+    {code:"ABCB", desc:"ballad",         pattern:[0,1,2,1], brief:"ABCB — ballad rhyme: only lines 2&4 rhyme."},
+    {code:"AAAA", desc:"monorhyme",      pattern:[0,0,0,0], brief:"AAAA — monorhyme: every line in a stanza shares one rhyme sound."},
+    {code:"ABBA", desc:"enclosed",       pattern:[0,1,1,0], brief:"ABBA — enclosed rhyme: lines 1&4 rhyme around an inner rhymed pair."},
+    {code:"FREE", desc:"no fixed rhyme", pattern:[0,1,2,3], brief:"Free verse — no fixed end-rhyme. Lean on rhythm and repetition."},
+    {code:"INT",  desc:"internal rhyme", pattern:[0,0,1,1], brief:"Internal rhyme — pack rhymes inside the lines as well as at the ends."}
+  ];
+
+  var GENRES = ["Pop","Indie rock","Hip-hop","Country","Folk","Metal",
+                "R&B / soul","Punk","Synth-pop","Jazz standard",
+                "Musical theatre","Sea shanty","Gospel","Bedroom lo-fi"];
+
+  var LENGTHS = [
+    {id:"short",    label:"Short",    brief:"about 3 sections and 16 lines total"},
+    {id:"standard", label:"Standard", brief:"about 5 sections and 28 lines total"},
+    {id:"long",     label:"Long",     brief:"about 7 sections and 40 lines total"}
+  ];
+
+  var SEEDS = [
+    "a payphone that only takes calls from 1998",
+    "the last bus home, and the person who never gets on it",
+    "learning to cook your grandmother's recipe from a stained index card",
+    "a lighthouse keeper who has never seen a ship",
+    "two friends who text every day and haven't met in nine years",
+    "the summer the river ran dry",
+    "moving out of a flat you hated and crying anyway",
+    "a stray cat that adopts a night-shift nurse",
+    "the argument you keep winning in the shower",
+    "an astronaut writing postcards nobody will collect",
+    "the smell of a swimming pool and being eleven",
+    "a small town that shares one traffic light",
+    "falling for someone in a language you barely speak",
+    "the week your best friend became a stranger",
+    "a locksmith who can't get into his own house",
+    "leaving voicemails for a disconnected number",
+    "the boy who mows lawns to pay for a telescope",
+    "a wedding where everyone knows it won't last",
+    "your dad teaching you to drive in an empty car park",
+    "the ghost that just wants the radio turned down",
+    "running out of petrol somewhere beautiful",
+    "a barista who names every regular in her head",
+    "the day the factory closed",
+    "sharing headphones on a night train",
+    "an old dog that still waits by the door",
+    "a magician who has forgotten how the trick ends",
+    "growing tomatoes on a sixth-floor balcony",
+    "the friend group chat that finally goes quiet",
+    "a fisherman's daughter who moves inland",
+    "getting a text from someone you deleted",
+    "the sea taking back a pier, one plank at a time",
+    "a sleepless city and one lit window",
+    "learning your parents were people first",
+    "a broken clock that's right about the important things",
+    "the boxer's last honest round",
+    "leaving the party without saying goodbye",
+    "two neighbours who communicate only by piano",
+    "a snowplough driver at four in the morning",
+    "the tattoo you'd get again",
+    "someone rebuilding a motorbike they'll never ride",
+    "a librarian in love with a name on the return slips",
+    "the year everyone moved away except you",
+    "a diner that stays open for one customer",
+    "forgiving someone who never asked you to",
+    "a kid selling lemonade in the rain",
+    "the last house on a road that floods",
+    "meeting your double in an airport",
+    "an orchard the developers bought",
+    "keeping a plant alive as a promise",
+    "the road trip you took to avoid a conversation"
+  ];
+
+  /* =====================================================================
+     2. OFFLINE WRITER — rhyme bank, line stock, assembly
+     ===================================================================== */
+
+  // Every tail is a noun phrase, so it can follow any preposition-ending opener.
+  var RHYME_BANK = {
+    rain:  ["the rain","a slow freight train","the empty lane","a paper chain","the window pane","the last plane","the fast lane"],
+    night: ["the night","a cheap streetlight","the porch light","a paper kite","one long flight","the traffic light","a losing fight"],
+    gold:  ["the cold","fool's gold","a hand to hold","a story I never told","a house too old","the same old gold"],
+    stone: ["a stone","the dial tone","a broken phone","the danger zone","skin and bone","a house of my own","the great unknown"],
+    line:  ["the line","a neon sign","cheap red wine","the county line","a power line","the dotted line","the state line"],
+    sound: ["the sound","the frozen ground","a lost and found","the long way round","the last round","holy ground"],
+    day:   ["the day","the highway","a shade of grey","the driveway","the runaway","the ashtray","a wet Tuesday"],
+    street:["the street","wet concrete","the back seat","a slow heartbeat","the summer heat","two left feet"],
+    hand:  ["your hand","a strip of land","the wedding band","dry sand","the second hand","a promised land"],
+    time:  ["borrowed time","the last dime","a small crime","closing time","the church chime","a life of crime"],
+    door:  ["the door","the kitchen floor","a foreign shore","the corner store","what I came for","the war"],
+    year:  ["the year","a souvenir","the chandelier","one more beer","the atmosphere","a cheap career"],
+    snow:  ["the snow","the radio","the window","a long shadow","the undertow","the afterglow"]
+  };
+
+  var OPENERS_GENERIC = [
+    "You said you'd wait for me in",
+    "I keep the porch light on for",
+    "Nothing ever grows in",
+    "We were seventeen and lost in",
+    "There's a version of us still standing in",
+    "I traded all my patience for",
+    "Every promise round here ends in",
+    "Somebody's always waiting on",
+    "I learned to hold my breath around",
+    "The whole town smells of",
+    "I've been counting out the hours by",
+    "They buried all the good years under",
+    "Don't tell me what you saw in",
+    "I'd give up half of everything for",
+    "She left her keys beside",
+    "There's a name I never say near",
+    "I've been sleeping in the back of",
+    "Half the things I own came from",
+    "I've got nothing left to lose but",
+    "I made a home of",
+    "There's a hole in the ceiling above",
+    "Everything I loved is in",
+    "I'll be honest, I preferred",
+    "They'll write about the two of us in",
+    "The last thing that I need is",
+    "I don't believe in much except",
+    "You can find me somewhere past",
+    "It always starts with",
+    "Nobody comes back from",
+    "I said my goodbyes to",
+    "We spent the whole of August in",
+    "I'm still paying for",
+    "Leave the door unlocked for",
+    "There's a photograph of"
+  ];
+
+  var OPENERS_BY_GENRE = {
+    "country":[
+      "The dogs won't quit their barking at","Daddy's truck is idling by",
+      "Mama's on the porch again with","Every county road leads back to",
+      "I've been drinking since","There ain't much out here but",
+      "The good Lord and I don't talk about","I lost the farm and most of"
+    ],
+    "hip-hop":[
+      "I came up counting","They ain't never seen a kid from",
+      "Put my whole life in","Broke bread with the ghosts of",
+      "Same block, same dream, same","I don't chase, I collect",
+      "Grew a garden out of","Made a fortune out of"
+    ],
+    "metal":[
+      "We were born beneath","Let the whole world drown in",
+      "Nothing holy ever came from","I have carved my name in",
+      "They will bury us beneath","The sky is falling into",
+      "I have no god except","Bring the fire down on"
+    ],
+    "folk":[
+      "My grandmother told me of","The river takes its time through",
+      "There's a song they used to sing in","I have walked a hundred miles for",
+      "The winter comes and goes like","We share our bread beneath",
+      "I'll be buried in","The old road runs past"
+    ],
+    "punk":[
+      "I don't care what you think about","They sold the whole damn town for",
+      "I'm sick of waiting on","Burn the letters, burn",
+      "Nobody asked me about","Give me two more years and",
+      "You can keep your love and","There's no future in"
+    ],
+    "sea shanty":[
+      "We set our sails against","The captain drowned beneath",
+      "Haul away, boys, haul for","There's a widow waiting past",
+      "We drank the last of","The sea will take her share of",
+      "Sing me one more song of","Our bones will rest in"
+    ],
+    "musical theatre":[
+      "And here I stand in front of","Did anybody warn me about",
+      "They told me I would grow into","So this is what they meant by",
+      "Tonight I'm walking into","How does anybody live with",
+      "I have waited all my life for","Look at me, I'm made of"
+    ],
+    "pop":[
+      "Baby, I'd do anything for","Call me when you're done with",
+      "We could disappear into","You're the only thing I like about",
+      "Don't make me choose between us and","Everything looks better under",
+      "I'm not over","Let's get lost inside"
+    ],
+    "r&b / soul":[
+      "Slow it down and give me","You know I never asked for",
+      "Say my name like","I've been up all night with",
+      "Baby, keep your secrets and","I don't need the world, just",
+      "Meet me where they're dimming","Nobody loved me like"
+    ],
+    "gospel":[
+      "I was carried through","There is mercy waiting in",
+      "I laid my burden down by","He found me somewhere near",
+      "Lift your hands above","Wash me clean in",
+      "I'll be singing past","Glory even in"
+    ],
+    "folk-alt":[]
+  };
+
+  var HOOK_OPENERS = [
+    "They can keep {C}, I'll take",
+    "Give me {C} and",
+    "It was always {C}, always",
+    "I'd trade {C} for",
+    "Say it's just {C}, say it's just",
+    "{C} and me and",
+    "I don't want {C}, I want",
+    "Here's to {C}, here's to"
+  ];
+
+  var CONCEPT_LINES = [
+    "This is what I mean when I say {P}",
+    "Everybody wants a song about {P}",
+    "I never wanted {C} to mean this much",
+    "Somebody should have warned me about {P}",
+    "You can call it {P} if that helps",
+    "It's still {C}, it's still the same"
+  ];
+
+  var FEELS = {
+    "country":{bpm:"96", key:"G major", feel:"pedal steel and brushes"},
+    "hip-hop":{bpm:"88", key:"F minor", feel:"dusty loop, hard snare"},
+    "metal":{bpm:"148", key:"E minor", feel:"drop tuning, wall of guitars"},
+    "folk":{bpm:"78", key:"D major", feel:"one guitar, one room"},
+    "punk":{bpm:"172", key:"A major", feel:"three chords, no mercy"},
+    "sea shanty":{bpm:"104", key:"D minor", feel:"stomps and a full crew"},
+    "musical theatre":{bpm:"84", key:"B♭ major", feel:"strings that swell late"},
+    "pop":{bpm:"104", key:"C major", feel:"bright synths, big last chorus"},
+    "indie rock":{bpm:"118", key:"A minor", feel:"jangle guitars, live drums"},
+    "r&b / soul":{bpm:"72", key:"E♭ major", feel:"warm keys, half-time drums"},
+    "synth-pop":{bpm:"122", key:"F♯ minor", feel:"arpeggios and gated drums"},
+    "jazz standard":{bpm:"92", key:"B♭ major", feel:"brushed kit and upright"},
+    "gospel":{bpm:"70", key:"A♭ major", feel:"organ, choir, hand claps"},
+    "bedroom lo-fi":{bpm:"82", key:"C minor", feel:"tape hiss and soft drums"}
+  };
+
+  var STOPWORDS = ("a an the and or but of in on at to for from with without by is are was were be been " +
+    "that this these those it its his her their your my our you i he she they we who whom which what when " +
+    "where why how not no yes as if then than so too very just only over under about into out up down " +
+    "again never always still one two some any all every each own same other another").split(" ");
+
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+  function shuffled(arr){
+    var a = arr.slice(), i, j, t;
+    for (i = a.length - 1; i > 0; i--){
+      j = Math.floor(Math.random()*(i+1));
+      t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function titleCase(s){
+    return s.replace(/\b[a-z]/g, function(m){ return m.toUpperCase(); });
+  }
+
+  // Words that read badly as the head of "the ___", so they lose the coin toss.
+  var WEAK_HEADS = ("last first only small empty broken whole next best worst good great new old long " +
+    "someone somebody everyone anyone something nothing thing much many more less real true").split(" ");
+
+  function keywords(concept){
+    var words = concept.toLowerCase().replace(/[^a-z0-9'\s-]/g," ").split(/\s+/);
+    var strong = [], weak = [], i, w;
+    for (i = 0; i < words.length; i++){
+      w = words[i];
+      if (w.length <= 3 || STOPWORDS.indexOf(w) !== -1) continue;
+      if (WEAK_HEADS.indexOf(w) !== -1 || /(ing|ly|ed)$/.test(w)) weak.push(w);
+      else strong.push(w);
+    }
+    return strong.concat(weak);
+  }
+
+  // Trim the subject to something that can sit inside a sung line.
+  // Returns the subject verbatim if it's short enough to sing, otherwise null.
+  // Cutting a long subject mid-clause leaves dangling verbs, so we don't cut at all.
+  function singablePhrase(concept){
+    var chunk = concept.split(/[,;:—–]/)[0].trim().replace(/[.!?]+$/,"");
+    if (!chunk || chunk.split(/\s+/).length > 8) return null;
+    return chunk.toLowerCase();
+  }
+
+  // A writer instance holds the "already used" bookkeeping for one song.
+  function Writer(concept, genre, rhyme, length){
+    this.concept = concept;
+    this.genre = genre;
+    this.rhyme = rhyme;
+    this.length = length;
+    this.kw = keywords(concept);
+    this.families = shuffled(Object.keys(RHYME_BANK));
+    this.famCursor = 0;
+    this.usedTails = {};
+    this.openers = shuffled(this.openerPool());
+    this.openCursor = 0;
+    this.conceptNP = this.kw.length ? "the " + this.kw[0] : "all of this";
+    this.shortPhrase = singablePhrase(concept);
+  }
+
+  Writer.prototype.openerPool = function(){
+    var g = this.genre.toLowerCase();
+    var extra = OPENERS_BY_GENRE[g] || [];
+    if (!extra.length){
+      // partial match, e.g. "indie folk" picks up the folk pool
+      for (var k in OPENERS_BY_GENRE){
+        if (OPENERS_BY_GENRE[k].length && (g.indexOf(k) !== -1 || k.indexOf(g) !== -1)){
+          extra = OPENERS_BY_GENRE[k];
+          break;
+        }
+      }
+    }
+    return OPENERS_GENERIC.concat(extra, extra); // weight the genre voice
+  };
+
+  Writer.prototype.nextFamily = function(){
+    if (this.famCursor >= this.families.length){
+      this.families = shuffled(this.families);
+      this.famCursor = 0;
+    }
+    return this.families[this.famCursor++];
+  };
+
+  Writer.prototype.tail = function(fam){
+    var bank = RHYME_BANK[fam];
+    var used = this.usedTails[fam] || (this.usedTails[fam] = []);
+    if (used.length >= bank.length) used.length = 0;
+    var t, guard = 0;
+    do { t = pick(bank); guard++; } while (used.indexOf(t) !== -1 && guard < 40);
+    used.push(t);
+    return t;
+  };
+
+  Writer.prototype.opener = function(){
+    if (this.openCursor >= this.openers.length){
+      this.openers = shuffled(this.openers);
+      this.openCursor = 0;
+    }
+    return this.openers[this.openCursor++];
+  };
+
+  Writer.prototype.line = function(fam, openerOverride){
+    var head = openerOverride || this.opener();
+    return head + " " + this.tail(fam);
+  };
+
+  // Build a stanza of `count` lines following the selected rhyme pattern.
+  Writer.prototype.stanza = function(count, hookOpener){
+    // A two-line stanza always lands as a couplet — an unrhymed pair reads like a mistake.
+    var pattern = (count === 2 && this.rhyme.code !== "FREE") ? [0,0] : this.rhyme.pattern;
+    var slots = {};
+    var lines = [];
+    for (var i = 0; i < count; i++){
+      var key = pattern[i % pattern.length] + "_" + Math.floor(i / pattern.length);
+      if (!slots[key]) slots[key] = this.nextFamily();
+      lines.push(this.line(slots[key], i === 0 ? hookOpener : null));
+    }
+    return lines;
+  };
+
+  Writer.prototype.hookOpener = function(){
+    var t = pick(HOOK_OPENERS).replace("{C}", this.conceptNP);
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  };
+
+  Writer.prototype.conceptLine = function(){
+    var self = this;
+    if (!this.conceptPool || !this.conceptPool.length){
+      this.conceptPool = shuffled(CONCEPT_LINES).filter(function(t){
+        return self.shortPhrase || t.indexOf("{P}") === -1;
+      });
+    }
+    var t = this.conceptPool.pop()
+      .replace("{P}", this.shortPhrase)
+      .replace("{C}", this.conceptNP);
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  };
+
+  Writer.prototype.title = function(){
+    var k = this.kw;
+    var options = [];
+    if (k.length >= 2){
+      options.push(titleCase(k[0] + " " + k[1]));
+      options.push(titleCase(k[0]) + ", " + titleCase(k[1]));
+      options.push("The " + titleCase(k[1]) + " " + titleCase(k[0]));
+    }
+    if (k.length >= 1){
+      options.push("The " + titleCase(k[0]));
+      options.push(titleCase(k[0]) + " Weather");
+      options.push("Somewhere Near The " + titleCase(k[0]));
+      options.push("The Last " + titleCase(k[0]));
+      options.push(titleCase(k[0]) + " In The Doorway");
+      options.push("Nobody Told The " + titleCase(k[0]));
+    }
+    if (!options.length) options.push("Untitled Take");
+    return pick(options);
+  };
+
+  Writer.prototype.write = function(){
+    var chorus = this.stanza(4, this.hookOpener());
+    var sections = [];
+    var pre1 = this.stanza(2);
+    var bridge = [this.conceptLine()].concat(this.stanza(2), [this.conceptLine()]);
+
+    if (this.length.id === "short"){
+      sections.push({label:"Verse 1", lines:this.stanza(4)});
+      sections.push({label:"Chorus", lines:chorus});
+      sections.push({label:"Verse 2", lines:this.stanza(4)});
+      sections.push({label:"Chorus", lines:chorus});
+    } else if (this.length.id === "standard"){
+      sections.push({label:"Verse 1", lines:this.stanza(4)});
+      sections.push({label:"Pre-Chorus", lines:pre1});
+      sections.push({label:"Chorus", lines:chorus});
+      sections.push({label:"Verse 2", lines:this.stanza(4)});
+      sections.push({label:"Pre-Chorus", lines:pre1});
+      sections.push({label:"Chorus", lines:chorus});
+      sections.push({label:"Bridge", lines:bridge});
+      sections.push({label:"Chorus", lines:chorus});
+    } else {
+      sections.push({label:"Verse 1", lines:this.stanza(4)});
+      sections.push({label:"Pre-Chorus", lines:pre1});
+      sections.push({label:"Chorus", lines:chorus});
+      sections.push({label:"Verse 2", lines:this.stanza(4)});
+      sections.push({label:"Pre-Chorus", lines:pre1});
+      sections.push({label:"Chorus", lines:chorus});
+      sections.push({label:"Bridge", lines:bridge});
+      sections.push({label:"Verse 3", lines:this.stanza(4)});
+      sections.push({label:"Chorus", lines:chorus});
+      sections.push({label:"Outro", lines:[chorus[0], this.conceptLine()]});
+    }
+
+    var f = FEELS[this.genre.toLowerCase()] || {bpm:String(76 + Math.floor(Math.random()*9)*6), key:pick(["C major","A minor","D major","E minor","G major","F♯ minor"]), feel:"guitar, bass, drums"};
+
+    return {
+      title: this.title(),
+      credits: {bpm:f.bpm, key:f.key, feel:f.feel},
+      sections: sections,
+      source: "offline engine"
+    };
+  };
+
+  /* =====================================================================
+     3. UI WIRING
+     ===================================================================== */
+
+  var state = {rhyme:RHYMES[1], genre:"Indie rock", length:LENGTHS[1], busy:false};
+
+  function $(id){ return document.getElementById(id); }
+  var concept = $("concept"), out = $("out"), writeBtn = $("writeBtn"),
+      stamp = $("stamp"), customGenre = $("customGenre");
+
+  function makeChip(html, pressed){
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "chip";
+    b.innerHTML = html;
+    b.setAttribute("aria-pressed", pressed ? "true" : "false");
+    return b;
+  }
+
+  function clearPressed(container){
+    var kids = container.querySelectorAll(".chip");
+    for (var i = 0; i < kids.length; i++) kids[i].setAttribute("aria-pressed","false");
+  }
+
+  var rhymeBox = $("rhymeChips");
+  RHYMES.forEach(function(r){
+    var c = makeChip("<b>" + r.code + "</b><small>" + r.desc + "</small>", r.code === state.rhyme.code);
+    c.addEventListener("click", function(){
+      clearPressed(rhymeBox); c.setAttribute("aria-pressed","true"); state.rhyme = r;
+    });
+    rhymeBox.appendChild(c);
+  });
+
+  var genreBox = $("genreChips");
+  GENRES.forEach(function(g){
+    var c = makeChip("<b>" + g + "</b>", g === state.genre);
+    c.addEventListener("click", function(){
+      clearPressed(genreBox); c.setAttribute("aria-pressed","true");
+      state.genre = g; customGenre.value = "";
+    });
+    genreBox.appendChild(c);
+  });
+
+  customGenre.addEventListener("input", function(){
+    var v = customGenre.value.trim();
+    if (v){ clearPressed(genreBox); state.genre = v; }
+    else {
+      state.genre = "Indie rock";
+      var kids = genreBox.querySelectorAll(".chip");
+      for (var i = 0; i < kids.length; i++){
+        if (kids[i].textContent === "Indie rock") kids[i].setAttribute("aria-pressed","true");
+      }
+    }
+  });
+
+  var lenBox = $("lenChips");
+  LENGTHS.forEach(function(l){
+    var c = makeChip("<b>" + l.label + "</b>", l.id === state.length.id);
+    c.addEventListener("click", function(){
+      clearPressed(lenBox); c.setAttribute("aria-pressed","true"); state.length = l;
+    });
+    lenBox.appendChild(c);
+  });
+
+  concept.addEventListener("input", function(){
+    $("count").textContent = concept.value.length + " / 240";
+  });
+
+  var spinBtn = $("spinBtn");
+  spinBtn.addEventListener("click", function(){
+    var current = concept.value.trim(), next = current, guard = 0;
+    while (next === current && guard < 12){ next = pick(SEEDS); guard++; }
+    concept.value = next;
+    $("count").textContent = next.length + " / 240";
+    spinBtn.classList.remove("rolling");
+    void spinBtn.offsetWidth;
+    spinBtn.classList.add("rolling");
+    concept.focus();
+  });
+
+  /* =====================================================================
+     4. ON-DEVICE MODEL — Chrome's Prompt API (Gemini Nano)
+     ===================================================================== */
+
+  // Nano is small, so we never ask it for a whole song in one go. Each call
+  // writes one short stanza, which it handles far more reliably, and the
+  // session keeps the earlier stanzas in context for continuity.
+
+  var nano = {supported:("LanguageModel" in self), status:"unknown", session:null};
+
+  function nanoAvailability(){
+    if (!nano.supported) return Promise.resolve("unavailable");
+    try {
+      return Promise.resolve(LanguageModel.availability()).catch(function(){ return "unavailable"; });
+    } catch(e){
+      return Promise.resolve("unavailable");
+    }
+  }
+
+  function systemPrompt(){
+    return [
+      "You are a working songwriter. You write ORIGINAL lyrics only and never reproduce",
+      "or rework the words of any existing song.",
+      "The song is a " + state.genre + " song about: " + concept.value.trim(),
+      "Rhyme rule for every stanza: " + state.rhyme.brief,
+      "Write concrete, singable lines of six to twelve words. Small physical details,",
+      "no greeting-card language, fresh rhymes (never fire/desire, heart/apart, tonight/alright).",
+      "Output ONLY the lyric lines, one per line. Never write section names, numbering,",
+      "quotation marks, notes or explanations."
+    ].join(" ");
+  }
+
+  function openSession(onProgress){
+    var opts = {
+      initialPrompts:[{role:"system", content:systemPrompt()}],
+      monitor:function(m){
+        m.addEventListener("downloadprogress", function(e){
+          if (onProgress) onProgress(Math.round((e.loaded || 0) * 100));
+        });
+      }
+    };
+    return Promise.resolve(LanguageModel.create(opts));
+  }
+
+  // Strip everything the model might add around the lines we asked for.
+  function cleanLines(raw, want){
+    var lines = String(raw).split(/\r?\n/), out = [], i, t;
+    for (i = 0; i < lines.length; i++){
+      t = lines[i].trim();
+      if (!t) continue;
+      t = t.replace(/^[-*\u2022]\s*/, "")
+           .replace(/^\d+[.)]\s*/, "")
+           .replace(/^\[.*?\]\s*/, "")
+           .replace(/^["\u201c\u2018']+|["\u201d\u2019']+$/g, "")
+           .trim();
+      if (!t) continue;
+      if (/^(verse|chorus|pre-?chorus|bridge|outro|hook|refrain|title)\b/i.test(t)) continue;
+      if (/^(here|sure|okay|of course|i've|i have)\b/i.test(t) && /:$/.test(t)) continue;
+      if (t.length > 90) continue;
+      out.push(t);
+      if (out.length === want) break;
+    }
+    return out;
+  }
+
+  function askStanza(label, count){
+    var ask = "Write " + label + ": exactly " + count + " lines. " +
+      "Rhyme rule: " + state.rhyme.brief + " " +
+      "Lines only, nothing else.";
+    return Promise.resolve(nano.session.prompt(ask)).then(function(text){
+      return cleanLines(text, count);
+    });
+  }
+
+  function askTitle(){
+    return Promise.resolve(nano.session.prompt(
+      "Give this song a title. Three to five words, no quotation marks, nothing else."
+    )).then(function(text){
+      var t = cleanLines(text, 1)[0] || "";
+      t = t.replace(/[.]$/,"").trim();
+      return (t && t.split(/\s+/).length <= 8) ? t : null;
+    });
+  }
+
+  /* =====================================================================
+     5. RENDER
+     ===================================================================== */
+
+  function esc(str){
+    return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  var RECORD_SVG =
+    '<svg class="record" viewBox="0 0 100 100" aria-hidden="true">' +
+      '<circle cx="50" cy="50" r="46" fill="#0A1038"/>' +
+      '<circle cx="50" cy="50" r="36" fill="none" stroke="#F4EFE2" stroke-opacity=".18"/>' +
+      '<circle cx="50" cy="50" r="28" fill="none" stroke="#F4EFE2" stroke-opacity=".18"/>' +
+      '<circle cx="50" cy="50" r="16" fill="#FF4E8C"/>' +
+      '<circle cx="50" cy="50" r="3" fill="#F4EFE2"/>' +
+      '<path d="M50 4 A46 46 0 0 1 84 20" stroke="#FFC93B" stroke-width="4" fill="none"/>' +
+    '</svg>';
+
+  function renderWorking(message){
+    stamp.textContent = "Lyric sheet · in the booth";
+    out.innerHTML =
+      '<div class="working">' + RECORD_SVG +
+        '<p id="workingMsg">' + esc(message || "Writing the song…") + '</p>' +
+        '<div class="meter"><i></i></div>' +
+      '</div>';
+  }
+
+  function setWorking(message){
+    var el = $("workingMsg");
+    if (el) el.textContent = message;
+    else renderWorking(message);
+  }
+
+  /* --- incremental sheet: sections land one at a time as they're written --- */
+
+  var sheet = {node:null, status:null};
+
+  function startSheet(credits, note){
+    stamp.textContent = "Lyric sheet · " + state.genre + " · " + state.rhyme.code;
+    var bits = [];
+    if (credits.bpm) bits.push(esc(credits.bpm) + " BPM");
+    if (credits.key) bits.push(esc(credits.key));
+    if (credits.feel) bits.push(esc(credits.feel));
+    bits.push(esc(state.genre));
+    bits.push("rhyme " + esc(state.rhyme.code));
+
+    out.innerHTML =
+      '<h2 class="song-title" id="sheetTitle">…</h2>' +
+      '<ul class="credits">' +
+        bits.map(function(b){ return "<li>" + b + "</li>"; }).join("") +
+        '<li class="src">' + esc(credits.source || "offline engine") + '</li>' +
+      '</ul>' +
+      (note ? '<p class="note">' + esc(note) + '</p>' : '') +
+      '<div id="sheetBody"></div>' +
+      '<p class="status" id="sheetStatus">writing…</p>';
+
+    sheet.node = $("sheetBody");
+    sheet.status = $("sheetStatus");
+  }
+
+  function setSheetTitle(title){
+    var el = $("sheetTitle");
+    if (el) el.textContent = title;
+  }
+
+  function setSheetStatus(text){
+    if (sheet.status) sheet.status.textContent = text;
+  }
+
+  function appendSection(label, lines){
+    if (!sheet.node) return;
+    var isChorus = /chorus|hook|refrain/i.test(label) && !/pre[-\s]?chorus/i.test(label);
+    var div = document.createElement("div");
+    div.className = "section" + (isChorus ? " is-chorus" : "");
+    var html = '<p class="section-label">[' + esc(label) + ']</p><div class="lines">';
+    lines.forEach(function(line, i){
+      html += '<div class="line" style="--d:' + (i * 0.06).toFixed(2) + 's">' + (esc(line) || "&nbsp;") + "</div>";
+    });
+    div.innerHTML = html + "</div>";
+    sheet.node.appendChild(div);
+  }
+
+  function finishSheet(song){
+    if (sheet.status && sheet.status.parentNode) sheet.status.parentNode.removeChild(sheet.status);
+    sheet.status = null;
+    var bar = document.createElement("div");
+    bar.className = "actions";
+    bar.innerHTML =
+      '<button class="act primary" id="again">Another take</button>' +
+      '<button class="act" id="copy">Copy lyrics</button>' +
+      '<button class="act" id="dl">Download .txt</button>';
+    out.appendChild(bar);
+    wireActions(song);
+  }
+
+  function renderError(message){
+    stamp.textContent = "Lyric sheet · side A";
+    out.innerHTML =
+      '<div class="error"><h2>Nothing to write about</h2><p>' + esc(message) + '</p>' +
+      '<button class="act primary" id="retry">Try again</button></div>';
+    var r = $("retry");
+    if (r) r.addEventListener("click", run);
+  }
+
+  function asText(song){
+    var lines = [(song.title || "Untitled").toUpperCase()];
+    var c = song.credits || {};
+    var meta = [c.bpm ? c.bpm + " BPM" : "", c.key || "", c.feel || "", state.genre, "rhyme " + state.rhyme.code]
+      .filter(Boolean).join(" · ");
+    if (meta) lines.push(meta);
+    lines.push("");
+    (song.sections || []).forEach(function(sec){
+      if (sec.label) lines.push("[" + sec.label + "]");
+      (sec.lines || []).forEach(function(l){ lines.push(String(l)); });
+      lines.push("");
+    });
+    return lines.join("\n").trim() + "\n";
+  }
+
+  function wireActions(song){
+    $("again").addEventListener("click", run);
+
+    $("copy").addEventListener("click", function(){
+      var btn = $("copy"), text = asText(song);
+      var done = function(ok){
+        btn.textContent = ok ? "Copied" : "Copy failed";
+        setTimeout(function(){ btn.textContent = "Copy lyrics"; }, 1600);
+      };
+      if (navigator.clipboard && window.isSecureContext){
+        navigator.clipboard.writeText(text).then(function(){ done(true); }, function(){ done(false); });
+      } else {
+        var ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        var ok = false;
+        try { ok = document.execCommand("copy"); } catch(e){}
+        document.body.removeChild(ta);
+        done(ok);
+      }
+    });
+
+    $("dl").addEventListener("click", function(){
+      var blob = new Blob([asText(song)], {type:"text/plain"});
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = (song.title || "song").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"") + ".txt";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+    });
+  }
+
+  // One-shot render, used when the whole song arrives at once (offline engine).
+  function renderSong(song, note){
+    var credits = song.credits || {};
+    credits.source = song.source || "offline engine";
+    startSheet(credits, note);
+    setSheetTitle(song.title || "Untitled");
+    (song.sections || []).forEach(function(sec){
+      appendSection(sec.label || "", sec.lines || []);
+    });
+    finishSheet(song);
+  }
+
+  /* =====================================================================
+     6. RUN
+     ===================================================================== */
+
+  // Both engines write the same shape, so a song looks consistent whichever
+  // one produced it. Repeated sections are written once and reused verbatim.
+  var PLANS = {
+    short:   [["Verse 1",4],["Chorus",4],["Verse 2",4],["Chorus",4]],
+    standard:[["Verse 1",4],["Pre-Chorus",2],["Chorus",4],["Verse 2",4],
+              ["Pre-Chorus",2],["Chorus",4],["Bridge",4],["Chorus",4]],
+    long:    [["Verse 1",4],["Pre-Chorus",2],["Chorus",4],["Verse 2",4],
+              ["Pre-Chorus",2],["Chorus",4],["Bridge",4],["Verse 3",4],
+              ["Chorus",4],["Outro",2]]
+  };
+
+  function creditsFor(){
+    var f = FEELS[state.genre.toLowerCase()];
+    if (f) return {bpm:f.bpm, key:f.key, feel:f.feel};
+    return {bpm:String(76 + Math.floor(Math.random()*9)*6),
+            key:pick(["C major","A minor","D major","E minor","G major","F♯ minor"]),
+            feel:"guitar, bass, drums"};
+  }
+
+  function finish(){
+    state.busy = false;
+    writeBtn.disabled = false;
+    writeBtn.textContent = "Write the song";
+  }
+
+  function runOffline(note){
+    var song = new Writer(concept.value.trim(), state.genre, state.rhyme, state.length).write();
+    renderSong(song, note);
+    finish();
+  }
+
+  function runNano(){
+    var backup = new Writer(concept.value.trim(), state.genre, state.rhyme, state.length);
+    var plan = PLANS[state.length.id];
+    var cache = {};
+    var song = {title:"Untitled", credits:creditsFor(), sections:[], source:"gemini nano"};
+    var leanedOnBackup = false;
+
+    setWorking("Waking the on-device model…");
+
+    return openSession(function(pct){
+      setWorking("Downloading the on-device model — " + pct + "%");
+    })
+    .then(function(session){
+      nano.session = session;
+      setWorking("Finding a title…");
+      return askTitle().catch(function(){ return null; });
+    })
+    .then(function(title){
+      song.title = title || backup.title();
+      startSheet({bpm:song.credits.bpm, key:song.credits.key, feel:song.credits.feel, source:"gemini nano"});
+      setSheetTitle(song.title);
+
+      // Walk the plan one stanza at a time, chaining promises.
+      return plan.reduce(function(chain, entry){
+        return chain.then(function(){
+          var label = entry[0], count = entry[1];
+          var key = /chorus/i.test(label) ? label.toLowerCase() : null;
+
+          if (key && cache[key]){
+            song.sections.push({label:label, lines:cache[key]});
+            appendSection(label, cache[key]);
+            return;
+          }
+
+          setSheetStatus("writing " + label.toLowerCase() + "…");
+
+          return askStanza(label, count)
+            .then(function(lines){
+              if (lines.length < count){
+                // one stricter retry before giving the stanza to the built-in writer
+                return askStanza(label + " (write exactly " + count + " lines, nothing else)", count);
+              }
+              return lines;
+            })
+            .catch(function(){ return []; })
+            .then(function(lines){
+              if (lines.length < count){
+                leanedOnBackup = true;
+                lines = lines.concat(backup.stanza(count - lines.length));
+              }
+              if (key) cache[key] = lines;
+              song.sections.push({label:label, lines:lines});
+              appendSection(label, lines);
+            });
+        });
+      }, Promise.resolve());
+    })
+    .then(function(){
+      if (leanedOnBackup) song.source = "nano + built-in";
+      var src = out.querySelector(".credits .src");
+      if (src) src.textContent = song.source;
+      finishSheet(song);
+      finish();
+      if (nano.session && nano.session.destroy) { try { nano.session.destroy(); } catch(e){} }
+      nano.session = null;
+    })
+    .catch(function(err){
+      if (nano.session && nano.session.destroy) { try { nano.session.destroy(); } catch(e){} }
+      nano.session = null;
+      runOffline("The on-device model stopped partway (" + (err && err.name ? err.name : "error") +
+                 "), so the built-in writer took this one.");
+    });
+  }
+
+  function run(){
+    if (state.busy) return;
+
+    if (!concept.value.trim()){
+      concept.focus();
+      renderError("There's no subject yet. Type what the song is about, or press “Spin one for me”.");
+      return;
+    }
+
+    state.busy = true;
+    writeBtn.disabled = true;
+    writeBtn.textContent = "Writing…";
+    renderWorking();
+
+    nanoAvailability().then(function(status){
+      nano.status = status;
+      if (status === "unavailable"){
+        runOffline(nano.supported
+          ? "Chrome has the Prompt API but no usable model on this device, so the built-in writer wrote this one."
+          : "Gemini Nano isn't available in this browser, so the built-in writer wrote this one.");
+        return;
+      }
+      runNano();
+    });
+  }
+
+  /* ---- engine badge under the button ---- */
+
+  (function reportEngine(){
+    var el = $("engineStatus");
+    if (!el) return;
+    if (!nano.supported){
+      el.textContent = "On-device model: not in this browser — using the built-in writer";
+      return;
+    }
+    nanoAvailability().then(function(status){
+      nano.status = status;
+      if (status === "available") el.textContent = "On-device model: ready";
+      else if (status === "downloadable") el.textContent = "On-device model: downloads on first song";
+      else if (status === "downloading") el.textContent = "On-device model: still downloading";
+      else el.textContent = "On-device model: unavailable — using the built-in writer";
+    });
+  })();
+
+  writeBtn.addEventListener("click", run);
+
+  document.addEventListener("keydown", function(e){
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter"){ e.preventDefault(); run(); }
+  });
+
+})();
+</script>
+</body>
+</html>

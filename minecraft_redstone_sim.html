@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bedrock Redstone Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        #canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        #inventory {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 5px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            pointer-events: all;
+        }
+        .inv-item {
+            width: 60px;
+            height: 60px;
+            background: rgba(139, 139, 139, 0.3);
+            border: 2px solid #555;
+            border-radius: 3px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 10px;
+            transition: all 0.2s;
+        }
+        .inv-item:hover {
+            background: rgba(139, 139, 139, 0.5);
+            border-color: #888;
+        }
+        .inv-item.selected {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: #fff;
+        }
+        .inv-icon {
+            font-size: 24px;
+            margin-bottom: 2px;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            pointer-events: none;
+        }
+        #controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 11px;
+            pointer-events: none;
+        }
+        #hover-tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            pointer-events: all;
+            display: none;
+            min-width: 200px;
+            border: 2px solid #555;
+        }
+        #hover-tooltip.visible {
+            display: block;
+        }
+        .tooltip-title {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: #FFD700;
+        }
+        .tooltip-property {
+            margin: 4px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .tooltip-button {
+            background: rgba(100, 100, 255, 0.5);
+            border: 1px solid #6464FF;
+            padding: 3px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+            color: white;
+            margin-left: 10px;
+        }
+        .tooltip-button:hover {
+            background: rgba(100, 100, 255, 0.7);
+        }
+        .tooltip-value {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 8px;
+            border-radius: 3px;
+            margin-left: 10px;
+        }
+        #placement-preview {
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div id="ui">
+        <div id="info">
+            <div>Selected: <span id="selected-item">Redstone Dust</span></div>
+            <div>Power Level: <span id="power-level">0</span></div>
+            <div>Tick: <span id="tick">0</span></div>
+        </div>
+        <div id="controls">
+            <div><strong>Controls:</strong></div>
+            <div>Left Click: Place Component</div>
+            <div>Right Click: Remove Component</div>
+            <div>Middle Click: Interact</div>
+            <div>Hover: View/Edit Properties</div>
+            <div>Mouse Drag: Rotate View</div>
+            <div>Mouse Wheel: Zoom</div>
+            <div>Shift+Drag: Pan View</div>
+        </div>
+        <div id="inventory"></div>
+        <div id="hover-tooltip"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Redstone Components
+        const components = [
+            { name: 'Dust', icon: '🔴', color: 0x8B0000 },
+            { name: 'Torch', icon: '🔥', color: 0xFF6600 },
+            { name: 'Repeater', icon: '⏩', color: 0x666666 },
+            { name: 'Comparator', icon: '⚖️', color: 0x666666 },
+            { name: 'Lever', icon: '🎚️', color: 0x8B4513 },
+            { name: 'Button', icon: '🔘', color: 0x8B4513 },
+            { name: 'Pressure Plate', icon: '⬜', color: 0x8B4513 },
+            { name: 'Redstone Block', icon: '🟥', color: 0xFF0000 },
+            { name: 'Lamp', icon: '💡', color: 0xFFFF00 },
+            { name: 'Piston', icon: '⬆️', color: 0x8B8B8B },
+            { name: 'Sticky Piston', icon: '🟢', color: 0x8B8B8B },
+            { name: 'Observer', icon: '👁️', color: 0x666666 },
+            { name: 'Dropper', icon: '📤', color: 0x666666 },
+            { name: 'Dispenser', icon: '📦', color: 0x666666 },
+            { name: 'Hopper', icon: '⬇️', color: 0x444444 }
+        ];
+
+        let selectedComponent = 0;
+        let scene, camera, renderer, raycaster, mouse;
+        let grid = {};
+        let tickCount = 0;
+        let powerStates = {};
+        let hoveredComponent = null;
+        let placementPreview = null;
+        let clickableObjects = [];
+
+        // Initialize Three.js
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(10, 15, 10);
+            camera.lookAt(0, 0, 0);
+
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas'), antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 20, 10);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+
+            // Ground plane (invisible for raycasting)
+            const groundGeometry = new THREE.PlaneGeometry(100, 100);
+            const groundMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x228B22,
+                transparent: false
+            });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            ground.name = 'ground';
+            scene.add(ground);
+
+            // Grid helper
+            const gridHelper = new THREE.GridHelper(100, 100, 0x000000, 0x444444);
+            scene.add(gridHelper);
+
+            raycaster = new THREE.Raycaster();
+            raycaster.params.Line.threshold = 0.1;
+            mouse = new THREE.Vector2();
+
+            setupInventory();
+            setupControls();
+            animate();
+        }
+
+        function setupInventory() {
+            const inventory = document.getElementById('inventory');
+            components.forEach((comp, idx) => {
+                const item = document.createElement('div');
+                item.className = 'inv-item' + (idx === 0 ? ' selected' : '');
+                item.innerHTML = `<div class="inv-icon">${comp.icon}</div><div>${comp.name}</div>`;
+                item.onclick = () => selectComponent(idx);
+                inventory.appendChild(item);
+            });
+        }
+
+        function selectComponent(idx) {
+            selectedComponent = idx;
+            document.querySelectorAll('.inv-item').forEach((item, i) => {
+                item.classList.toggle('selected', i === idx);
+            });
+            document.getElementById('selected-item').textContent = components[idx].name;
+        }
+
+        function setupControls() {
+            let isDragging = false;
+            let dragStarted = false;
+            let previousMousePosition = { x: 0, y: 0 };
+
+            document.getElementById('canvas').addEventListener('mousedown', (e) => {
+                isDragging = true;
+                dragStarted = false;
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                updateMousePosition(e);
+                updateHoverTooltip(e);
+                updatePlacementPreview(e);
+
+                if (isDragging) {
+                    const deltaX = Math.abs(e.clientX - previousMousePosition.x);
+                    const deltaY = Math.abs(e.clientY - previousMousePosition.y);
+                    
+                    if (deltaX > 3 || deltaY > 3) {
+                        dragStarted = true;
+                    }
+
+                    if (dragStarted && !e.shiftKey) {
+                        const dx = e.clientX - previousMousePosition.x;
+                        const dy = e.clientY - previousMousePosition.y;
+
+                        const phi = dy * 0.01;
+                        const theta = dx * 0.01;
+
+                        let spherical = new THREE.Spherical().setFromVector3(camera.position);
+                        
+                        spherical.theta -= theta;
+                        spherical.phi -= phi;
+                        spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+
+                        camera.position.setFromSpherical(spherical);
+                        camera.lookAt(0, 0, 0);
+                    }
+                    previousMousePosition = { x: e.clientX, y: e.clientY };
+                }
+            });
+
+            document.addEventListener('mouseup', (e) => {
+                if (!dragStarted && isDragging) {
+                    if (e.button === 0) {
+                        placeComponent(e);
+                    } else if (e.button === 2) {
+                        removeComponent(e);
+                    } else if (e.button === 1) {
+                        interactComponent(e);
+                    }
+                }
+                isDragging = false;
+                dragStarted = false;
+            });
+
+            document.getElementById('canvas').addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const delta = e.deltaY * 0.01;
+                const distance = camera.position.length();
+                const newDistance = Math.max(5, Math.min(50, distance + delta));
+                camera.position.multiplyScalar(newDistance / distance);
+            });
+
+            document.addEventListener('contextmenu', (e) => e.preventDefault());
+        }
+
+        function updateMousePosition(e) {
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        }
+
+        function updateHoverTooltip(e) {
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(clickableObjects, true);
+
+            const tooltip = document.getElementById('hover-tooltip');
+            
+            // Check if mouse is over the tooltip itself
+            const rect = tooltip.getBoundingClientRect();
+            const overTooltip = e.clientX >= rect.left && e.clientX <= rect.right &&
+                               e.clientY >= rect.top && e.clientY <= rect.bottom;
+
+            if (overTooltip) {
+                return; // Keep tooltip visible if mouse is over it
+            }
+
+            if (intersects.length > 0) {
+                const intersected = intersects[0].object;
+                let targetMesh = intersected;
+                
+                while (targetMesh.parent && !targetMesh.userData.gridKey) {
+                    targetMesh = targetMesh.parent;
+                }
+
+                const key = targetMesh.userData.gridKey;
+                if (key && grid[key]) {
+                    hoveredComponent = grid[key];
+                    showTooltip(e, grid[key], key);
+                } else {
+                    hideTooltip();
+                    hoveredComponent = null;
+                }
+            } else {
+                hideTooltip();
+                hoveredComponent = null;
+            }
+        }
+
+        function showTooltip(e, comp, key) {
+            const tooltip = document.getElementById('hover-tooltip');
+            tooltip.classList.add('visible');
+            
+            // Position tooltip to the right of the cursor, but keep it fixed once shown
+            if (!tooltip.dataset.positioned || tooltip.dataset.key !== key) {
+                tooltip.style.left = (e.clientX + 15) + 'px';
+                tooltip.style.top = (e.clientY + 15) + 'px';
+                tooltip.dataset.positioned = 'true';
+                tooltip.dataset.key = key;
+            }
+
+            let html = `<div class="tooltip-title">${comp.type}</div>`;
+            html += `<div class="tooltip-property">Powered: <span class="tooltip-value">${comp.powered ? 'Yes' : 'No'}</span></div>`;
+            html += `<div class="tooltip-property">Power Level: <span class="tooltip-value">${comp.powerLevel}</span></div>`;
+
+            if (comp.type === 'Repeater') {
+                const delay = comp.state.delay || 1;
+                html += `<div class="tooltip-property">Delay: <span class="tooltip-value">${delay} tick${delay > 1 ? 's' : ''}</span>`;
+                html += `<button class="tooltip-button" onclick="changeDelay('${key}')">Change</button></div>`;
+                const locked = comp.state.locked || false;
+                html += `<div class="tooltip-property">Locked: <span class="tooltip-value">${locked ? 'Yes' : 'No'}</span></div>`;
+            }
+
+            if (comp.type === 'Comparator') {
+                const mode = comp.state.mode || 'compare';
+                html += `<div class="tooltip-property">Mode: <span class="tooltip-value">${mode}</span>`;
+                html += `<button class="tooltip-button" onclick="toggleComparatorMode('${key}')">Toggle</button></div>`;
+            }
+
+            if (comp.type === 'Lever') {
+                html += `<div class="tooltip-property">State: <span class="tooltip-value">${comp.powered ? 'ON' : 'OFF'}</span>`;
+                html += `<button class="tooltip-button" onclick="toggleLever('${key}')">Toggle</button></div>`;
+            }
+
+            if (comp.type === 'Piston' || comp.type === 'Sticky Piston') {
+                const extended = comp.state.extended || false;
+                html += `<div class="tooltip-property">Extended: <span class="tooltip-value">${extended ? 'Yes' : 'No'}</span></div>`;
+            }
+
+            if (comp.type === 'Observer') {
+                html += `<div class="tooltip-property">Facing: <span class="tooltip-value">${comp.state.facing || 'North'}</span>`;
+                html += `<button class="tooltip-button" onclick="rotateFacing('${key}')">Rotate</button></div>`;
+            }
+
+            tooltip.innerHTML = html;
+        }
+
+        function hideTooltip() {
+            const tooltip = document.getElementById('hover-tooltip');
+            tooltip.classList.remove('visible');
+            tooltip.dataset.positioned = 'false';
+            tooltip.dataset.key = '';
+        }
+
+        window.changeDelay = function(key) {
+            if (grid[key]) {
+                const delay = grid[key].state.delay || 1;
+                grid[key].state.delay = (delay % 4) + 1;
+                
+                // Update the tooltip to show new value
+                const comp = grid[key];
+                showTooltip({ clientX: parseInt(document.getElementById('hover-tooltip').style.left), 
+                             clientY: parseInt(document.getElementById('hover-tooltip').style.top) }, 
+                           comp, key);
+                
+                updateRedstone();
+            }
+        };
+
+        window.toggleComparatorMode = function(key) {
+            if (grid[key]) {
+                grid[key].state.mode = grid[key].state.mode === 'compare' ? 'subtract' : 'compare';
+                
+                // Update the tooltip to show new value
+                const comp = grid[key];
+                showTooltip({ clientX: parseInt(document.getElementById('hover-tooltip').style.left), 
+                             clientY: parseInt(document.getElementById('hover-tooltip').style.top) }, 
+                           comp, key);
+                
+                updateRedstone();
+            }
+        };
+
+        window.toggleLever = function(key) {
+            if (grid[key]) {
+                grid[key].powered = !grid[key].powered;
+                
+                // Update the tooltip to show new value
+                const comp = grid[key];
+                showTooltip({ clientX: parseInt(document.getElementById('hover-tooltip').style.left), 
+                             clientY: parseInt(document.getElementById('hover-tooltip').style.top) }, 
+                           comp, key);
+                
+                updateComponentAppearance(grid[key]);
+                updateRedstone();
+            }
+        };
+
+        window.rotateFacing = function(key) {
+            if (grid[key]) {
+                const facings = ['North', 'East', 'South', 'West'];
+                const current = facings.indexOf(grid[key].state.facing || 'North');
+                grid[key].state.facing = facings[(current + 1) % 4];
+                const rotation = (current + 1) * Math.PI / 2;
+                grid[key].mesh.rotation.y = rotation;
+                
+                // Update the tooltip to show new value
+                const comp = grid[key];
+                showTooltip({ clientX: parseInt(document.getElementById('hover-tooltip').style.left), 
+                             clientY: parseInt(document.getElementById('hover-tooltip').style.top) }, 
+                           comp, key);
+            }
+        };
+
+        function updatePlacementPreview(e) {
+            raycaster.setFromCamera(mouse, camera);
+            const ground = scene.getObjectByName('ground');
+            const intersects = raycaster.intersectObject(ground);
+
+            if (placementPreview) {
+                scene.remove(placementPreview);
+                placementPreview = null;
+            }
+
+            if (intersects.length > 0 && !hoveredComponent) {
+                const point = intersects[0].point;
+                const gridX = Math.round(point.x);
+                const gridZ = Math.round(point.z);
+                const key = `${gridX},${gridZ}`;
+
+                if (!grid[key]) {
+                    placementPreview = createComponent(components[selectedComponent], gridX, gridZ);
+                    placementPreview.traverse((child) => {
+                        if (child.material) {
+                            child.material = child.material.clone();
+                            child.material.transparent = true;
+                            child.material.opacity = 0.5;
+                        }
+                    });
+                    scene.add(placementPreview);
+                }
+            }
+        }
+
+        function placeComponent(e) {
+            raycaster.setFromCamera(mouse, camera);
+            const ground = scene.getObjectByName('ground');
+            const intersects = raycaster.intersectObject(ground);
+
+            if (intersects.length > 0) {
+                const point = intersects[0].point;
+                const gridX = Math.round(point.x);
+                const gridZ = Math.round(point.z);
+                const key = `${gridX},${gridZ}`;
+
+                if (!grid[key]) {
+                    const comp = createComponent(components[selectedComponent], gridX, gridZ);
+                    comp.userData.gridKey = key;
+                    scene.add(comp);
+                    
+                    clickableObjects.push(comp);
+                    comp.traverse((child) => {
+                        if (child.isMesh) {
+                            clickableObjects.push(child);
+                        }
+                    });
+
+                    grid[key] = { 
+                        mesh: comp, 
+                        type: components[selectedComponent].name,
+                        powered: false,
+                        powerLevel: 0,
+                        state: {
+                            delay: 1,
+                            mode: 'compare',
+                            locked: false,
+                            extended: false,
+                            facing: 'North'
+                        }
+                    };
+                    updateRedstone();
+                }
+            }
+        }
+
+        function removeComponent(e) {
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(clickableObjects, true);
+
+            if (intersects.length > 0) {
+                const intersected = intersects[0].object;
+                let targetMesh = intersected;
+                
+                while (targetMesh.parent && !targetMesh.userData.gridKey) {
+                    targetMesh = targetMesh.parent;
+                }
+
+                const key = targetMesh.userData.gridKey;
+                if (key && grid[key]) {
+                    scene.remove(grid[key].mesh);
+                    clickableObjects = clickableObjects.filter(obj => {
+                        return obj !== grid[key].mesh && obj.parent !== grid[key].mesh;
+                    });
+                    delete grid[key];
+                    hideTooltip();
+                    updateRedstone();
+                }
+            }
+        }
+
+        function interactComponent(e) {
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(clickableObjects, true);
+
+            if (intersects.length > 0) {
+                const intersected = intersects[0].object;
+                let targetMesh = intersected;
+                
+                while (targetMesh.parent && !targetMesh.userData.gridKey) {
+                    targetMesh = targetMesh.parent;
+                }
+
+                const key = targetMesh.userData.gridKey;
+                if (key && grid[key]) {
+                    const comp = grid[key];
+                    if (comp.type === 'Lever' || comp.type === 'Button') {
+                        comp.powered = !comp.powered;
+                        updateComponentAppearance(comp);
+                        updateRedstone();
+                    }
+                }
+            }
+        }
+
+        function createComponent(comp, x, z) {
+            let geometry, material, mesh;
+
+            switch(comp.name) {
+                case 'Dust':
+                    geometry = new THREE.BoxGeometry(0.9, 0.05, 0.9);
+                    material = new THREE.MeshStandardMaterial({ color: comp.color });
+                    mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.y = 0.025;
+                    break;
+                
+                case 'Torch':
+                    const group = new THREE.Group();
+                    const base = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.3, 0.6, 0.3),
+                        new THREE.MeshStandardMaterial({ color: 0x8B4513 })
+                    );
+                    base.position.y = 0.3;
+                    const flame = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.2, 0.2, 0.2),
+                        new THREE.MeshStandardMaterial({ color: 0xFF6600, emissive: 0xFF6600 })
+                    );
+                    flame.position.y = 0.7;
+                    group.add(base);
+                    group.add(flame);
+                    mesh = group;
+                    break;
+
+                case 'Repeater':
+                    const repGroup = new THREE.Group();
+                    const repBase = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.9, 0.15, 0.9),
+                        new THREE.MeshStandardMaterial({ color: comp.color })
+                    );
+                    repBase.position.y = 0.075;
+                    const torch1 = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.15, 0.3, 0.15),
+                        new THREE.MeshStandardMaterial({ color: 0xFF6600 })
+                    );
+                    torch1.position.set(0, 0.25, -0.3);
+                    repGroup.add(repBase);
+                    repGroup.add(torch1);
+                    mesh = repGroup;
+                    break;
+
+                case 'Comparator':
+                    const compGroup = new THREE.Group();
+                    const compBase = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.9, 0.15, 0.9),
+                        new THREE.MeshStandardMaterial({ color: comp.color })
+                    );
+                    compBase.position.y = 0.075;
+                    const torch2 = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.15, 0.3, 0.15),
+                        new THREE.MeshStandardMaterial({ color: 0xFF6600 })
+                    );
+                    torch2.position.set(-0.25, 0.25, 0);
+                    const torch3 = torch2.clone();
+                    torch3.position.set(0.25, 0.25, 0);
+                    compGroup.add(compBase);
+                    compGroup.add(torch2);
+                    compGroup.add(torch3);
+                    mesh = compGroup;
+                    break;
+
+                case 'Lever':
+                    geometry = new THREE.BoxGeometry(0.4, 0.6, 0.4);
+                    material = new THREE.MeshStandardMaterial({ color: comp.color });
+                    mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.y = 0.3;
+                    break;
+
+                case 'Button':
+                    geometry = new THREE.BoxGeometry(0.4, 0.2, 0.4);
+                    material = new THREE.MeshStandardMaterial({ color: comp.color });
+                    mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.y = 0.1;
+                    break;
+
+                case 'Pressure Plate':
+                    geometry = new THREE.BoxGeometry(0.9, 0.05, 0.9);
+                    material = new THREE.MeshStandardMaterial({ color: comp.color });
+                    mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.y = 0.025;
+                    break;
+
+                case 'Redstone Block':
+                    geometry = new THREE.BoxGeometry(1, 1, 1);
+                    material = new THREE.MeshStandardMaterial({ color: comp.color, emissive: 0x440000 });
+                    mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.y = 0.5;
+                    break;
+
+                case 'Lamp':
+                    geometry = new THREE.BoxGeometry(0.9, 0.9, 0.9);
+                    material = new THREE.MeshStandardMaterial({ color: 0x666666 });
+                    mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.y = 0.45;
+                    break;
+
+                case 'Piston':
+                case 'Sticky Piston':
+                    geometry = new THREE.BoxGeometry(0.9, 0.9, 0.9);
+                    material = new THREE.MeshStandardMaterial({ 
+                        color: comp.name === 'Sticky Piston' ? 0x4CAF50 : 0x8B8B8B 
+                    });
+                    mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.y = 0.45;
+                    break;
+
+                case 'Observer':
+                    const obsGroup = new THREE.Group();
+                    const obsBase = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.9, 0.9, 0.9),
+                        new THREE.MeshStandardMaterial({ color: comp.color })
+                    );
+                    obsBase.position.y = 0.45;
+                    const face = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.5, 0.5, 0.05),
+                        new THREE.MeshStandardMaterial({ color: 0xFF0000 })
+                    );
+                    face.position.set(0, 0.45, 0.48);
+                    obsGroup.add(obsBase);
+                    obsGroup.add(face);
+                    mesh = obsGroup;
+                    break;
+
+                case 'Dropper':
+                case 'Dispenser':
+                    geometry = new THREE.BoxGeometry(0.9, 0.9, 0.9);
+                    material = new THREE.MeshStandardMaterial({ color: comp.color });
+                    mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.y = 0.45;
+                    break;
+
+                case 'Hopper':
+                    geometry = new THREE.BoxGeometry(0.9, 0.6, 0.9);
+                    material = new THREE.MeshStandardMaterial({ color: comp.color });
+                    mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.y = 0.3;
+                    break;
+
+                default:
+                    geometry = new THREE.BoxGeometry(0.9, 0.3, 0.9);
+                    material = new THREE.MeshStandardMaterial({ color: comp.color });
+                    mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.y = 0.15;
+            }
+
+            mesh.position.x = x;
+            mesh.position.z = z;
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+
+            return mesh;
+        }
+
+        function updateComponentAppearance(comp) {
+            comp.mesh.traverse((child) => {
+                if (child.material) {
+                    if (comp.powered) {
+                        if (child.material.emissive) {
+                            child.material.emissive.setHex(0xFF0000);
+                            child.material.emissiveIntensity = 0.5;
+                        }
+                    } else {
+                        if (child.material.emissive) {
+                            child.material.emissive.setHex(0x000000);
+                            child.material.emissiveIntensity = 0;
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateRedstone() {
+            Object.keys(grid).forEach(key => {
+                const comp = grid[key];
+                if (comp.type !== 'Lever' && comp.type !== 'Redstone Block') {
+                    comp.powered = false;
+                    comp.powerLevel = 0;
+                }
+                if (comp.type === 'Redstone Block') {
+                    comp.powered = true;
+                    comp.powerLevel = 15;
+                }
+            });
+
+            for (let i = 0; i < 10; i++) {
+                Object.keys(grid).forEach(key => {
+                    const [x, z] = key.split(',').map(Number);
+                    const comp = grid[key];
+
+                    if (comp.type === 'Dust') {
+                        let maxPower = 0;
+                        [[0,1],[0,-1],[1,0],[-1,0]].forEach(([dx, dz]) => {
+                            const nKey = `${x+dx},${z+dz}`;
+                            if (grid[nKey] && grid[nKey].powered) {
+                                maxPower = Math.max(maxPower, grid[nKey].powerLevel - 1);
+                            }
+                        });
+                        comp.powerLevel = Math.max(0, maxPower);
+                        comp.powered = comp.powerLevel > 0;
+                    }
+
+                    if (comp.type === 'Torch') {
+                        const below = grid[`${x},${z}`];
+                        comp.powered = !(below && below.powered);
+                        comp.powerLevel = comp.powered ? 15 : 0;
+                    }
+
+                    if (comp.type === 'Lamp') {
+                        [[0,1],[0,-1],[1,0],[-1,0]].forEach(([dx, dz]) => {
+                            const nKey = `${x+dx},${z+dz}`;
+                            if (grid[nKey] && grid[nKey].powered) {
+                                comp.powered = true;
+                                comp.powerLevel = 15;
+                            }
+                        });
+                    }
+
+                    updateComponentAppearance(comp);
+                });
+            }
+
+            tickCount++;
+            document.getElementById('tick').textContent = tickCount;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        init();
+    </script>
+</body>
+</html>

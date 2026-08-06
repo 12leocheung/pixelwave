@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GEARWORKS — Gear Mechanism Designer</title>
+<style>
+  :root{
+    --bg:#171a1f; --panel:#20242b; --panel2:#262b33; --line:#343b46;
+    --ink:#d7dde6; --ink-dim:#8b95a3; --ink-faint:#5a6472;
+    --brass:#d9a648; --brass-dim:#8a6c34; --steel:#7fa8c9; --ok:#63c78a;
+    --warn:#e0564a; --sel:#e8c76f;
+    --mono:ui-monospace,'Cascadia Code','SF Mono',Menlo,Consolas,monospace;
+    --sans:'Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+    font-family:var(--sans);font-size:13px;user-select:none;-webkit-user-select:none}
+  button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer}
+  input,select{font-family:var(--mono);font-size:12px;color:var(--ink);
+    background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:4px 6px;outline:none}
+  input:focus,select:focus{border-color:var(--brass)}
+  input[type=range]{padding:0;border:none;background:transparent;accent-color:var(--brass)}
+
+  #app{display:grid;height:100%;
+    grid-template-rows:44px 1fr 24px;
+    grid-template-columns:52px 1fr 244px;
+    grid-template-areas:"top top top" "tools canvas props" "status status status"}
+
+  /* ---- top bar ---- */
+  #topbar{grid-area:top;display:flex;align-items:center;gap:10px;padding:0 12px;
+    background:var(--panel);border-bottom:1px solid var(--line)}
+  #logo{font-family:var(--mono);font-weight:700;letter-spacing:.22em;font-size:14px;color:var(--brass)}
+  #logo small{color:var(--ink-faint);letter-spacing:.1em;font-weight:400;margin-left:8px;font-size:10px}
+  .tgroup{display:flex;align-items:center;gap:6px;padding:0 10px;border-left:1px solid var(--line);height:26px}
+  .tbtn{padding:5px 10px;border-radius:5px;font-size:12px;color:var(--ink-dim);border:1px solid transparent}
+  .tbtn:hover{color:var(--ink);background:var(--panel2)}
+  .tbtn.on{color:var(--brass);border-color:var(--brass-dim);background:rgba(217,166,72,.08)}
+  #playBtn{width:78px;font-family:var(--mono);font-weight:700;letter-spacing:.08em;
+    border:1px solid var(--brass-dim);color:var(--brass);border-radius:5px;padding:5px 0}
+  #playBtn.running{background:var(--brass);color:#1a150a;border-color:var(--brass)}
+  #speedVal{font-family:var(--mono);color:var(--ink-dim);width:34px;text-align:right}
+  label.tl{color:var(--ink-faint);font-size:11px}
+
+  /* ---- tool rail ---- */
+  #tools{grid-area:tools;background:var(--panel);border-right:1px solid var(--line);
+    display:flex;flex-direction:column;align-items:center;padding-top:10px;gap:6px}
+  .tool{width:38px;height:38px;border-radius:7px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;color:var(--ink-dim);border:1px solid transparent;position:relative}
+  .tool svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  .tool span{font-size:8px;font-family:var(--mono);margin-top:1px;letter-spacing:.05em}
+  .tool:hover{color:var(--ink);background:var(--panel2)}
+  .tool.on{color:var(--brass);border-color:var(--brass-dim);background:rgba(217,166,72,.08)}
+  .tool.danger.on{color:var(--warn);border-color:rgba(224,86,74,.5);background:rgba(224,86,74,.08)}
+  #tools .sep{width:26px;height:1px;background:var(--line);margin:4px 0}
+
+  /* ---- canvas ---- */
+  #canvasWrap{grid-area:canvas;position:relative;overflow:hidden;background:var(--bg)}
+  #cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:default}
+  #hint{position:absolute;left:12px;top:10px;pointer-events:none;font-family:var(--mono);
+    font-size:11px;color:var(--ink-faint);letter-spacing:.03em;white-space:pre-line}
+
+  /* ---- properties panel ---- */
+  #props{grid-area:props;background:var(--panel);border-left:1px solid var(--line);
+    overflow-y:auto;padding:12px}
+  #props h2{font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--ink-faint);
+    margin-bottom:10px;font-weight:600}
+  #props h2 b{color:var(--brass);font-weight:700}
+  .prow{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;gap:8px}
+  .prow label{color:var(--ink-dim);font-size:12px;flex-shrink:0}
+  .prow input[type=number]{width:64px;text-align:right}
+  .prow select{width:100px}
+  .prow input[type=range]{flex:1;min-width:0}
+  .pbig{font-family:var(--mono);font-size:22px;color:var(--ink);margin:2px 0 10px}
+  .pbig small{font-size:11px;color:var(--ink-faint);margin-left:4px}
+  .psub{color:var(--ink-faint);font-size:11px;margin-bottom:10px;line-height:1.5}
+  .pdiv{height:1px;background:var(--line);margin:12px 0}
+  .pbtn{display:block;width:100%;text-align:center;padding:7px 0;border-radius:5px;
+    border:1px solid var(--line);color:var(--ink-dim);font-size:12px;margin-bottom:7px}
+  .pbtn:hover{color:var(--ink);border-color:var(--ink-faint)}
+  .pbtn.accent{color:var(--brass);border-color:var(--brass-dim)}
+  .pbtn.danger{color:var(--warn);border-color:rgba(224,86,74,.45)}
+  .glist{list-style:none}
+  .glist li{display:flex;justify-content:space-between;padding:6px 8px;border:1px solid var(--line);
+    border-radius:5px;margin-bottom:5px;font-family:var(--mono);font-size:11px;cursor:pointer;color:var(--ink-dim)}
+  .glist li:hover{border-color:var(--brass-dim);color:var(--ink)}
+  .glist li.cur{border-color:var(--brass);color:var(--brass)}
+  .laydot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+  .jog{display:flex;gap:6px}
+  .jog button{flex:1;border:1px solid var(--line);border-radius:5px;padding:4px 0;
+    font-family:var(--mono);color:var(--ink-dim)}
+  .jog button:hover{color:var(--brass);border-color:var(--brass-dim)}
+
+  /* ---- status bar ---- */
+  #status{grid-area:status;display:flex;align-items:center;gap:18px;padding:0 12px;
+    background:var(--panel);border-top:1px solid var(--line);
+    font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+  #status .warnTxt{color:var(--warn)}
+  #status .okTxt{color:var(--ok)}
+  #statMode{color:var(--brass);letter-spacing:.1em}
+
+  /* ---- help overlay ---- */
+  #help{position:absolute;inset:0;background:rgba(13,15,18,.86);display:none;
+    align-items:center;justify-content:center;z-index:20;backdrop-filter:blur(2px)}
+  #help.show{display:flex}
+  #helpCard{width:min(680px,92%);max-height:86%;overflow-y:auto;background:var(--panel);
+    border:1px solid var(--line);border-radius:10px;padding:26px 30px;line-height:1.65;user-select:text}
+  #helpCard h1{font-family:var(--mono);font-size:15px;letter-spacing:.2em;color:var(--brass);margin-bottom:4px}
+  #helpCard h3{font-size:12px;letter-spacing:.14em;color:var(--ink-dim);margin:16px 0 6px;
+    font-family:var(--mono);text-transform:uppercase}
+  #helpCard p,#helpCard li{color:var(--ink);font-size:13px}
+  #helpCard ul{padding-left:18px}
+  #helpCard kbd{font-family:var(--mono);background:var(--bg);border:1px solid var(--line);
+    border-radius:4px;padding:1px 6px;font-size:11px;color:var(--brass)}
+  #helpClose{position:sticky;float:right;top:0;color:var(--ink-faint);font-size:18px}
+  #helpClose:hover{color:var(--ink)}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="topbar">
+    <div id="logo">GEARWORKS<small>MECHANISM DESIGNER</small></div>
+    <div class="tgroup">
+      <button id="playBtn">▶ RUN</button>
+      <label class="tl">speed</label>
+      <input type="range" id="speed" min="5" max="300" value="100" style="width:90px">
+      <span id="speedVal">1.0×</span>
+    </div>
+    <div class="tgroup">
+      <button class="tbtn on" id="view2dBtn">2D</button>
+      <button class="tbtn" id="view3dBtn">3D</button>
+    </div>
+    <div class="tgroup">
+      <button class="tbtn on" id="togglePitch">pitch ⌀</button>
+      <button class="tbtn on" id="toggleLabels">rpm labels</button>
+      <button class="tbtn" id="fitBtn">zoom fit</button>
+    </div>
+    <div class="tgroup" style="margin-left:auto;border-left:none">
+      <button class="tbtn" id="saveBtn">save</button>
+      <button class="tbtn" id="loadBtn">load</button>
+      <button class="tbtn" id="clearBtn">new</button>
+      <button class="tbtn" id="helpBtn">? help</button>
+      <input type="file" id="fileIn" accept=".json,.gearworks" style="display:none">
+    </div>
+  </div>
+
+  <div id="tools">
+    <button class="tool on" data-mode="select" title="Select / move / pan  (V)">
+      <svg viewBox="0 0 24 24"><path d="M6 3l12 9-5.5 1L15 19l-3 1.4-2.4-5.7L6 18z"/></svg><span>SEL</span>
+    </button>
+    <button class="tool" data-mode="gear" title="Add gear — click empty space for a new axle, click an existing axle to stack a compound gear  (G)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg><span>GEAR</span>
+    </button>
+    <button class="tool" data-mode="beam" title="Add beam — click two axles to link them  (B)">
+      <svg viewBox="0 0 24 24"><circle cx="5" cy="19" r="2.4"/><circle cx="19" cy="5" r="2.4"/><path d="M6.8 17.2L17.2 6.8"/></svg><span>BEAM</span>
+    </button>
+    <button class="tool" data-mode="motor" title="Toggle motor on an axle  (M)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M8.5 15V9l3.5 4 3.5-4v6"/></svg><span>MOTOR</span>
+    </button>
+    <div class="sep"></div>
+    <button class="tool danger" data-mode="delete" title="Delete  (X)">
+      <svg viewBox="0 0 24 24"><path d="M5 7h14M9 7V5h6v2M8 7l1 13h6l1-13"/></svg><span>DEL</span>
+    </button>
+  </div>
+
+  <div id="canvasWrap">
+    <canvas id="gl" style="position:absolute;inset:0;width:100%;height:100%;display:none"></canvas>
+    <canvas id="cv"></canvas>
+    <div id="hint"></div>
+    <div id="help">
+      <div id="helpCard">
+        <button id="helpClose">✕</button>
+        <h1>GEARWORKS</h1>
+        <p style="color:var(--ink-dim)">A drafting table for gear trains — build, mesh, and run whole mechanisms.</p>
+        <h3>Building</h3>
+        <ul>
+          <li><kbd>G</kbd> Gear tool — click empty space to plant a new axle with a gear. Click an <b>existing axle</b> to stack a second gear on it (a <b>compound gear</b> — the heart of any real ratio train).</li>
+          <li>Drag a gear near another gear on the <b>same layer</b> and it snaps to perfect meshing distance. Meshed teeth align and turn together when you run.</li>
+          <li><kbd>B</kbd> Beam tool — click two axles to link them with a rigid beam (structure / visual frame).</li>
+          <li><kbd>M</kbd> Motor tool — click an axle to attach a motor. Set RPM and direction in the panel. Multiple motors are allowed.</li>
+          <li>Layers: gears only mesh with gears on the same layer. Use layers to route trains past each other in 2.5D, exactly like stacked plates in a real machine.</li>
+        </ul>
+        <h3>Running</h3>
+        <ul>
+          <li><kbd>Space</kbd> or ▶ RUN simulates the whole mechanism with exact tooth ratios. Every driven axle shows live RPM.</li>
+          <li><b style="color:var(--warn)">Red</b> gears are jammed: either two gears overlap too deep, or a loop demands two different speeds of the same axle (a real gridlock — fix the tooth counts).</li>
+        </ul>
+        <h3>Designing a slot machine</h3>
+        <ul>
+          <li>Three big <b>reel gears</b> (e.g. 60T) on layer 0, spaced apart.</li>
+          <li>One motor axle with a small pinion; use <b>compound pairs</b> (big gear + small gear on one axle) to step the ratio down so reels spin at different speeds — that's what desynchronizes them.</li>
+          <li>Beams form the chassis plate holding all axles.</li>
+          <li>Odd/even gear counts in a chain flip direction — chain an idler gear in when a reel must spin the other way.</li>
+        </ul>
+        <h3>3D view</h3>
+        <p>Switch with the <b>2D / 3D</b> buttons or <kbd>Tab</kbd>. The 3D view is a true WebGL render with a depth buffer, so meshing teeth, stacked compounds, and frames draw correctly from every angle. <b>Every tool works in 3D</b>: click the ground to plant gears, click axles to stack compounds, drag parts (mesh-snapping included), run beams, attach motors, delete. Navigation: <b>left click selects and highlights</b> (hovering highlights too, and dragging a part moves it), <b>middle-drag pans</b>, <b>scroll zooms</b>, <b>right-drag orbits</b>. Hold <kbd>Shift</kbd> and left-drag on empty space for rubber-band multi-select.</p>
+        <p>Beams are Technic-style structure: each beam is <b>horizontal at a chosen layer</b> (set in the panel), riding in the gap just below that layer\u2019s gears — between the gear planes, so a beam can never pass through a gear mesh. Stack beams on different layers to frame the full 3D structure your gears mount in.</p>
+        <h3>Keys</h3>
+        <p><kbd>V</kbd> select · <kbd>G</kbd> gear · <kbd>B</kbd> beam · <kbd>M</kbd> motor · <kbd>X</kbd> delete tool · <kbd>Del</kbd> delete selection · <kbd>Esc</kbd> cancel · <kbd>Space</kbd> run · wheel = zoom · drag empty = box-select · right or middle drag = pan</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="props"><h2>NO SELECTION</h2><div class="psub">Select a gear, axle, or beam to edit it. Press <b>?</b> for help.</div></div>
+
+  <div id="status">
+    <span id="statMode">SELECT</span>
+    <span id="statCounts"></span>
+    <span id="statSim"></span>
+    <span id="statMsg" style="margin-left:auto"></span>
+  </div>
+</div>
+<script>
+'use strict';
+/* ================= GEARWORKS core ================= */
+const TAU = Math.PI*2;
+const LAYERS = [
+  {name:'L0', col:'#d9a648', hub:'#8a6c34'},
+  {name:'L1', col:'#7fa8c9', hub:'#4c6c8a'},
+  {name:'L2', col:'#c97f9b', hub:'#8a4c62'},
+  {name:'L3', col:'#8fc97f', hub:'#5a8a4c'},
+  {name:'L4', col:'#b08fd9', hub:'#6f558a'},
+  {name:'L5', col:'#d9c07f', hub:'#8a7a4c'},
+];
+let doc = { axles:[], gears:[], beams:[] };
+let nextId = 1;
+const uid = () => nextId++;
+
+const axleById = id => doc.axles.find(a=>a.id===id);
+const gearById = id => doc.gears.find(g=>g.id===id);
+const beamById = id => doc.beams.find(b=>b.id===id);
+const gearsOf  = aid => doc.gears.filter(g=>g.axle===aid);
+const pitchR   = g => g.module*g.teeth/2;
+const outerR   = g => pitchR(g)+g.module*0.95;
+const rootR    = g => Math.max(pitchR(g)-g.module*1.15, pitchR(g)*0.3);
+
+/* ---------- canvas / camera ---------- */
+const wrap = document.getElementById('canvasWrap');
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let DPR=1, CW=0, CH=0;
+const cam = {x:0, y:0, z:1};
+function resize(){
+  DPR = window.devicePixelRatio||1;
+  CW = wrap.clientWidth; CH = wrap.clientHeight;
+  cv.width = CW*DPR; cv.height = CH*DPR;
+  if(window.__resizeGL) window.__resizeGL();
+}
+window.addEventListener('resize', resize); resize();
+const w2s = p => ({x:(p.x-cam.x)*cam.z + CW/2, y:(p.y-cam.y)*cam.z + CH/2});
+const s2w = p => ({x:(p.x-CW/2)/cam.z + cam.x, y:(p.y-CH/2)/cam.z + cam.y});
+
+/* ---------- app state ---------- */
+let mode='select', sel=null, playing=false, simSpeed=1, view='2d';
+let showPitch=true, showLabels=true;
+let pendingBeam=null, hover=null, mouseW={x:0,y:0}, statusMsg='', statusMsgT=0;
+let msel=null, marquee=null; // msel: {axles:[ids], beams:[ids]} — box multi-selection
+const inMsel = aid => !!(msel && msel.axles.includes(aid));
+let defaults = { teeth:24, module:8 };
+/* ================= meshing & simulation ================= */
+function computeMeshes(){
+  const meshes=[]; doc.gears.forEach(g=>{g.overlap=false;});
+  for(let i=0;i<doc.gears.length;i++) for(let j=i+1;j<doc.gears.length;j++){
+    const g=doc.gears[i], h=doc.gears[j];
+    if(g.layer!==h.layer || g.axle===h.axle) continue;
+    const A=axleById(g.axle), B=axleById(h.axle);
+    const dx=B.x-A.x, dy=B.y-A.y, d=Math.hypot(dx,dy);
+    const D=pitchR(g)+pitchR(h);
+    const tol=0.42*Math.min(g.module,h.module);
+    if(Math.abs(d-D)<=tol) meshes.push({g,h,phi:Math.atan2(dy,dx),mixed:g.module!==h.module});
+    else if(d < D - tol){ g.overlap=true; h.overlap=true; }
+  }
+  return meshes;
+}
+
+let curMeshes=[], jammed=false;
+function simulate(dt){
+  // integrate motor axles
+  if(playing && dt>0) for(const a of doc.axles)
+    if(a.motor) a.theta += a.motor.dir * a.motor.rpm/60*TAU * dt * simSpeed;
+
+  curMeshes = computeMeshes();
+  // adjacency: axleId -> [{to, gA, gB, phi(from a's axle toward b's axle)}]
+  const adj=new Map(); doc.axles.forEach(a=>adj.set(a.id,[]));
+  for(const m of curMeshes){
+    adj.get(m.g.axle).push({to:m.h.axle,gA:m.g,gB:m.h,phi:m.phi});
+    adj.get(m.h.axle).push({to:m.g.axle,gA:m.h,gB:m.g,phi:m.phi+Math.PI});
+  }
+  for(const a of doc.axles){ a.omega=0; a.driven=false; a.conflict=false; a._v=false; }
+  jammed = doc.gears.some(g=>g.overlap);
+
+  const seeds = doc.axles.filter(a=>a.motor)
+    .concat(doc.axles.filter(a=>!a.motor && adj.get(a.id).length));
+  for(const seed of seeds){
+    if(seed._v) continue;
+    seed._v=true;
+    if(seed.motor){ seed.omega=seed.motor.dir*seed.motor.rpm/60*TAU; seed.driven=true; }
+    const q=[seed];
+    while(q.length){
+      const a=q.shift();
+      for(const e of adj.get(a.id)){
+        const b=axleById(e.to);
+        const rho = pitchR(e.gA)/pitchR(e.gB), N2=e.gB.teeth; // ratio from true pitch radii (size × teeth)
+        const w = -a.omega*rho;
+        const thA = a.theta + e.gA.phase;
+        const thB = -rho*(thA - e.phi) + e.phi + Math.PI + Math.PI/N2;
+        if(!b._v){
+          b._v=true; b.omega=w; b.driven=a.driven;
+          b.theta = thB - e.gB.phase;
+          q.push(b);
+        }else{
+          const scale=Math.max(Math.abs(b.omega),Math.abs(w),1e-6);
+          if(Math.abs(b.omega-w)/scale > 1e-3){ a.conflict=b.conflict=true; jammed=true; }
+        }
+      }
+    }
+  }
+  // gears inherit resolved angles
+  for(const g of doc.gears){ const a=axleById(g.axle); g.rot = a.theta + g.phase; }
+}
+
+/* ================= rendering ================= */
+function gearPath(x,y,g){
+  const N=g.teeth, ro=outerR(g), ri=rootR(g), p=TAU/N, rot=g.rot||0;
+  ctx.beginPath();
+  for(let i=0;i<N;i++){
+    const a=rot+i*p;
+    const pts=[[ri,a-0.30*p],[ro,a-0.145*p],[ro,a+0.145*p],[ri,a+0.30*p]];
+    for(let k=0;k<4;k++){
+      const px=x+Math.cos(pts[k][1])*pts[k][0], py=y+Math.sin(pts[k][1])*pts[k][0];
+      (i===0&&k===0)?ctx.moveTo(px,py):ctx.lineTo(px,py);
+    }
+  }
+  ctx.closePath();
+}
+
+function drawGrid(){
+  const step=40*cam.z>=14 ? 40 : (40*cam.z>=4?200:1000);
+  const tl=s2w({x:0,y:0}), br=s2w({x:CW,y:CH});
+  ctx.strokeStyle='rgba(120,135,155,0.07)'; ctx.lineWidth=1;
+  ctx.beginPath();
+  for(let x=Math.floor(tl.x/step)*step;x<=br.x;x+=step){const s=w2s({x,y:0});ctx.moveTo(s.x,0);ctx.lineTo(s.x,CH);}
+  for(let y=Math.floor(tl.y/step)*step;y<=br.y;y+=step){const s=w2s({x:0,y});ctx.moveTo(0,s.y);ctx.lineTo(CW,s.y);}
+  ctx.stroke();
+  const o=w2s({x:0,y:0});
+  ctx.strokeStyle='rgba(120,135,155,0.16)';
+  ctx.beginPath();ctx.moveTo(o.x-14,o.y);ctx.lineTo(o.x+14,o.y);ctx.moveTo(o.x,o.y-14);ctx.lineTo(o.x,o.y+14);ctx.stroke();
+}
+
+function shade(hex,f){ // simple darken/lighten
+  const n=parseInt(hex.slice(1),16);
+  let r=(n>>16)&255,g=(n>>8)&255,b=n&255;
+  r=Math.min(255,Math.max(0,Math.round(r*f))); g=Math.min(255,Math.max(0,Math.round(g*f))); b=Math.min(255,Math.max(0,Math.round(b*f)));
+  return `rgb(${r},${g},${b})`;
+}
+
+function render(){
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.clearRect(0,0,CW,CH);
+  drawGrid();
+
+  // beams (below gears)
+  for(const b of doc.beams){
+    const A=w2s(axleById(b.a)), B=w2s(axleById(b.b));
+    const selB = (sel && sel.type==='beam' && sel.id===b.id) || !!(msel && msel.beams.includes(b.id));
+    const hovB = hover && hover.type==='beam' && hover.id===b.id;
+    ctx.lineCap='round';
+    ctx.strokeStyle = selB ? 'var(--sel)' : '#39414d';
+    ctx.strokeStyle = selB ? '#e8c76f' : (hovB?'#4a5563':'#39414d');
+    ctx.lineWidth=13*cam.z; ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();
+    ctx.strokeStyle = selB ? '#8f7a3c' : '#232932';
+    ctx.lineWidth=6*cam.z; ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();
+  }
+  if(pendingBeam){
+    const A=w2s(axleById(pendingBeam)); const M=w2s(mouseW);
+    ctx.strokeStyle='rgba(217,166,72,.6)'; ctx.lineWidth=2; ctx.setLineDash([6,5]);
+    ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(M.x,M.y);ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  // gears, lowest layer first
+  const gs=[...doc.gears].sort((a,b)=>a.layer-b.layer);
+  for(const g of gs){
+    const a=axleById(g.axle), s=w2s(a);
+    const L=LAYERS[g.layer%LAYERS.length];
+    const isSel = (sel && ((sel.type==='gear'&&sel.id===g.id)||(sel.type==='axle'&&sel.id===a.id))) || inMsel(a.id);
+    const bad = g.overlap || a.conflict;
+    ctx.save(); ctx.translate(0,0);
+    ctx.scale(1,1);
+    // build path in screen coords: transform world→screen manually via scale
+    ctx.save();
+    ctx.translate(s.x,s.y); ctx.scale(cam.z,cam.z);
+    gearPath(0,0,g);
+    ctx.fillStyle = bad ? 'rgba(224,86,74,0.32)' : shade(L.col, 0.30);
+    ctx.fill();
+    ctx.lineWidth=1.6/cam.z*Math.min(cam.z,1.4);
+    ctx.strokeStyle = bad ? '#e0564a' : (isSel ? '#e8c76f' : L.col);
+    ctx.stroke();
+    // inner plate + spokes
+    const ri=rootR(g);
+    ctx.beginPath();ctx.arc(0,0,ri*0.88,0,TAU);
+    ctx.strokeStyle=bad?'rgba(224,86,74,.5)':shade(L.col,0.62); ctx.lineWidth=1.2; ctx.stroke();
+    const hubR=Math.max(6,ri*0.22);
+    if(ri>26){
+      ctx.strokeStyle=bad?'rgba(224,86,74,.5)':shade(L.col,0.62);
+      ctx.lineWidth=Math.max(2,ri*0.09);
+      const spokes = g.teeth>=40?6:(g.teeth>=18?5:4);
+      for(let i=0;i<spokes;i++){
+        const an=(g.rot||0)+i*TAU/spokes+TAU/(2*spokes);
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(an)*hubR*1.25,Math.sin(an)*hubR*1.25);
+        ctx.lineTo(Math.cos(an)*ri*0.82,Math.sin(an)*ri*0.82);
+        ctx.stroke();
+      }
+    }
+    // pitch circle
+    if(showPitch){
+      ctx.beginPath();ctx.arc(0,0,pitchR(g),0,TAU);
+      ctx.setLineDash([4,5]); ctx.strokeStyle='rgba(215,221,230,0.22)'; ctx.lineWidth=1; ctx.stroke(); ctx.setLineDash([]);
+    }
+    // hub
+    ctx.beginPath();ctx.arc(0,0,hubR,0,TAU);
+    ctx.fillStyle='#1b1f25'; ctx.fill();
+    ctx.strokeStyle=bad?'#e0564a':L.hub; ctx.lineWidth=1.6; ctx.stroke();
+    // keyway mark (shows rotation on small gears)
+    const ka=(g.rot||0);
+    ctx.beginPath();ctx.moveTo(Math.cos(ka)*hubR*0.35,Math.sin(ka)*hubR*0.35);
+    ctx.lineTo(Math.cos(ka)*hubR*0.95,Math.sin(ka)*hubR*0.95);
+    ctx.strokeStyle=bad?'#e0564a':L.col; ctx.lineWidth=1.4; ctx.stroke();
+    ctx.restore();
+    ctx.restore();
+    // tooth count tag
+    if(cam.z*pitchR(g)>22){
+      ctx.font=`${Math.max(9,11*Math.min(cam.z,1.3))}px ui-monospace,Menlo,monospace`;
+      ctx.fillStyle= isSel?'#e8c76f':'rgba(215,221,230,0.55)';
+      ctx.textAlign='center';
+      ctx.fillText(`${g.teeth}T`, s.x, s.y - (rootR(g)*0.55)*cam.z);
+    }
+  }
+
+  // axle pins + motors + labels
+  for(const a of doc.axles){
+    const s=w2s(a);
+    const isSel = (sel && sel.type==='axle' && sel.id===a.id) || inMsel(a.id);
+    ctx.beginPath();ctx.arc(s.x,s.y,Math.max(3.2,4.5*cam.z),0,TAU);
+    ctx.fillStyle = a.conflict ? '#e0564a' : (isSel?'#e8c76f':'#d7dde6');
+    ctx.fill();
+    if(a.motor){
+      const R=Math.max(8,11*cam.z);
+      ctx.beginPath();ctx.arc(s.x,s.y,R,0,TAU);
+      ctx.strokeStyle='#d9a648'; ctx.lineWidth=2; ctx.stroke();
+      ctx.font=`bold ${Math.max(8,9*cam.z)}px ui-monospace,monospace`;
+      ctx.fillStyle='#d9a648'; ctx.textAlign='center';
+      ctx.fillText('M', s.x, s.y - R - 4);
+    }
+    if(showLabels && (a.driven||a.motor)){
+      const rpm=a.omega*60/TAU;
+      ctx.font=`${Math.max(9,10*Math.min(cam.z,1.2))}px ui-monospace,monospace`;
+      ctx.textAlign='center';
+      ctx.fillStyle = a.conflict ? '#e0564a' : 'rgba(127,168,201,0.95)';
+      ctx.fillText(a.conflict?'JAM':`${rpm.toFixed(1)} rpm`, s.x, s.y + Math.max(14,16*cam.z));
+    }
+  }
+
+  // mesh contact dots (amber = modules differ, teeth won't truly interlock)
+  for(const m of curMeshes){
+    const A=axleById(m.g.axle);
+    const cx=A.x+Math.cos(m.phi)*pitchR(m.g), cy=A.y+Math.sin(m.phi)*pitchR(m.g);
+    const s=w2s({x:cx,y:cy});
+    ctx.fillStyle=m.mixed?'rgba(217,166,72,0.9)':'rgba(99,199,138,0.8)';
+    ctx.beginPath();ctx.arc(s.x,s.y,m.mixed?3.2:2.4,0,TAU);ctx.fill();
+  }
+
+  // marquee box
+  if(marquee){
+    const A=w2s({x:marquee.x0,y:marquee.y0}), B=w2s({x:marquee.x1,y:marquee.y1});
+    const rx=Math.min(A.x,B.x), ry=Math.min(A.y,B.y), rw=Math.abs(B.x-A.x), rh=Math.abs(B.y-A.y);
+    ctx.fillStyle='rgba(232,199,111,0.06)'; ctx.fillRect(rx,ry,rw,rh);
+    ctx.strokeStyle='rgba(232,199,111,0.75)'; ctx.lineWidth=1; ctx.setLineDash([5,4]);
+    ctx.strokeRect(rx,ry,rw,rh); ctx.setLineDash([]);
+  }
+}
+
+
+/* ================= 3D view (WebGL) ================= */
+const LAYER_H=34, THICK=18, FOV=0.9, TGT_Z=30;
+const cam3={yaw:-0.65,pitch:0.95,dist:1500};
+const glc=document.getElementById('gl');
+let gl3=null; try{ gl3=glc.getContext('webgl',{antialias:true}); }catch(err){}
+window.__resizeGL=()=>{ glc.width=CW*DPR; glc.height=CH*DPR; };
+window.__resizeGL();
+let VPjs=null, mouse3={x:0,y:0}, marquee3=null, hover3=null;
+function gearZ(g){return g.layer*LAYER_H;}
+function axleTopZ(a){
+  const gl=gearsOf(a.id);
+  return (gl.length?Math.max(...gl.map(g=>g.layer)):0)*LAYER_H+THICK+14;
+}
+function beamZ(l){return (l||0)*LAYER_H-10;} // horizontal bar in the gap under its layer's gears — gear slabs span l*LAYER_H..+THICK, so bars never intersect them
+
+/* ---- vec / mat ---- */
+const sub3=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]];
+const cross3=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+const dot3=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const norm3=a=>{const l=Math.hypot(a[0],a[1],a[2])||1;return[a[0]/l,a[1]/l,a[2]/l];};
+function mMul(a,b){const o=new Float32Array(16);
+  for(let c=0;c<4;c++)for(let r=0;r<4;r++)
+    o[c*4+r]=a[r]*b[c*4]+a[4+r]*b[c*4+1]+a[8+r]*b[c*4+2]+a[12+r]*b[c*4+3];
+  return o;}
+function mPersp(fov,asp,n,f){const t=1/Math.tan(fov/2),o=new Float32Array(16);
+  o[0]=t/asp;o[5]=t;o[10]=(f+n)/(n-f);o[11]=-1;o[14]=2*f*n/(n-f);return o;}
+function mLookAt(e,t,up){const f=norm3(sub3(t,e)),r=norm3(cross3(f,up)),u=cross3(r,f);
+  const o=new Float32Array(16);
+  o[0]=r[0];o[4]=r[1];o[8]=r[2];o[12]=-dot3(r,e);
+  o[1]=u[0];o[5]=u[1];o[9]=u[2];o[13]=-dot3(u,e);
+  o[2]=-f[0];o[6]=-f[1];o[10]=-f[2];o[14]=dot3(f,e);
+  o[15]=1;return o;}
+function mModel(tx,ty,tz,az,ay,sx,sy,sz){ // T * Rz(az) * Ry(ay) * S, column-major
+  const cA=Math.cos(az),sA=Math.sin(az),cB=Math.cos(ay),sB=Math.sin(ay);
+  return new Float32Array([
+    cA*cB*sx, sA*cB*sx, -sB*sx, 0,
+    -sA*sy,   cA*sy,     0,     0,
+    cA*sB*sz, sA*sB*sz,  cB*sz, 0,
+    tx, ty, tz, 1]);
+}
+function n3ZY(az,ay){
+  const cA=Math.cos(az),sA=Math.sin(az),cB=Math.cos(ay),sB=Math.sin(ay);
+  return new Float32Array([cA*cB,sA*cB,-sB, -sA,cA,0, cA*sB,sA*sB,cB]);
+}
+const N3_I=n3ZY(0,0);
+
+/* ---- GL programs & meshes ---- */
+function _prog(vs,fs){
+  const gl=gl3;
+  const sh=(t,src)=>{const o=gl.createShader(t);gl.shaderSource(o,src);gl.compileShader(o);return o;};
+  const p=gl.createProgram();
+  gl.attachShader(p,sh(gl.VERTEX_SHADER,vs));
+  gl.attachShader(p,sh(gl.FRAGMENT_SHADER,fs));
+  gl.linkProgram(p);
+  const o={p};
+  for(const u of ['uVP','uM','uN3','uC']) o[u]=gl.getUniformLocation(p,u);
+  o.aP=gl.getAttribLocation(p,'aP'); o.aN=gl.getAttribLocation(p,'aN');
+  return o;
+}
+let LIT=null,LINEP=null,MESH_CYL=null,MESH_BOX=null,gridBuf=null,gridCount=0;
+const gearMeshCache=new Map();
+function makeMesh(arr){const gl=gl3,buf=gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(arr),gl.STATIC_DRAW);
+  return {buf,n:arr.length/6};}
+function buildCylArr(){ // unit cylinder r=1, z 0..1, capped
+  const S=18,a=[];
+  const P=(x,y,z,nx,ny,nz)=>a.push(x,y,z,nx,ny,nz);
+  for(let i=0;i<S;i++){
+    const a0=i/S*TAU,a1=(i+1)/S*TAU;
+    const x0=Math.cos(a0),y0=Math.sin(a0),x1=Math.cos(a1),y1=Math.sin(a1);
+    P(x0,y0,0,x0,y0,0);P(x1,y1,0,x1,y1,0);P(x1,y1,1,x1,y1,0);
+    P(x0,y0,0,x0,y0,0);P(x1,y1,1,x1,y1,0);P(x0,y0,1,x0,y0,0);
+    P(0,0,1,0,0,1);P(x0,y0,1,0,0,1);P(x1,y1,1,0,0,1);
+    P(0,0,0,0,0,-1);P(x1,y1,0,0,0,-1);P(x0,y0,0,0,0,-1);
+  }
+  return a;
+}
+function buildBoxArr(){ // unit cube centered at origin
+  const a=[],P=(x,y,z,n)=>a.push(x,y,z,n[0],n[1],n[2]);
+  const F=(c0,c1,c2,c3,n)=>{P(...c0,n);P(...c1,n);P(...c2,n);P(...c0,n);P(...c2,n);P(...c3,n);};
+  const h=0.5;
+  F([ h,-h,-h],[ h, h,-h],[ h, h, h],[ h,-h, h],[1,0,0]);
+  F([-h, h,-h],[-h,-h,-h],[-h,-h, h],[-h, h, h],[-1,0,0]);
+  F([ h, h,-h],[-h, h,-h],[-h, h, h],[ h, h, h],[0,1,0]);
+  F([-h,-h,-h],[ h,-h,-h],[ h,-h, h],[-h,-h, h],[0,-1,0]);
+  F([-h,-h, h],[ h,-h, h],[ h, h, h],[-h, h, h],[0,0,1]);
+  F([ h,-h,-h],[-h,-h,-h],[-h, h,-h],[ h, h,-h],[0,0,-1]);
+  return a;
+}
+function gearProfile(teeth,module){
+  const N=teeth,p=TAU/N,r=module*teeth/2,ro=r+module*0.95,ri=Math.max(r-module*1.15,r*0.3);
+  const pts=[];
+  for(let i=0;i<N;i++){const an=i*p;
+    for(const [rr,aa] of [[ri,an-0.30*p],[ro,an-0.145*p],[ro,an+0.145*p],[ri,an+0.30*p]])
+      pts.push({x:Math.cos(aa)*rr,y:Math.sin(aa)*rr});
+  }
+  return pts;
+}
+function buildGearArr(teeth,module){
+  const pts=gearProfile(teeth,module),M=pts.length,T=THICK,a=[];
+  const P=(x,y,z,nx,ny,nz)=>a.push(x,y,z,nx,ny,nz);
+  for(let i=0;i<M;i++){
+    const p0=pts[i],p1=pts[(i+1)%M];
+    P(0,0,T,0,0,1);P(p0.x,p0.y,T,0,0,1);P(p1.x,p1.y,T,0,0,1);      // top fan
+    P(0,0,0,0,0,-1);P(p1.x,p1.y,0,0,0,-1);P(p0.x,p0.y,0,0,0,-1);   // bottom fan
+    let nx=p1.y-p0.y, ny=-(p1.x-p0.x);                              // side wall
+    const L=Math.hypot(nx,ny)||1; nx/=L; ny/=L;
+    if(nx*(p0.x+p1.x)+ny*(p0.y+p1.y)<0){nx=-nx;ny=-ny;}
+    P(p0.x,p0.y,0,nx,ny,0);P(p1.x,p1.y,0,nx,ny,0);P(p1.x,p1.y,T,nx,ny,0);
+    P(p0.x,p0.y,0,nx,ny,0);P(p1.x,p1.y,T,nx,ny,0);P(p0.x,p0.y,T,nx,ny,0);
+  }
+  return a;
+}
+function getGearMesh(g){
+  const key=g.teeth+'|'+g.module;
+  let m=gearMeshCache.get(key);
+  if(!m){
+    if(gearMeshCache.size>80){for(const mm of gearMeshCache.values())gl3.deleteBuffer(mm.buf);gearMeshCache.clear();}
+    m=makeMesh(buildGearArr(g.teeth,g.module)); gearMeshCache.set(key,m);
+  }
+  return m;
+}
+if(gl3){
+  LIT=_prog(
+    'attribute vec3 aP;attribute vec3 aN;uniform mat4 uVP,uM;uniform mat3 uN3;varying vec3 vN;'+
+    'void main(){vN=uN3*aN;gl_Position=uVP*(uM*vec4(aP,1.0));}',
+    'precision mediump float;varying vec3 vN;uniform vec3 uC;'+
+    'void main(){vec3 L=normalize(vec3(0.45,-0.55,0.85));float d=abs(dot(normalize(vN),L));'+
+    'gl_FragColor=vec4(uC*(0.36+0.64*d),1.0);}');
+  LINEP=_prog(
+    'attribute vec3 aP;uniform mat4 uVP,uM;void main(){gl_Position=uVP*(uM*vec4(aP,1.0));}',
+    'precision mediump float;uniform vec4 uC;void main(){gl_FragColor=uC;}');
+  MESH_CYL=makeMesh(buildCylArr());
+  MESH_BOX=makeMesh(buildBoxArr());
+  const gliness=[];
+  for(let i=-20;i<=20;i++){
+    gliness.push(i*100,-2000,0, i*100,2000,0);
+    gliness.push(-2000,i*100,0, 2000,i*100,0);
+  }
+  gridBuf=gl3.createBuffer();
+  gl3.bindBuffer(gl3.ARRAY_BUFFER,gridBuf);
+  gl3.bufferData(gl3.ARRAY_BUFFER,new Float32Array(gliness),gl3.STATIC_DRAW);
+  gridCount=gliness.length/3;
+}
+
+/* ---- camera / rays ---- */
+function camEye(){
+  const cp=Math.cos(cam3.pitch),sp=Math.sin(cam3.pitch);
+  return [cam.x+cam3.dist*cp*Math.cos(cam3.yaw),
+          cam.y+cam3.dist*cp*Math.sin(cam3.yaw),
+          TGT_Z+cam3.dist*sp];
+}
+function captureCam(){
+  const eye=camEye(),tgt=[cam.x,cam.y,TGT_Z];
+  const f=norm3(sub3(tgt,eye)),r=norm3(cross3(f,[0,0,1])),u=cross3(r,f);
+  return {eye,f,r,u};
+}
+function rayFromBasis(bs,mx,my){
+  const tan=Math.tan(FOV/2),asp=CW/Math.max(CH,1);
+  const nx=(mx/CW*2-1)*tan*asp, ny=(1-my/CH*2)*tan;
+  return {o:bs.eye,d:norm3([
+    bs.f[0]+bs.r[0]*nx+bs.u[0]*ny,
+    bs.f[1]+bs.r[1]*nx+bs.u[1]*ny,
+    bs.f[2]+bs.r[2]*nx+bs.u[2]*ny])};
+}
+const makeRay=(mx,my)=>rayFromBasis(captureCam(),mx,my);
+function groundFromBasis(bs,mx,my){
+  const R=rayFromBasis(bs,mx,my);
+  if(Math.abs(R.d[2])<1e-6)return null;
+  const t=-R.o[2]/R.d[2]; if(t<=0)return null;
+  return {x:R.o[0]+R.d[0]*t, y:R.o[1]+R.d[1]*t};
+}
+const groundHit=(mx,my)=>groundFromBasis(captureCam(),mx,my);
+function project3(x,y,z){
+  const m=VPjs;
+  const cx=m[0]*x+m[4]*y+m[8]*z+m[12];
+  const cy2=m[1]*x+m[5]*y+m[9]*z+m[13];
+  const w=m[3]*x+m[7]*y+m[11]*z+m[15];
+  return {x:(cx/w*0.5+0.5)*CW, y:(1-(cy2/w*0.5+0.5))*CH, d:w,
+          s:(CH*0.5)/(Math.tan(FOV/2)*Math.max(w,1))};
+}
+
+/* ---- picking ---- */
+function closestRaySeg(R,P0,P1){
+  const u=R.d,v=sub3(P1,P0),w0=sub3(R.o,P0);
+  const a=dot3(u,u),b=dot3(u,v),c=dot3(v,v),d=dot3(u,w0),e=dot3(v,w0);
+  const den=a*c-b*b;
+  let tc=den>1e-9?(a*e-b*d)/den:(c>1e-9?e/c:0);
+  tc=Math.max(0,Math.min(1,tc));
+  const q=[P0[0]+v[0]*tc,P0[1]+v[1]*tc,P0[2]+v[2]*tc];
+  let sc=dot3(u,sub3(q,R.o))/a; if(sc<0)sc=0;
+  const pnt=[R.o[0]+u[0]*sc,R.o[1]+u[1]*sc,R.o[2]+u[2]*sc];
+  return {t:sc,dist:Math.hypot(pnt[0]-q[0],pnt[1]-q[1],pnt[2]-q[2])};
+}
+function pick3D(mx,my){
+  const R=makeRay(mx,my);
+  let best=null;
+  const upd=(t,hit)=>{if(t>0&&(!best||t<best.t))best=Object.assign({t},hit);};
+  for(const g of doc.gears){
+    const a=axleById(g.axle),z0=gearZ(g),z1=z0+THICK,RO=outerR(g);
+    if(Math.abs(R.d[2])>1e-6) for(const zp of [z1,z0]){
+      const t=(zp-R.o[2])/R.d[2];
+      if(t>0){const px=R.o[0]+R.d[0]*t-a.x,py=R.o[1]+R.d[1]*t-a.y;
+        if(px*px+py*py<=RO*RO)upd(t,{type:'gear',id:g.id});}
+    }
+    const ox=R.o[0]-a.x,oy=R.o[1]-a.y,dx=R.d[0],dy=R.d[1];
+    const A2=dx*dx+dy*dy;
+    if(A2>1e-9){
+      const B2=2*(ox*dx+oy*dy),C2=ox*ox+oy*oy-RO*RO,disc=B2*B2-4*A2*C2;
+      if(disc>=0){const t=(-B2-Math.sqrt(disc))/(2*A2);
+        if(t>0){const z=R.o[2]+R.d[2]*t;
+          if(z>=z0&&z<=z1)upd(t,{type:'gear',id:g.id});}}
+    }
+  }
+  for(const a of doc.axles){
+    const ox=R.o[0]-a.x,oy=R.o[1]-a.y,dx=R.d[0],dy=R.d[1];
+    const A2=dx*dx+dy*dy;
+    const t=A2>1e-9?-(ox*dx+oy*dy)/A2:0;
+    if(t>0){
+      const px=ox+dx*t,py=oy+dy*t,z=R.o[2]+R.d[2]*t;
+      if(px*px+py*py<64&&z>=-22&&z<=axleTopZ(a)+10)upd(t,{type:'axle',id:a.id});
+    }
+  }
+  for(const b of doc.beams){
+    const A=axleById(b.a),B=axleById(b.b);
+    const r=closestRaySeg(R,[A.x,A.y,beamZ(b.layer)],[B.x,B.y,beamZ(b.layer)]);
+    if(r.dist<11)upd(r.t,{type:'beam',id:b.id});
+  }
+  return best;
+}
+const hitAxleId3=h=>!h?null:h.type==='axle'?h.id:h.type==='gear'?gearById(h.id).axle:null;
+
+/* ---- colors ---- */
+const hex3=h=>{const n=parseInt(h.slice(1),16);return[((n>>16)&255)/255,((n>>8)&255)/255,(n&255)/255];};
+const C_SEL=[0.91,0.78,0.44],C_BAD=[0.88,0.34,0.29],C_STEEL=[0.56,0.60,0.66],
+      C_BEAM=[0.30,0.34,0.40],C_CAP=[0.17,0.20,0.25],C_HUB=[0.10,0.12,0.15],C_BRASS=[0.85,0.65,0.28];
+const LCOL=LAYERS.map(l=>hex3(l.col));
+
+const hoverTint=c=>[c[0]+(1-c[0])*0.28, c[1]+(1-c[1])*0.28, c[2]+(1-c[2])*0.28];
+const isHov3=(type,id)=>!!(hover3&&hover3.type===type&&hover3.id===id);
+/* ---- render ---- */
+function drawM(mesh,model,n3,color){
+  const gl=gl3;
+  gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buf);
+  gl.enableVertexAttribArray(LIT.aP);
+  gl.vertexAttribPointer(LIT.aP,3,gl.FLOAT,false,24,0);
+  gl.enableVertexAttribArray(LIT.aN);
+  gl.vertexAttribPointer(LIT.aN,3,gl.FLOAT,false,24,12);
+  gl.uniformMatrix4fv(LIT.uM,false,model);
+  gl.uniformMatrix3fv(LIT.uN3,false,n3);
+  gl.uniform3f(LIT.uC,color[0],color[1],color[2]);
+  gl.drawArrays(gl.TRIANGLES,0,mesh.n);
+}
+function render3D(){
+  ctx.setTransform(DPR,0,0,DPR,0,0); ctx.clearRect(0,0,CW,CH);
+  if(!gl3){
+    ctx.fillStyle='#8b95a3';ctx.font='13px ui-monospace,monospace';ctx.textAlign='left';
+    ctx.fillText('3D view needs WebGL, which is unavailable in this browser.',20,34);
+    return;
+  }
+  const gl=gl3;
+  VPjs=mMul(mPersp(FOV,CW/Math.max(CH,1),10,20000),
+            mLookAt(camEye(),[cam.x,cam.y,TGT_Z],[0,0,1]));
+  gl.viewport(0,0,glc.width,glc.height);
+  gl.enable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
+  gl.clearColor(0.090,0.102,0.122,1);
+  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  // grid
+  gl.useProgram(LINEP.p);
+  gl.uniformMatrix4fv(LINEP.uVP,false,VPjs);
+  gl.uniformMatrix4fv(LINEP.uM,false,mModel(Math.round(cam.x/100)*100,Math.round(cam.y/100)*100,0,0,0,1,1,1));
+  gl.uniform4f(LINEP.uC,0.5,0.56,0.63,0.10);
+  gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+  gl.bindBuffer(gl.ARRAY_BUFFER,gridBuf);
+  gl.enableVertexAttribArray(LINEP.aP);
+  gl.vertexAttribPointer(LINEP.aP,3,gl.FLOAT,false,12,0);
+  gl.drawArrays(gl.LINES,0,gridCount);
+  gl.disable(gl.BLEND);
+  // solids
+  gl.useProgram(LIT.p);
+  gl.uniformMatrix4fv(LIT.uVP,false,VPjs);
+  for(const b of doc.beams){
+    const A=axleById(b.a),B=axleById(b.b);
+    const z=beamZ(b.layer);
+    const dx=B.x-A.x,dy=B.y-A.y;
+    const az=Math.atan2(dy,dx),len=Math.hypot(dx,dy);
+    const selB=(sel&&sel.type==='beam'&&sel.id===b.id)||!!(msel&&msel.beams.includes(b.id));
+    const bcol=selB?C_SEL:(isHov3('beam',b.id)?hoverTint(C_BEAM):C_BEAM);
+    drawM(MESH_BOX,mModel((A.x+B.x)/2,(A.y+B.y)/2,z,az,0,len,12,9),n3ZY(az,0),bcol);
+    drawM(MESH_CYL,mModel(A.x,A.y,z-5.5,0,0,8.5,8.5,11),N3_I,selB?C_SEL:C_CAP);
+    drawM(MESH_CYL,mModel(B.x,B.y,z-5.5,0,0,8.5,8.5,11),N3_I,selB?C_SEL:C_CAP);
+  }
+  for(const a of doc.axles){
+    const isSel=(sel&&sel.type==='axle'&&sel.id===a.id)||inMsel(a.id);
+    let col=a.conflict?C_BAD:(isSel?C_SEL:C_STEEL);
+    if(!isSel&&!a.conflict&&isHov3('axle',a.id)) col=hoverTint(col);
+    const top=axleTopZ(a);
+    drawM(MESH_CYL,mModel(a.x,a.y,-20,0,0,3.5,3.5,top+26),N3_I,col);
+    if(a.motor) drawM(MESH_CYL,mModel(a.x,a.y,top+1,0,0,7.5,7.5,5),N3_I,C_BRASS);
+  }
+  for(const g of doc.gears){
+    const a=axleById(g.axle),z0=gearZ(g);
+    const bad=g.overlap||a.conflict;
+    const isSel=(sel&&((sel.type==='gear'&&sel.id===g.id)||(sel.type==='axle'&&sel.id===a.id)))||inMsel(a.id);
+    let col=bad?C_BAD:(isSel?C_SEL:LCOL[g.layer%LCOL.length]);
+    if(!bad&&!isSel&&isHov3('gear',g.id)) col=hoverTint(col);
+    drawM(getGearMesh(g),mModel(a.x,a.y,z0,g.rot||0,0,1,1,1),n3ZY(g.rot||0,0),col);
+    const hubR=Math.max(6,rootR(g)*0.22);
+    drawM(MESH_CYL,mModel(a.x,a.y,z0-0.6,0,0,hubR,hubR,THICK+1.2),N3_I,C_HUB);
+  }
+  overlay3D();
+}
+function overlay3D(){
+  for(const g of doc.gears){
+    const a=axleById(g.axle),z1=gearZ(g)+THICK;
+    if(showPitch){
+      ctx.beginPath();
+      let ok=true;
+      for(let k=0;k<=28;k++){const an=k/28*TAU;
+        const q=project3(a.x+Math.cos(an)*pitchR(g),a.y+Math.sin(an)*pitchR(g),z1);
+        if(q.d<=1){ok=false;break;}
+        k?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y);}
+      if(ok){ctx.setLineDash([4,5]);ctx.strokeStyle='rgba(215,221,230,0.20)';ctx.lineWidth=1;ctx.stroke();ctx.setLineDash([]);}
+    }
+    const c=project3(a.x,a.y,z1);
+    if(c.d>1&&c.s*pitchR(g)>24){
+      ctx.font=`${Math.max(9,11*Math.min(c.s,1.2))}px ui-monospace,Menlo,monospace`;
+      ctx.fillStyle='rgba(215,221,230,0.6)';ctx.textAlign='center';
+      ctx.fillText(`${g.teeth}T`,c.x,c.y-rootR(g)*0.5*c.s);
+    }
+  }
+  for(const a of doc.axles){
+    const tp=project3(a.x,a.y,axleTopZ(a)+6);
+    if(tp.d<=1)continue;
+    if(a.motor){
+      ctx.font='bold 9px ui-monospace,monospace';ctx.fillStyle='#d9a648';ctx.textAlign='center';
+      ctx.fillText('M',tp.x,tp.y-12);
+    }
+    if(showLabels&&(a.driven||a.motor)){
+      const rpm=a.omega*60/TAU;
+      ctx.font='10px ui-monospace,monospace';ctx.textAlign='center';
+      ctx.fillStyle=a.conflict?'#e0564a':'rgba(127,168,201,0.95)';
+      ctx.fillText(a.conflict?'JAM':`${rpm.toFixed(1)} rpm`,tp.x,tp.y+(a.motor?14:4));
+    }
+  }
+  if(marquee3){
+    const rx=Math.min(marquee3.x0,marquee3.x1), ry=Math.min(marquee3.y0,marquee3.y1);
+    const rw=Math.abs(marquee3.x1-marquee3.x0), rh=Math.abs(marquee3.y1-marquee3.y0);
+    ctx.fillStyle='rgba(232,199,111,0.06)'; ctx.fillRect(rx,ry,rw,rh);
+    ctx.strokeStyle='rgba(232,199,111,0.75)'; ctx.lineWidth=1; ctx.setLineDash([5,4]);
+    ctx.strokeRect(rx,ry,rw,rh); ctx.setLineDash([]);
+  }
+  if(pendingBeam!=null){
+    const a=axleById(pendingBeam);
+    if(a){const q=project3(a.x,a.y,axleTopZ(a));
+      if(q.d>1){ctx.strokeStyle='rgba(217,166,72,.6)';ctx.lineWidth=2;ctx.setLineDash([6,5]);
+        ctx.beginPath();ctx.moveTo(q.x,q.y);ctx.lineTo(mouse3.x,mouse3.y);ctx.stroke();ctx.setLineDash([]);}}
+  }
+}
+
+/* ---- 3D interaction: every tool works here ---- */
+function setView(v){
+  view=v; pendingBeam=null; marquee=null; marquee3=null; drag=null;
+  glc.style.display = v==='3d'?'block':'none';
+  document.getElementById('view2dBtn').classList.toggle('on',v==='2d');
+  document.getElementById('view3dBtn').classList.toggle('on',v==='3d');
+  cv.style.cursor = v==='3d'?'grab':'default';
+  setMode(mode);
+}
+function handle3DDown(e){
+  if(!gl3){flash('3D needs WebGL, which is unavailable in this browser');return;}
+  const mx=e.offsetX,my=e.offsetY;
+  if(e.button===1){ // middle drag = pan (screen-space, uniform feel at any angle)
+    const bs=captureCam();
+    drag={kind:'pan3',bs,sx:mx,sy:my,tx:cam.x,ty:cam.y,
+          k:2*Math.tan(FOV/2)*cam3.dist/Math.max(CH,1)};
+    return;
+  }
+  if(e.button===2){ // right drag = orbit
+    drag={kind:'orbit',sx:mx,sy:my,yaw0:cam3.yaw,pitch0:cam3.pitch,moved:false};
+    return;
+  }
+  const hit=pick3D(mx,my);
+  if(mode==='select'){
+    const aid=hitAxleId3(hit);
+    if(aid!=null){
+      const a0=axleById(aid);
+      const w=groundHit(mx,my)||{x:a0.x,y:a0.y};
+      if(inMsel(aid)){
+        drag={kind:'group3',id:aid,ox:a0.x-w.x,oy:a0.y-w.y,gx:a0.x,gy:a0.y,
+              start:msel.axles.map(id=>{const a=axleById(id);return{id,x:a.x,y:a.y};})};
+      }else{
+        msel=null; sel=hit.type==='gear'?hit:{type:'axle',id:aid};
+        drag={kind:'axle3',id:aid,ox:a0.x-w.x,oy:a0.y-w.y};
+      }
+      renderPanel();
+    }else if(hit&&hit.type==='beam'){ msel=null; sel=hit; drag=null; renderPanel(); }
+    else if(e.shiftKey){ sel=null; msel=null; renderPanel();
+      marquee3={x0:mx,y0:my,x1:mx,y1:my}; drag={kind:'mq3'}; }
+    else{ sel=null; msel=null; drag=null; renderPanel(); } // left click on empty = deselect
+  }
+  else if(mode==='gear'){
+    const aid=hitAxleId3(hit);
+    if(aid!=null){const a=axleById(aid);addGearAt({x:a.x,y:a.y});}
+    else{const w=groundHit(mx,my); if(w)addGearAt(w);}
+  }
+  else if(mode==='beam'){
+    const aid=hitAxleId3(hit);
+    if(aid==null){pendingBeam=null;flash('click an axle');}
+    else if(pendingBeam==null){pendingBeam=aid;flash('now click the second axle');}
+    else if(pendingBeam!==aid){
+      if(!doc.beams.some(x=>(x.a===pendingBeam&&x.b===aid)||(x.b===pendingBeam&&x.a===aid)))
+        doc.beams.push({id:uid(),a:pendingBeam,b:aid,layer:defaultBeamLayer(pendingBeam,aid)});
+      pendingBeam=null;
+    }
+  }
+  else if(mode==='motor'){
+    const aid=hitAxleId3(hit);
+    if(aid!=null){const a=axleById(aid);a.motor=a.motor?null:{rpm:20,dir:1};sel={type:'axle',id:aid};renderPanel();}
+  }
+  else if(mode==='delete'){ if(hit) deleteSel(hit); }
+}
+function handle3DMove(e){
+  mouse3={x:e.offsetX,y:e.offsetY};
+  if(!drag){
+    hover3=pick3D(e.offsetX,e.offsetY);
+    cv.style.cursor=hover3?'pointer':'grab';
+    return;
+  }
+  if(drag.kind==='orbit'){
+    const dx=e.offsetX-drag.sx,dy=e.offsetY-drag.sy;
+    if(Math.abs(dx)+Math.abs(dy)>3)drag.moved=true;
+    cam3.yaw=drag.yaw0-dx*0.006;
+    cam3.pitch=Math.min(1.5,Math.max(-1.5,drag.pitch0+dy*0.006));
+  }else if(drag.kind==='mq3'){
+    marquee3.x1=e.offsetX; marquee3.y1=e.offsetY;
+  }else if(drag.kind==='pan3'){
+    const dx=e.offsetX-drag.sx, dy=e.offsetY-drag.sy;
+    const r=drag.bs.r, u=drag.bs.u, k=drag.k;
+    cam.x=drag.tx + (-dx*r[0]+dy*u[0])*k;
+    cam.y=drag.ty + (-dx*r[1]+dy*u[1])*k;
+  }else if(drag.kind==='axle3'){
+    const w=groundHit(e.offsetX,e.offsetY); if(!w)return;
+    const a=axleById(drag.id); if(!a)return;
+    a.x=w.x+drag.ox; a.y=w.y+drag.oy;
+    snapAxle(a);
+  }else if(drag.kind==='group3'){
+    const w=groundHit(e.offsetX,e.offsetY); if(!w)return;
+    const grab=axleById(drag.id); if(!grab)return;
+    grab.x=w.x+drag.ox; grab.y=w.y+drag.oy;
+    snapAxle(grab,new Set(msel?msel.axles:[]));
+    const dx=grab.x-drag.gx,dy=grab.y-drag.gy;
+    for(const s0 of drag.start){if(s0.id===drag.id)continue;
+      const a=axleById(s0.id); if(a){a.x=s0.x+dx;a.y=s0.y+dy;}}
+  }
+}
+function handle3DUp(e){
+  if(drag&&drag.kind==='mq3'&&marquee3){
+    if(VPjs){
+      const x0=Math.min(marquee3.x0,marquee3.x1),x1=Math.max(marquee3.x0,marquee3.x1);
+      const y0=Math.min(marquee3.y0,marquee3.y1),y1=Math.max(marquee3.y0,marquee3.y1);
+      const axles=doc.axles.filter(a=>{
+        const q=project3(a.x,a.y,axleTopZ(a));
+        return q.d>1&&q.x>=x0&&q.x<=x1&&q.y>=y0&&q.y<=y1;
+      }).map(a=>a.id);
+      const beams=doc.beams.filter(b=>axles.includes(b.a)&&axles.includes(b.b)).map(b=>b.id);
+      if(axles.length===1){ sel={type:'axle',id:axles[0]}; msel=null; }
+      else if(axles.length){ msel={axles,beams}; sel=null;
+        flash(`${axles.length} axles selected — drag any to move the group`); }
+      renderPanel();
+    }
+    marquee3=null;
+  }
+  if(drag&&(drag.kind==='axle3'||drag.kind==='group3')) renderPanel();
+  drag=null;
+}
+/* ================= interaction ================= */
+function hitTest(w){
+  // axle pins first (small target, on top)
+  const pinR=10/cam.z;
+  for(const a of doc.axles) if(Math.hypot(w.x-a.x,w.y-a.y)<pinR) return {type:'axle',id:a.id};
+  // gears, topmost layer first
+  const gs=[...doc.gears].sort((a,b)=>b.layer-a.layer);
+  for(const g of gs){
+    const a=axleById(g.axle);
+    if(Math.hypot(w.x-a.x,w.y-a.y)<=outerR(g)) return {type:'gear',id:g.id};
+  }
+  for(const b of doc.beams){
+    const A=axleById(b.a),B=axleById(b.b);
+    const t=Math.max(0,Math.min(1,((w.x-A.x)*(B.x-A.x)+(w.y-A.y)*(B.y-A.y))/((B.x-A.x)**2+(B.y-A.y)**2||1)));
+    const px=A.x+t*(B.x-A.x),py=A.y+t*(B.y-A.y);
+    if(Math.hypot(w.x-px,w.y-py)<9/Math.min(cam.z,1)) return {type:'beam',id:b.id};
+  }
+  return null;
+}
+const hitAxleId = h => !h?null : h.type==='axle'?h.id : h.type==='gear'?gearById(h.id).axle : null;
+
+function snapAxle(ax, exclude){
+  // mesh-distance snap against same-layer gears on other axles
+  let best=null;
+  for(const g of gearsOf(ax.id)) for(const h of doc.gears){
+    if(h.axle===ax.id||(exclude&&exclude.has(h.axle))||h.layer!==g.layer) continue;
+    const O=axleById(h.axle);
+    const d=Math.hypot(ax.x-O.x,ax.y-O.y), D=pitchR(g)+pitchR(h);
+    const diff=Math.abs(d-D);
+    if(diff<16/Math.min(cam.z,1) && (!best||diff<best.diff)) best={O,D,diff};
+  }
+  if(best){
+    const dx=ax.x-best.O.x, dy=ax.y-best.O.y, d=Math.hypot(dx,dy)||1;
+    ax.x=best.O.x+dx/d*best.D; ax.y=best.O.y+dy/d*best.D;
+    return true;
+  }
+  ax.x=Math.round(ax.x/5)*5; ax.y=Math.round(ax.y/5)*5;
+  return false;
+}
+
+function addGearAt(w){
+  const hit=hitTest(w); const onAxle=hitAxleId(hit);
+  if(onAxle!=null){
+    const a=axleById(onAxle);
+    const used=gearsOf(a.id).map(g=>g.layer);
+    let layer=0; while(used.includes(layer)&&layer<LAYERS.length-1) layer++;
+    const g={id:uid(),axle:a.id,teeth:12,module:defaults.module,layer,phase:0,rot:0};
+    doc.gears.push(g); sel={type:'gear',id:g.id};
+    flash(`compound gear added on layer ${layer}`);
+  }else{
+    const a={id:uid(),x:w.x,y:w.y,theta:0,omega:0,motor:null};
+    const g={id:uid(),axle:a.id,teeth:defaults.teeth,module:defaults.module,layer:0,phase:0,rot:0};
+    doc.axles.push(a); doc.gears.push(g);
+    snapAxle(a);
+    sel={type:'gear',id:g.id};
+  }
+  renderPanel();
+}
+
+function deleteSel(target){
+  if(!target && msel){
+    msel.axles.forEach(removeAxle);
+    msel=null; sel=null; renderPanel(); return;
+  }
+  const t=target||sel; if(!t) return;
+  if(t.type==='gear'){
+    const g=gearById(t.id); if(!g)return;
+    doc.gears=doc.gears.filter(x=>x.id!==g.id);
+    if(!gearsOf(g.axle).length) removeAxle(g.axle);
+  }else if(t.type==='axle') removeAxle(t.id);
+  else if(t.type==='beam') doc.beams=doc.beams.filter(b=>b.id!==t.id);
+  sel=null; renderPanel();
+}
+function removeAxle(aid){
+  doc.gears=doc.gears.filter(g=>g.axle!==aid);
+  doc.beams=doc.beams.filter(b=>b.a!==aid&&b.b!==aid);
+  doc.axles=doc.axles.filter(a=>a.id!==aid);
+}
+
+function defaultBeamLayer(aid,bid){
+  const lo=id=>{const gl=gearsOf(id);return gl.length?Math.min(...gl.map(g=>g.layer)):0;};
+  return Math.min(lo(aid),lo(bid));
+}
+/* pointer */
+let drag=null;
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();}); // block middle-click autoscroll
+cv.addEventListener('pointerdown',e=>{
+  cv.setPointerCapture(e.pointerId);
+  if(view==='3d'){handle3DDown(e);return;}
+  const w=s2w({x:e.offsetX,y:e.offsetY}); mouseW=w;
+  if(e.button===1||e.button===2){ // pan on middle / right button in any mode
+    drag={kind:'pan',sx:e.offsetX,sy:e.offsetY,cx:cam.x,cy:cam.y}; return;
+  }
+  const hit=hitTest(w);
+  if(mode==='select'){
+    const aid=hitAxleId(hit);
+    if(aid!=null){
+      if(inMsel(aid)){ // grab inside the multi-selection → move whole group
+        const grab=axleById(aid);
+        drag={kind:'group',id:aid,ox:grab.x-w.x,oy:grab.y-w.y,gx:grab.x,gy:grab.y,
+              start:msel.axles.map(id=>{const a=axleById(id);return {id,x:a.x,y:a.y};})};
+      }else{
+        msel=null; sel=hit; const a=axleById(aid);
+        drag={kind:'axle',id:aid,ox:a.x-w.x,oy:a.y-w.y};
+      }
+    }else if(hit&&hit.type==='beam'){ msel=null; sel=hit; drag=null; }
+    else { sel=null; msel=null; marquee={x0:w.x,y0:w.y,x1:w.x,y1:w.y}; drag={kind:'marquee'}; }
+    renderPanel();
+  }
+  else if(mode==='gear') addGearAt(w);
+  else if(mode==='beam'){
+    const aid=hitAxleId(hit);
+    if(aid==null){ pendingBeam=null; flash('click an axle'); }
+    else if(pendingBeam==null){ pendingBeam=aid; flash('now click the second axle'); }
+    else if(pendingBeam!==aid){
+      if(!doc.beams.some(b=>(b.a===pendingBeam&&b.b===aid)||(b.b===pendingBeam&&b.a===aid)))
+        doc.beams.push({id:uid(),a:pendingBeam,b:aid,layer:defaultBeamLayer(pendingBeam,aid)});
+      pendingBeam=null;
+    }
+  }
+  else if(mode==='motor'){
+    const aid=hitAxleId(hit);
+    if(aid!=null){
+      const a=axleById(aid);
+      a.motor = a.motor ? null : {rpm:20,dir:1};
+      sel={type:'axle',id:aid}; renderPanel();
+    }
+  }
+  else if(mode==='delete'){ if(hit) deleteSel(hit); }
+});
+cv.addEventListener('pointermove',e=>{
+  if(view==='3d'){handle3DMove(e);return;}
+  const w=s2w({x:e.offsetX,y:e.offsetY}); mouseW=w;
+  if(drag){
+    if(drag.kind==='pan'){ cam.x=drag.cx-(e.offsetX-drag.sx)/cam.z; cam.y=drag.cy-(e.offsetY-drag.sy)/cam.z; }
+    else if(drag.kind==='marquee'){ marquee.x1=w.x; marquee.y1=w.y; }
+    else if(drag.kind==='group'){
+      const grab=axleById(drag.id); if(!grab)return;
+      grab.x=w.x+drag.ox; grab.y=w.y+drag.oy;
+      snapAxle(grab, new Set(msel?msel.axles:[]));
+      const dx=grab.x-drag.gx, dy=grab.y-drag.gy;
+      for(const s0 of drag.start){ if(s0.id===drag.id) continue;
+        const a=axleById(s0.id); if(a){ a.x=s0.x+dx; a.y=s0.y+dy; } }
+    }
+    else if(drag.kind==='axle'){
+      const a=axleById(drag.id); if(!a)return;
+      a.x=w.x+drag.ox; a.y=w.y+drag.oy; drag.moved=true;
+      snapAxle(a);
+    }
+  }else{
+    hover=hitTest(w);
+    cv.style.cursor = hover ? (mode==='delete'?'not-allowed':'pointer') : (mode==='gear'?'crosshair':'default');
+  }
+});
+cv.addEventListener('pointerup',e=>{
+  if(view==='3d'){handle3DUp(e);return;}
+  if(drag&&drag.kind==='marquee'&&marquee){
+    const x0=Math.min(marquee.x0,marquee.x1), x1=Math.max(marquee.x0,marquee.x1);
+    const y0=Math.min(marquee.y0,marquee.y1), y1=Math.max(marquee.y0,marquee.y1);
+    const axles=doc.axles.filter(a=>a.x>=x0&&a.x<=x1&&a.y>=y0&&a.y<=y1).map(a=>a.id);
+    const beams=doc.beams.filter(b=>axles.includes(b.a)&&axles.includes(b.b)).map(b=>b.id);
+    marquee=null;
+    if(axles.length===1){ sel={type:'axle',id:axles[0]}; msel=null; }
+    else if(axles.length){ msel={axles,beams}; sel=null; flash(`${axles.length} axles selected — drag any to move the group`); }
+    renderPanel();
+  }
+  if(drag&&(drag.kind==='axle'||drag.kind==='group')) renderPanel();
+  drag=null;
+});
+cv.addEventListener('wheel',e=>{
+  e.preventDefault();
+  if(view==='3d'){cam3.dist=Math.min(7000,Math.max(220,cam3.dist*Math.exp(e.deltaY*0.0012)));return;}
+  const w=s2w({x:e.offsetX,y:e.offsetY});
+  const f=Math.exp(-e.deltaY*0.0012);
+  cam.z=Math.min(4,Math.max(0.08,cam.z*f));
+  const w2=s2w({x:e.offsetX,y:e.offsetY});
+  cam.x+=w.x-w2.x; cam.y+=w.y-w2.y;
+},{passive:false});
+
+/* ================= UI ================= */
+const $=id=>document.getElementById(id);
+function setMode(m){
+  mode=m; pendingBeam=null;
+  document.querySelectorAll('.tool').forEach(t=>t.classList.toggle('on',t.dataset.mode===m));
+  $('statMode').textContent=m.toUpperCase();
+  const h2={
+    select:'drag part = move (snaps to mesh) · drag empty = box-select · right/middle-drag = pan · wheel = zoom',
+    gear:'click empty space = new gear · click an axle = stack compound gear',
+    beam:'click two axles to link them with a beam',
+    motor:'click an axle to attach / remove a motor',
+    delete:'click anything to delete it'
+  };
+  const h3={
+    select:'left click = select · drag part = move · right-drag = orbit · middle-drag = pan · scroll = zoom · shift+drag empty = box-select',
+    gear:'click the ground = new gear · click an axle = stack compound gear · right-drag = orbit',
+    beam:'click two axles to link them · pick the beam\u2019s layer in the panel',
+    motor:'click an axle to attach / remove a motor',
+    delete:'click anything to delete it'
+  };
+  $('hint').textContent=(view==='3d'?h3:h2)[m];
+}
+document.querySelectorAll('.tool').forEach(t=>t.addEventListener('click',()=>setMode(t.dataset.mode)));
+
+function flash(msg){ statusMsg=msg; statusMsgT=performance.now(); }
+
+$('playBtn').addEventListener('click',togglePlay);
+function togglePlay(){
+  playing=!playing;
+  $('playBtn').textContent = playing?'■ STOP':'▶ RUN';
+  $('playBtn').classList.toggle('running',playing);
+}
+$('speed').addEventListener('input',e=>{
+  simSpeed=e.target.value/100; $('speedVal').textContent=simSpeed.toFixed(1)+'×';
+});
+$('togglePitch').addEventListener('click',e=>{showPitch=!showPitch;e.target.classList.toggle('on',showPitch);});
+$('toggleLabels').addEventListener('click',e=>{showLabels=!showLabels;e.target.classList.toggle('on',showLabels);});
+$('fitBtn').addEventListener('click',zoomFit);
+$('view2dBtn').addEventListener('click',()=>setView('2d'));
+$('view3dBtn').addEventListener('click',()=>setView('3d'));
+function zoomFit(){
+  if(!doc.axles.length){cam.x=0;cam.y=0;cam.z=1;return;}
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for(const g of doc.gears){const a=axleById(g.axle),r=outerR(g);
+    x0=Math.min(x0,a.x-r);y0=Math.min(y0,a.y-r);x1=Math.max(x1,a.x+r);y1=Math.max(y1,a.y+r);}
+  cam.x=(x0+x1)/2; cam.y=(y0+y1)/2;
+  cam.z=Math.min(4,Math.max(0.08, 0.88*Math.min(CW/(x1-x0+1),CH/(y1-y0+1))));
+  cam3.dist=Math.min(7000,Math.max(400, Math.max(x1-x0,y1-y0)*1.35+320));
+}
+$('helpBtn').addEventListener('click',()=>$('help').classList.add('show'));
+$('helpClose').addEventListener('click',()=>$('help').classList.remove('show'));
+$('help').addEventListener('click',e=>{if(e.target.id==='help')$('help').classList.remove('show');});
+
+/* save / load / new */
+$('saveBtn').addEventListener('click',()=>{
+  const data=JSON.stringify({v:1,nextId,
+    axles:doc.axles.map(a=>({id:a.id,x:a.x,y:a.y,motor:a.motor})),
+    gears:doc.gears.map(g=>({id:g.id,axle:g.axle,teeth:g.teeth,module:g.module,layer:g.layer,phase:g.phase})),
+    beams:doc.beams},null,1);
+  const b=new Blob([data],{type:'application/json'});
+  const u=URL.createObjectURL(b), el=document.createElement('a');
+  el.href=u; el.download='mechanism.gearworks.json'; el.click();
+  URL.revokeObjectURL(u); flash('saved mechanism.gearworks.json');
+});
+$('loadBtn').addEventListener('click',()=>$('fileIn').click());
+$('fileIn').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{try{
+    const d=JSON.parse(r.result);
+    doc={axles:d.axles.map(a=>({...a,theta:0,omega:0,motor:a.motor||null})),
+         gears:d.gears.map(g=>({...g,phase:g.phase||0,rot:0})),
+         beams:(d.beams||[]).map(b=>({...b,layer:(b.layer!==undefined?b.layer:Math.min(b.la||0,b.lb||0))}))};
+    nextId=d.nextId||Math.max(0,...doc.axles.map(a=>a.id),...doc.gears.map(g=>g.id),...doc.beams.map(b=>b.id))+1;
+    sel=null; renderPanel(); zoomFit(); flash('loaded');
+  }catch(err){flash('load failed: not a valid file');}};
+  r.readAsText(f); e.target.value='';
+});
+$('clearBtn').addEventListener('click',()=>{
+  if(doc.gears.length && !confirm('Clear the whole mechanism?')) return;
+  doc={axles:[],gears:[],beams:[]}; sel=null; renderPanel();
+});
+
+/* ---------- properties panel ---------- */
+const props=$('props');
+function renderPanel(){
+  if(msel){
+    const gc=doc.gears.filter(g=>msel.axles.includes(g.axle)).length;
+    props.innerHTML=`
+      <h2><b>SELECTION</b></h2>
+      <div class="pbig">${msel.axles.length}<small>axles · ${gc} gears · ${msel.beams.length} beams</small></div>
+      <button class="pbtn danger" id="pDelM">delete selection</button>
+      <button class="pbtn" id="pClrM">clear selection</button>
+      <div class="psub">Drag any selected part to move the whole group rigidly — internal meshes are preserved, and the group still snaps to mesh with outside gears.</div>`;
+    document.getElementById('pDelM').addEventListener('click',()=>deleteSel());
+    document.getElementById('pClrM').addEventListener('click',()=>{msel=null;renderPanel();});
+    return;
+  }
+  if(!sel){props.innerHTML=`<h2>NO SELECTION</h2><div class="psub">Select a gear, axle, or beam to edit it. Press <b>?</b> for help.</div>`;return;}
+  if(sel.type==='gear'){
+    const g=gearById(sel.id); if(!g){sel=null;return renderPanel();}
+    const a=axleById(g.axle);
+    const rpm=(a.omega*60/TAU).toFixed(1);
+    const L=LAYERS[g.layer%LAYERS.length];
+    props.innerHTML=`
+      <h2><b>GEAR</b> · <span class="laydot" style="background:${L.col}"></span>${L.name}</h2>
+      <div class="pbig">${g.teeth}T<small>⌀ ${(pitchR(g)*2).toFixed(0)} · ${rpm} rpm</small></div>
+      <div class="prow"><label>teeth</label><input type="range" id="pT" min="6" max="120" value="${g.teeth}"><input type="number" id="pTn" min="6" max="120" value="${g.teeth}"></div>
+      <div class="prow"><label>module (size)</label><input type="range" id="pM" min="4" max="16" value="${g.module}"><input type="number" id="pMn" min="4" max="16" value="${g.module}"></div>
+      <div class="prow"><label>layer</label><select id="pL">${LAYERS.map((l,i)=>`<option value="${i}" ${i===g.layer?'selected':''}>${l.name}</option>`).join('')}</select></div>
+      <div class="prow"><label>tooth phase</label><div class="jog"><button id="pPm">−</button><button id="pPz">0</button><button id="pPp">+</button></div></div>
+      <div class="pdiv"></div>
+      <button class="pbtn accent" id="pSelAxle">select axle (${gearsOf(a.id).length} gear${gearsOf(a.id).length>1?'s':''})</button>
+      <button class="pbtn danger" id="pDel">delete gear</button>
+      <div class="psub">Gears mesh only with same-layer gears on other axles. Same-axle gears turn together (compound).</div>`;
+    const upd=()=>{simulate(0);renderPanel();};
+    const bindPair=(rid,nid,fn)=>{
+      $(rid).addEventListener('input',e=>{fn(+e.target.value);$(nid).value=e.target.value;defaultsSync();});
+      $(nid).addEventListener('change',e=>{fn(Math.max(+e.target.min,Math.min(+e.target.max,+e.target.value||6)));upd();});
+      $(rid).addEventListener('change',upd);
+    };
+    bindPair('pT','pTn',v=>{g.teeth=Math.round(v);});
+    bindPair('pM','pMn',v=>{g.module=Math.round(v);});
+    function defaultsSync(){defaults.teeth=g.teeth;defaults.module=g.module;}
+    $('pL').addEventListener('change',e=>{g.layer=+e.target.value;upd();});
+    $('pPm').addEventListener('click',()=>{g.phase-=Math.PI/g.teeth/2;});
+    $('pPp').addEventListener('click',()=>{g.phase+=Math.PI/g.teeth/2;});
+    $('pPz').addEventListener('click',()=>{g.phase=0;});
+    $('pSelAxle').addEventListener('click',()=>{sel={type:'axle',id:a.id};renderPanel();});
+    $('pDel').addEventListener('click',()=>deleteSel());
+  }
+  else if(sel.type==='axle'){
+    const a=axleById(sel.id); if(!a){sel=null;return renderPanel();}
+    const rpm=(a.omega*60/TAU).toFixed(1);
+    const gl=gearsOf(a.id);
+    props.innerHTML=`
+      <h2><b>AXLE</b> #${a.id}</h2>
+      <div class="pbig">${a.conflict?'JAM':rpm}<small>${a.conflict?'— inconsistent loop':'rpm'}</small></div>
+      <div class="prow"><label>motor</label><button class="pbtn ${a.motor?'accent':''}" id="pMot" style="margin:0;width:100px">${a.motor?'attached':'attach'}</button></div>
+      ${a.motor?`
+      <div class="prow"><label>rpm</label><input type="number" id="pRpm" min="0" max="3000" value="${a.motor.rpm}"></div>
+      <div class="prow"><label>direction</label><button class="pbtn" id="pDir" style="margin:0;width:100px">${a.motor.dir>0?'CW ↻':'CCW ↺'}</button></div>`:''}
+      <div class="pdiv"></div>
+      <div class="psub">Gears on this axle</div>
+      <ul class="glist">${gl.map(g=>`<li data-g="${g.id}"><span><span class="laydot" style="background:${LAYERS[g.layer%LAYERS.length].col}"></span>${g.teeth}T</span><span>${LAYERS[g.layer%LAYERS.length].name}</span></li>`).join('')}</ul>
+      <button class="pbtn" id="pAddG">+ stack compound gear</button>
+      <button class="pbtn danger" id="pDelA">delete axle</button>`;
+    $('pMot').addEventListener('click',()=>{a.motor=a.motor?null:{rpm:20,dir:1};renderPanel();});
+    if(a.motor){
+      $('pRpm').addEventListener('change',e=>{a.motor.rpm=Math.max(0,+e.target.value||0);});
+      $('pDir').addEventListener('click',()=>{a.motor.dir*=-1;renderPanel();});
+    }
+    props.querySelectorAll('.glist li').forEach(li=>li.addEventListener('click',()=>{sel={type:'gear',id:+li.dataset.g};renderPanel();}));
+    $('pAddG').addEventListener('click',()=>{addGearAt({x:a.x,y:a.y});});
+    $('pDelA').addEventListener('click',()=>deleteSel());
+  }
+  else if(sel.type==='beam'){
+    const b=beamById(sel.id); if(!b){sel=null;return renderPanel();}
+    const A=axleById(b.a),B=axleById(b.b);
+    props.innerHTML=`
+      <h2><b>BEAM</b> #${b.id} · ${LAYERS[(b.layer||0)%LAYERS.length].name}</h2>
+      <div class="pbig">${Math.hypot(B.x-A.x,B.y-A.y).toFixed(0)}<small>units, axle #${b.a} → #${b.b}</small></div>
+      <div class="prow"><label>layer</label><select id="pBL">${LAYERS.map((l,i)=>`<option value="${i}" ${i===(b.layer||0)?'selected':''}>${l.name}</option>`).join('')}</select></div>
+      <button class="pbtn danger" id="pDelB">delete beam</button>
+      <div class="psub">Beams are always horizontal, sitting in the gap just below their layer\u2019s gears — between gear planes, so they can\u2019t cut through a mesh. Stack beams on different layers to frame the structure in 3D.</div>`;
+    $('pBL').addEventListener('change',e=>{b.layer=+e.target.value;renderPanel();});
+    $('pDelB').addEventListener('click',()=>deleteSel());
+  }
+}
+
+/* keyboard */
+window.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;
+  const k=e.key.toLowerCase();
+  if(k==='v')setMode('select'); else if(k==='g')setMode('gear');
+  else if(k==='b')setMode('beam'); else if(k==='m')setMode('motor');
+  else if(k==='x')setMode('delete');
+  else if(k===' '){e.preventDefault();togglePlay();}
+  else if(k==='delete'||k==='backspace'){deleteSel();}
+  else if(k==='escape'){pendingBeam=null;sel=null;msel=null;marquee=null;marquee3=null;$('help').classList.remove('show');renderPanel();}
+  else if(k==='?'){$('help').classList.toggle('show');}
+  else if(k==='f'){zoomFit();}
+  else if(k==='tab'){e.preventDefault();setView(view==='2d'?'3d':'2d');}
+});
+
+/* ================= demo mechanism ================= */
+function demo(){
+  const A=(x,y,motor)=>{const a={id:uid(),x,y,theta:0,omega:0,motor:motor?{rpm:30,dir:1}:null};doc.axles.push(a);return a;};
+  const G=(a,t,m,l)=>{const g={id:uid(),axle:a.id,teeth:t,module:m,layer:l,phase:0,rot:0};doc.gears.push(g);return g;};
+  const m=A(-260,60,true);  G(m,10,8,0);                 // motor pinion 10T
+  const c1=A(-260+ (10+30)*4,60); G(c1,30,8,0); G(c1,12,8,1); // compound 30T/12T
+  const r1=A(0,0); // placed below via mesh distance on layer1
+  r1.x=c1.x+(12+50)*4; r1.y=60; G(r1,50,8,1);            // reel 1
+  const r2=A(r1.x+(50+12)*4,60); G(r2,12,8,1); G(r2,44,8,2);
+  const r3=A(r2.x+(44+36)*4,60); G(r3,36,8,2);
+  doc.beams.push({id:uid(),a:m.id,b:c1.id,layer:0},{id:uid(),a:c1.id,b:r1.id,layer:0},
+                 {id:uid(),a:r1.id,b:r2.id,layer:1},{id:uid(),a:r2.id,b:r3.id,layer:2});
+}
+demo(); simulate(0); zoomFit(); setMode('select');
+
+/* ================= main loop ================= */
+let last=performance.now();
+function loop(t){
+  const dt=Math.min(0.05,(t-last)/1000); last=t;
+  simulate(dt);
+  view==='3d'?render3D():render();
+  $('statCounts').textContent=`${doc.gears.length} gears · ${doc.axles.length} axles · ${doc.beams.length} beams · ${curMeshes.length} meshes`;
+  $('statSim').innerHTML = jammed?`<span class="warnTxt">⚠ jam — red parts overlap or fight</span>`:(playing?`<span class="okTxt">running</span>`:'idle');
+  $('statMsg').textContent = (performance.now()-statusMsgT<2600)?statusMsg:'';
+  // live rpm in panel while running
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+</script>
+</body>
+</html>   

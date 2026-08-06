@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GAME IDEA GEN v1.0</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+    :root {
+      --amber: #ffb000;
+      --amber-dim: #7a5200;
+      --bg: #0c0900;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 3px,
+        rgba(0,0,0,0.18) 3px, rgba(0,0,0,0.18) 4px
+      );
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    body::after {
+      content: "";
+      position: fixed; inset: 0;
+      background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.72) 100%);
+      pointer-events: none;
+      z-index: 101;
+    }
+
+    .terminal {
+      width: min(780px, 100vw);
+      height: min(600px, 100vh);
+      padding: 32px 36px 28px;
+      font-family: 'Share Tech Mono', 'Courier New', monospace;
+      color: var(--amber);
+      display: flex;
+      flex-direction: column;
+      animation: flicker 8s infinite;
+    }
+
+    @keyframes flicker {
+      0%,98%,100% { opacity:1 }
+      98.5% { opacity:.93 }
+      99%   { opacity:1 }
+      99.4% { opacity:.97 }
+    }
+
+    .header {
+      border-bottom: 1px solid var(--amber-dim);
+      padding-bottom: 10px;
+      margin-bottom: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .header-title { font-size: 13px; letter-spacing: .2em; text-transform: uppercase; }
+    .header-info  { font-size: 11px; color: var(--amber-dim); letter-spacing: .08em; }
+
+    .rows {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      align-items: start;
+      gap: 12px;
+      opacity: 0.22;
+      transition: opacity .2s;
+    }
+
+    .row.revealed { opacity: 1; }
+    .row.current  { opacity: 0.55; }
+
+    .row-label {
+      font-size: 11px;
+      letter-spacing: .18em;
+      color: var(--amber-dim);
+      text-transform: uppercase;
+      padding-top: 1px;
+    }
+
+    .row-label span {
+      display: block;
+      font-size: 9px;
+      letter-spacing: .1em;
+      opacity: .65;
+      margin-top: 3px;
+      line-height: 1.4;
+    }
+
+    .row-value {
+      font-size: 20px;
+      line-height: 1.3;
+      letter-spacing: .02em;
+      min-height: 26px;
+    }
+
+    .row-value.rolling { color: var(--amber-dim); }
+
+    .row-value.done {
+      color: var(--amber);
+      text-shadow: 0 0 12px rgba(255,176,0,0.5), 0 0 30px rgba(255,176,0,0.12);
+    }
+
+    .row-value.land { animation: land .12s ease 2; }
+
+    @keyframes land {
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.02); text-shadow: 0 0 20px rgba(255,176,0,0.9); }
+      100% { transform: scale(1); }
+    }
+
+    .prompt-line {
+      border-top: 1px solid var(--amber-dim);
+      padding-top: 14px;
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .prompt-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .prompt-left { font-size: 13px; color: var(--amber-dim); letter-spacing: .06em; }
+    .prompt-left strong { color: var(--amber); }
+
+    .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    button {
+      font-family: inherit;
+      font-size: 12px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      border: 1px solid var(--amber-dim);
+      background: transparent;
+      color: var(--amber-dim);
+      padding: 7px 14px;
+      cursor: pointer;
+      transition: all .1s;
+    }
+
+    button.primary { border-color: var(--amber); color: var(--amber); }
+    button.primary:hover { background: var(--amber); color: var(--bg); }
+    button:hover { border-color: var(--amber); color: var(--amber); }
+    button:active { opacity: .7; }
+    button:disabled { opacity: .3; cursor: default; }
+
+    /* POST button — green tint when active */
+    button.post-btn {
+      border-color: #2d6a2d;
+      color: #2d6a2d;
+      display: none;
+    }
+
+    button.post-btn.visible {
+      display: inline-block;
+      border-color: #39ff14;
+      color: #39ff14;
+    }
+
+    button.post-btn.visible:hover {
+      background: #39ff14;
+      color: var(--bg);
+    }
+
+    button.post-btn.posted {
+      display: inline-block;
+      border-color: #1a7a1a;
+      color: #1a7a1a;
+      cursor: default;
+    }
+
+    .forum-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 28px;
+    }
+
+    .forum-status {
+      font-size: 11px;
+      letter-spacing: .1em;
+      color: var(--amber-dim);
+      flex: 1;
+    }
+
+    .forum-status.ok   { color: #39ff14; }
+    .forum-status.err  { color: #ff4444; }
+
+    .cursor {
+      display: inline-block;
+      width: 10px; height: 18px;
+      background: var(--amber);
+      vertical-align: middle;
+      margin-left: 4px;
+      animation: blink 1s step-end infinite;
+    }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    @media (max-width: 600px) {
+      .terminal { padding: 20px 18px; height: 100vh; }
+      .row { grid-template-columns: 110px 1fr; gap: 8px; }
+      .row-value { font-size: 15px; }
+    }
+  </style>
+</head>
+<body>
+<div class="terminal">
+
+  <div class="header">
+    <div class="header-title">GAME IDEA GEN <span style="opacity:.45">v1.0</span></div>
+    <div class="header-info" id="countEl">0 IDEAS GENERATED</div>
+  </div>
+
+  <div class="rows" id="rows"></div>
+
+  <div class="prompt-line">
+    <div class="prompt-row">
+      <div class="prompt-left" id="promptMsg"><strong>&gt;</strong> PRESS REVEAL TO BEGIN<span class="cursor"></span></div>
+      <div class="btns">
+        <button class="primary" id="nextBtn">REVEAL</button>
+        <button id="newBtn">NEW IDEA</button>
+        <button id="copyBtn">COPY</button>
+      </div>
+    </div>
+
+    <div class="forum-bar">
+      <div class="forum-status" id="forumStatus"></div>
+      <button class="post-btn" id="postBtn">POST TO FORUM</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const GENRES_POOL = [
+  "Platformer","Metroidvania","Roguelike","Roguelite","Deckbuilder","Auto-battler","Bullet Heaven","Bullet Hell",
+  "Survival Horror","Immersive Sim","Stealth","Puzzle","Narrative Adventure","Visual Novel","Factory Builder",
+  "City Builder","Colony Sim","Management Sim","Life Sim","Dating Sim","Rhythm","Tactics","Turn-Based Strategy",
+  "Real-Time Strategy","Tower Defense","Extraction Shooter","Arena Shooter","Boomer Shooter","Twin-Stick Shooter",
+  "Rail Shooter","Third-Person Action","Character Action","Hack and Slash","Beat 'em Up","Fighting","Party Game",
+  "Social Deduction","Idle Game","Incremental","Fishing Game","Farming Sim","Cooking Game","Trading Game",
+  "Political Sim","God Game","Physics Sandbox","Vehicle Combat","Racing","Kart Racer","Drift Game","Skateboarding",
+  "Snowboarding","Parkour","Climbing Game","Photography Game","Archaeology Game","Detective Mystery",
+  "Courtroom Drama","Heist Game","Creature Collector","Monster Tamer","Pet Sim","Dungeon Crawler","CRPG","JRPG",
+  "Action RPG","Soulslike","Cozy Exploration","Walking Sim","Typing Game","Word Game","4X Strategy",
+  "Grand Strategy","Naval Combat","Submarine Sim","Flight Combat","Space Sim","Mech Combat","Train Management",
+  "Theme Park Sim","Hospital Management","Prison Management","Hotel Management","Courier Sim","Smuggling Sim",
+  "Arms Dealer Sim","Spy Thriller","Assassin Sandbox","Pinball","Brick Breaker","Match-3","Looter Shooter",
+  "Open World Survival","Crafting Survival","Base Defense","Horde Survival","Time Management","Negotiation Sim",
+  "Prop Hunt","Arena Brawler","Interactive Fiction","Underwater Exploration","Treasure Hunt","Job Sim",
+  "Hacker Sim","Foraging Sim","Courier Adventure","Puzzle Platformer","Stealth Platformer","Horror Puzzle",
+  "Narrative RPG","Atmospheric Explorer","Rogue Card Game","Tactical Shooter","Retro Arcade","Endless Runner",
+  "Auto-Runner","Rhythm Platformer","Escape Room","Breakout-like","Tower Climber","Grid Puzzler","Sokoban-like",
+  "Point and Click","Graphic Adventure","Creature Sim","Ecosystem Sim","Traffic Sim","Crowd Sim",
+  "Ant Colony Sim","Space Colony Sim","Diplomacy Game","Wargame","Hexagonal Strategy","Dice Battler",
+  "Tabletop RPG Sim","Murder Mystery","Hidden Object","Asymmetric Multiplayer","Battle Royale",
+  "Extraction Survival","Loot and Craft","Souls-lite","Run and Gun","Shmup","Manic Shooter","Danmaku",
+  "Cave Flyer","Jetpack Game","Grapple Hook Platformer","Momentum Platformer","Wall-Running Game",
+  "Time-Loop Puzzle","Time-Manipulation Puzzle","Physics Puzzler","Portal-like","Marble Game","Ball Roller",
+  "Sports Management","Football Manager-like","Betting Sim","Casino Sim","Poker Game","Chess-like",
+  "Abstract Strategy","Solitaire-like","Trivia Game","Quiz Show Sim","Dance Game","DJ Sim",
+  "Music Production Sim","Band Management","Film Director Sim","Movie Studio Sim","Journalism Sim",
+  "Legal Thriller","Medical Drama Sim","Emergency Response Sim","Firefighter Sim","Police Procedural",
+  "Bounty Hunter Game","Mercenary Sim","Guild Management","Tavern Keeper Sim","Shop Keeper Sim",
+  "Auction House Game","Car Mechanic Sim","Boat Builder","Plane Builder","Robot Builder","Mech Builder",
+  "Dungeon Builder","Level Editor Sandbox","Incremental Clicker","Prestige Game","Tycoon Game",
+  "Whodunnit","Cold Case Detective","Paranormal Investigator","Cult Simulator","Alchemy Sim","Crafting RPG",
+  "Blacksmith Sim","Potion Brewer","Spell Crafter","Gardening Sim","Aquarium Sim","Zoo Sim",
+  "Virus Sim","Plague Sim","Ecosystem Collapse Sim","Climate Sim"
+];
+
+const RULES = [
+  "You can only move by spending collected light",
+  "Every attack permanently reshapes the map",
+  "Your health is also your only currency",
+  "You can never stop moving",
+  "You are strongest when completely still",
+  "You control the world, not the hero",
+  "You can rewind exactly one object at a time",
+  "There is only one button",
+  "Every 10 seconds, player and enemy roles swap",
+  "Every upgrade removes a different ability",
+  "Only sound reveals hidden parts of the level",
+  "The objective changes if you are being watched",
+  "All combat must be indirect",
+  "You may carry only one item at all times",
+  "The map is built from your previous failures",
+  "You must cooperate with your future self",
+  "NPCs permanently remember every lie you tell",
+  "The pause menu exists inside the game world",
+  "Losing a fight opens new paths that winning does not",
+  "The environment votes on your next action",
+  "You build levels while escaping them",
+  "Each in-game day, one core mechanic disappears forever",
+  "You can copy enemy abilities but never attack directly",
+  "Staying in danger makes you progressively more powerful",
+  "The final boss is always visible somewhere in every room",
+  "You win by making your rivals trust you completely",
+  "The world visibly ages whenever you heal",
+  "Moving creates new enemies",
+  "You can edit exactly one rule per run",
+  "Only your shadow can activate switches",
+  "Your inventory is shared with your enemies",
+  "You can possess tools but never living things",
+  "Every choice must be made in under three seconds",
+  "Talking is your only weapon",
+  "Rooms collapse the moment you leave them",
+  "Weapons must be crafted mid-battle from nearby scraps",
+  "Your companion always slightly misinterprets your commands",
+  "Every success makes the next challenge harder in an unexpected new way",
+  "You cannot jump — only redirect local gravity",
+  "Winning a level destroys one reward in a future level",
+  "The safest path always leads to the worst ending",
+  "You are forbidden from repeating the same action twice in a row",
+  "Death returns you with all knowledge but no items",
+  "Vision is limited to a torch that shrinks every minute",
+  "You can slow time but it directly costs your score",
+  "Enemies become permanent allies if you flee from them",
+  "Resources only regenerate in zones you have never visited",
+  "Every interaction costs health instead of resources",
+  "The map rotates 90 degrees every time you checkpoint",
+  "Items degrade by one tier each time you save the game",
+  "You must leave a physical trail or the world fully resets",
+  "The camera is a finite resource you manage manually",
+  "Allies are summoned by failing, not by succeeding",
+  "Every door you open locks a different door somewhere else",
+  "You have no HUD — all information comes from the world itself",
+  "The game only runs in real time — no pausing, no speeding up",
+  "All abilities are stolen from the last enemy that damaged you",
+  "Noise attracts everything — silence is your only shield",
+  "The clock runs backwards — time only increases when you rest",
+  "Each room can be visited only once across the entire run",
+  "Spending currency earns you XP — hoarding it kills you",
+  "You can only see the room you were in previously",
+  "Healing your enemies also heals you, nothing else does",
+  "You can see 10 seconds into the future but cannot change the past",
+  "The level only appears when you are not looking at it",
+  "Every NPC has a hidden motive that changes based on your choices",
+  "You can split into two controlled characters at any time",
+  "Gravity changes direction every time you land",
+  "The objective is shown to the enemy team, not to you",
+  "You can bookmark any moment in time and return to it once",
+  "Enemies share a health pool — hurting one heals another",
+  "Every weapon has exactly three uses before it vanishes forever",
+  "Alliances can only be formed with enemies who have beaten you",
+  "You play twice simultaneously — once forward, once in reverse",
+  "The map is invisible until you have died in every room once",
+  "You can sacrifice points to learn the next enemy's attack pattern",
+  "Each level starts with the final boss already in the room",
+  "Every ability you use permanently transfers to a random enemy",
+  "The win condition changes every five minutes",
+  "You carry the memories of every failed run as visible ghosts",
+  "Damage dealt equals damage received — always symmetrical",
+  "You earn currency by standing completely still in dangerous places",
+  "You can trade health for information at any moment",
+  "Dying respawns you as the enemy that killed you",
+  "Everything you destroy becomes part of the terrain permanently",
+  "Your score decreases the longer you survive without taking a risk"
+];
+
+const SETTINGS = [
+  "A flooded megacity 40 years after the sea rose",
+  "A moon-sized shopping mall after closing time",
+  "A haunted archive of a burned-down museum",
+  "A biomechanical forest that repairs itself overnight",
+  "A drifting ocean of scrap metal and lost ships",
+  "A frozen orbital elevator between two dead stations",
+  "An underground republic run entirely by its library",
+  "A hotel collapsing slowly into a shared dream",
+  "A city built inside the ribcage of a sleeping giant",
+  "A submarine kingdom beneath a frozen methane sea",
+  "A monastery carved into the side of an active volcano",
+  "A railway loop that never reaches its destination",
+  "Earth after the sun was quietly switched off",
+  "A carnival city built on top of ancient ruins",
+  "A clockwork desert where all machines want to escape",
+  "A deep-sea trench research station going dark",
+  "A motorway network that became its own civilisation",
+  "A secret village sealed beneath a major airport",
+  "A vertical farming arcology where someone started a war",
+  "A castle that is also sentient and increasingly hostile",
+  "A decommissioned MMO server with one player still logged in",
+  "A suburban garden at 1:12 scale — you are the pest",
+  "An abandoned luxury space station reclaimed by plants",
+  "A desert of dead satellites that still broadcast old signals",
+  "A village on floating platforms above a permanent storm layer",
+  "A ritual TV studio that has been broadcasting for 40 years",
+  "A colony ship infested by a parasitic second civilisation",
+  "A black-market bazaar hidden inside a major transit hub",
+  "A prison built entirely from mirrors",
+  "A machine cathedral that converts prayers into electricity",
+  "A server farm so overgrown it became a dense rainforest",
+  "A museum dedicated entirely to futures that never happened",
+  "A chain of tiny planets connected by fraying rope bridges",
+  "A cave system lit only by ancient CRT screens",
+  "A toxic wellness resort promising medically impossible cures",
+  "An infinite apartment block with no ground floor",
+  "A battlefield where the war ended three centuries ago",
+  "A lab sealed under the ocean after an experiment escaped",
+  "A village that hitches rides on the back of a colossal beast",
+  "A legal no-man's-land wedged between two colliding dimensions",
+  "A solarpunk canal city built entirely from reclaimed warships",
+  "A landfill for unwanted memories",
+  "A quarantined island theme park that no one can leave",
+  "A mountain observatory that discovered something it shouldn't have",
+  "A derelict cruise ship half-sunk, still playing music",
+  "A city that is demolished and rebuilt from scratch every dawn",
+  "A planet-wide train station with no trains running any more",
+  "A storm-chasing town bolted onto reinforced mobile tracks",
+  "A glacier with an entire civilisation buried and preserved inside",
+  "An asteroid converted into a self-sustaining greenhouse colony",
+  "A theme park built around a real, active nuclear reactor",
+  "A society living entirely within a single skyscraper",
+  "A rainforest that grows one metre every hour",
+  "A gas giant colony suspended inside the upper cloud layer",
+  "A city where every building is also a living organism",
+  "A military bunker converted into a luxury hotel after the war",
+  "A sand sea navigated entirely by sail-powered land ships",
+  "A digital city existing inside the memory of a decommissioned AI",
+  "A floating archive barge carrying the last copies of all human media",
+  "A post-war reconstruction zone managed by competing corporations",
+  "A network of rooftop settlements above a permanently toxic ground level",
+  "A village accessible only at low tide, six hours per day",
+  "A cloning facility on a remote island with no outside contact",
+  "A city beneath a dome on a planet with no breathable atmosphere",
+  "A labyrinthine bazaar inside an ancient hollowed-out meteorite",
+  "A dying space elevator whose counterweight has gone dark",
+  "An orbital debris field colonised by scavengers over decades",
+  "A coral reef city built around a slowly awakening sea god",
+  "A medieval fortress unknowingly built over a quantum anomaly",
+  "A seed vault converted into a habitation after the surface died",
+  "A travelling circus that is also the last functioning government",
+  "A network of underground rivers connecting rival city-states",
+  "A post-collapse suburb where nature and infrastructure merged",
+  "A lunar mining colony where the ore ran out thirty years ago",
+  "A generation ship whose passengers forgot they were on a ship",
+  "A retrofuturist city frozen aesthetically in 1987",
+  "A prison colony on a tidally locked moon — half eternal day, half eternal night",
+  "A massive derelict warship converted into a floating city-state",
+  "A frozen tundra research outpost during a 14-month polar night",
+  "An artificial island constructed from compressed ocean garbage",
+  "A city split in two by a wall — each side has different physics",
+  "A grand bazaar at the exact geographic centre of a vast empire",
+  "A subterranean city that has never seen the surface",
+  "A library planet — every surface covered in stored text",
+  "A city where architecture is currency",
+  "A ruined colosseum repurposed as a self-governing community",
+  "A space station neighbourhood forgotten during a corporate merger",
+  "A valley that only exists during a solar eclipse",
+  "A vast underground bunker built for a war that never came",
+  "A floating market that migrates with ocean currents",
+  "A village inside a dormant mechanical god",
+  "A theme park whose AI staff never received the shutdown order",
+  "A post-apocalyptic botanical garden still maintained perfectly by robots"
+];
+
+const THEMES = [
+  "Grief that quietly becomes a system",
+  "Small kindnesses under enormous pressure",
+  "Losing your identity while trying to fit in",
+  "The hidden cost of pure convenience",
+  "Beauty found only inside the act of maintenance",
+  "Hope surviving something irreversible",
+  "When strict ritual and wild improvisation collide",
+  "Placing trust in a system that does not care about you",
+  "Who actually owns a memory",
+  "Play as a quiet form of resistance",
+  "Awe and dread arriving at exactly the same moment",
+  "Care used deliberately as a form of strategy",
+  "The fear of being made redundant by something better",
+  "Loneliness inside an extremely crowded place",
+  "The weight of inheriting someone else's choices",
+  "The tension between escape and responsibility",
+  "Finding deep joy inside pure repetition",
+  "Repair chosen deliberately over conquest",
+  "What remains human inside full automation",
+  "Performing for survival with no audience",
+  "Secrecy becoming its own form of closeness",
+  "Community assembled entirely from leftovers",
+  "Sacrifice that goes permanently unrecognised",
+  "The feeling of control slowly draining away",
+  "Learning how and when to let go",
+  "Obsession slowly becoming architecture",
+  "Nature reclaiming something built with clear intention",
+  "The ethics of bringing back what has been dead for decades",
+  "Work becoming indistinguishable from religion",
+  "Tenderness hidden deep inside something monstrous",
+  "A paradise that is entirely fabricated",
+  "Survival through creative thinking alone",
+  "History rewritten entirely by those who won",
+  "Art that is also critical infrastructure",
+  "Silence weaponised as a form of power",
+  "The specific danger of pure nostalgia",
+  "Friendship across a boundary that should be impossible",
+  "Softness enduring inside sustained brutality",
+  "Luck repeatedly mistaken for earned destiny",
+  "Boredom ritualised into meaning",
+  "Finding signal buried inside total noise",
+  "Consumption with no reflection attached",
+  "Forgiveness on the far side of total transformation",
+  "Ambition quietly mutating into something like hunger",
+  "Home as something permanently in motion",
+  "The afterlife of technology that failed publicly",
+  "Wonder produced entirely by accident",
+  "Guilt that refuses every attempt at burial",
+  "Fragile ecosystems held together by mutual trust",
+  "Rebellion expressed entirely through craft",
+  "Treating time as a finite natural resource",
+  "Intimacy developing gradually with a machine",
+  "The absurd comedy of total civilisational collapse",
+  "Dreams repurposed as industrial fuel",
+  "Mercy surviving inside deeply competitive spaces",
+  "The thing you study eventually becomes you",
+  "Belonging manufactured and sold back to you",
+  "The moment a tool starts to have preferences",
+  "Inheritance as a form of trap",
+  "Power that can only exist if no one names it",
+  "The violence of being truly understood",
+  "Progress that looks identical to decay",
+  "Building something beautiful in a place it cannot last",
+  "The loyalty of people with nowhere else to go",
+  "What gets left behind when efficiency wins",
+  "The slow collapse of a shared lie everyone needed",
+  "Dignity preserved under conditions designed to strip it away",
+  "The second life of abandoned infrastructure",
+  "Cooperation between people who genuinely hate each other",
+  "The thing a map cannot show you",
+  "Desire for a version of the world that never existed",
+  "Making peace with a system you cannot change",
+  "The cost of being the only one who remembers",
+  "Kindness that arrives too late to matter but matters anyway",
+  "Survival changing a person until the original is gone",
+  "The moment a copy becomes more real than the original",
+  "Order imposed on chaos by someone who will not survive it",
+  "The intimacy of shared catastrophe",
+  "Loving something that is actively trying to end",
+  "The gap between what was promised and what arrived",
+  "Routine as the last form of hope",
+  "The person you had to stop being to get here",
+  "Everything left unsaid between two people across a lifetime",
+  "The discovery that freedom and safety cannot coexist",
+  "Finding purpose inside a task no one assigned you",
+  "The fragility of a world held together by one person's effort",
+  "Memory as the only form of resurrection available",
+  "The longing for a home that was already gone when you left",
+  "The strange pride of mastering something completely useless",
+  "What children inherit that adults cannot see",
+  "Tenderness expressed only through the work of your hands",
+  "The moment you realise you became the villain of someone else's story",
+  "Peace that feels indistinguishable from surrender",
+  "The price of being right in a world that needed you to be wrong",
+  "Connection formed entirely through parallel suffering",
+  "The small rebellions that keep a person intact",
+  "Beauty that exists only because someone kept showing up",
+  "The particular loneliness of being ahead of your time",
+  "How much of yourself you will trade for stability",
+  "The grief of outliving the world you were built for"
+];
+
+// Map generator genre labels to forum genre options
+const GENRE_MAP = {
+  "Platformer":"Platformer","Puzzle Platformer":"Platformer","Grapple Hook Platformer":"Platformer",
+  "Momentum Platformer":"Platformer","Stealth Platformer":"Platformer","Rhythm Platformer":"Platformer",
+  "Auto-Runner":"Platformer","Endless Runner":"Platformer","Tower Climber":"Platformer",
+  "Roguelike":"Action","Roguelite":"Action","Soulslike":"Action","Souls-lite":"Action",
+  "Character Action":"Action","Hack and Slash":"Action","Beat 'em Up":"Action","Run and Gun":"Action",
+  "Boomer Shooter":"Action","Twin-Stick Shooter":"Action","Arena Shooter":"Action","Bullet Hell":"Action",
+  "Bullet Heaven":"Action","Rail Shooter":"Action","Extraction Shooter":"Action","Looter Shooter":"Action",
+  "Third-Person Action":"Action","Mech Combat":"Action","Vehicle Combat":"Action","Naval Combat":"Action",
+  "Fighting":"Action","Arena Brawler":"Action","Shmup":"Action","Manic Shooter":"Action","Danmaku":"Action",
+  "Metroidvania":"Adventure","Cozy Exploration":"Adventure","Walking Sim":"Adventure",
+  "Narrative Adventure":"Adventure","Treasure Hunt":"Adventure","Underwater Exploration":"Adventure",
+  "Heist Game":"Adventure","Spy Thriller":"Adventure","Assassin Sandbox":"Adventure",
+  "Detective Mystery":"Adventure","Cold Case Detective":"Adventure","Paranormal Investigator":"Adventure",
+  "Whodunnit":"Adventure","Courtroom Drama":"Adventure","Atmospheric Explorer":"Adventure",
+  "Hacker Sim":"Adventure","Point and Click":"Adventure","Graphic Adventure":"Adventure",
+  "Interactive Fiction":"Adventure","Visual Novel":"Adventure","Narrative Puzzle":"Adventure",
+  "Action RPG":"RPG","JRPG":"RPG","CRPG":"RPG","Dungeon Crawler":"RPG","Narrative RPG":"RPG",
+  "Crafting RPG":"RPG","Loot and Craft":"RPG","Monster Tamer":"RPG","Creature Collector":"RPG",
+  "Deckbuilder":"Strategy","Turn-Based Strategy":"Strategy","Real-Time Strategy":"Strategy",
+  "Tactics":"Strategy","Grand Strategy":"Strategy","4X Strategy":"Strategy","Wargame":"Strategy",
+  "Hexagonal Strategy":"Strategy","Tower Defense":"Strategy","Auto-battler":"Strategy",
+  "Diplomacy Game":"Strategy","Political Sim":"Strategy","Negotiation Sim":"Strategy",
+  "Puzzle":"Puzzle","Grid Puzzler":"Puzzle","Sokoban-like":"Puzzle","Physics Puzzler":"Puzzle",
+  "Portal-like":"Puzzle","Time-Loop Puzzle":"Puzzle","Time-Manipulation Puzzle":"Puzzle",
+  "Escape Room":"Puzzle","Hidden Object":"Puzzle","Brick Breaker":"Puzzle","Match-3":"Puzzle",
+  "Breakout-like":"Puzzle","Marble Game":"Puzzle","Ball Roller":"Puzzle","Word Game":"Puzzle",
+  "Typing Game":"Puzzle","Trivia Game":"Puzzle","Pinball":"Puzzle",
+  "Survival Horror":"Horror","Horror Puzzle":"Horror",
+  "Life Sim":"Simulation","Dating Sim":"Simulation","Farming Sim":"Simulation","Cooking Game":"Simulation",
+  "Fishing Game":"Simulation","Gardening Sim":"Simulation","Aquarium Sim":"Simulation",
+  "Pet Sim":"Simulation","Zoo Sim":"Simulation","Creature Sim":"Simulation","Job Sim":"Simulation",
+  "Car Mechanic Sim":"Simulation","Blacksmith Sim":"Simulation","Potion Brewer":"Simulation",
+  "Alchemy Sim":"Simulation","City Builder":"Simulation","Colony Sim":"Simulation",
+  "Factory Builder":"Simulation","Management Sim":"Simulation","Hotel Management":"Simulation",
+  "Hospital Management":"Simulation","Prison Management":"Simulation","Train Management":"Simulation",
+  "Theme Park Sim":"Simulation","Traffic Sim":"Simulation","Ant Colony Sim":"Simulation",
+  "Ecosystem Sim":"Simulation","Virus Sim":"Simulation","Plague Sim":"Simulation",
+  "Climate Sim":"Simulation","Ecosystem Collapse Sim":"Simulation","God Game":"Simulation",
+  "Physics Sandbox":"Simulation","Crowd Sim":"Simulation","Space Colony Sim":"Simulation",
+  "Racing":"Sports","Kart Racer":"Sports","Drift Game":"Sports","Skateboarding":"Sports",
+  "Snowboarding":"Sports","Parkour":"Sports","BMX Game":"Sports","Sports Management":"Sports",
+  "Football Manager-like":"Sports","Betting Sim":"Sports"
+};
+
+function mapGenre(g) {
+  return GENRE_MAP[g] || "Other";
+}
+
+const STAGES = [
+  { key:"genre1",  label:"GENRE A",    hint:"first genre to mix",                   pool: GENRES_POOL },
+  { key:"genre2",  label:"GENRE B",    hint:"second genre to blend with A",          pool: GENRES_POOL },
+  { key:"rule",    label:"CORE RULE",  hint:"the one mechanic that defines play",    pool: RULES       },
+  { key:"setting", label:"SETTING",    hint:"the world and place the game lives in", pool: SETTINGS    },
+  { key:"theme",   label:"THEME",      hint:"the emotional core of the game",        pool: THEMES      }
+];
+
+const rowsEl      = document.getElementById("rows");
+const nextBtn     = document.getElementById("nextBtn");
+const newBtn      = document.getElementById("newBtn");
+const copyBtn     = document.getElementById("copyBtn");
+const postBtn     = document.getElementById("postBtn");
+const promptMsg   = document.getElementById("promptMsg");
+const countEl     = document.getElementById("countEl");
+const forumStatus = document.getElementById("forumStatus");
+
+let stage = 0, picked = {}, rolling = false, ideaCount = 0;
+const recentKeys = [];
+
+STAGES.forEach((s, i) => {
+  const row = document.createElement("div");
+  row.className = "row";
+  row.id = "row" + i;
+  row.innerHTML = `<div class="row-label">${s.label}<span>${s.hint}</span></div>
+                   <div class="row-value" id="val${i}">—</div>`;
+  rowsEl.appendChild(row);
+});
+
+function rand(pool, exclude = []) {
+  const f = pool.filter(x => !exclude.includes(x));
+  return f[Math.floor(Math.random() * f.length)];
+}
+
+function buildKey(p) {
+  return [p.genre1,p.genre2,p.rule,p.setting,p.theme].join("|");
+}
+
+function rollFull() {
+  let a, tries = 0;
+  do {
+    const g1 = rand(GENRES_POOL);
+    a = { genre1:g1, genre2:rand(GENRES_POOL,[g1]), rule:rand(RULES), setting:rand(SETTINGS), theme:rand(THEMES) };
+    tries++;
+  } while (recentKeys.includes(buildKey(a)) && tries < 400);
+  return a;
+}
+
+let queued = rollFull();
+
+function reset() {
+  stage = 0; picked = {};
+  STAGES.forEach((_,i) => {
+    document.getElementById("row"+i).className = "row" + (i===0?" current":"");
+    const v = document.getElementById("val"+i);
+    v.className = "row-value"; v.textContent = "—";
+  });
+  nextBtn.textContent = "REVEAL";
+  nextBtn.disabled = false;
+  setPrompt("PRESS REVEAL TO BEGIN");
+  postBtn.className = "post-btn";
+  forumStatus.textContent = "";
+  forumStatus.className = "forum-status";
+}
+
+function setPrompt(msg) {
+  promptMsg.innerHTML = `<strong>&gt;</strong> ${msg}<span class="cursor"></span>`;
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+async function reveal() {
+  if (rolling || stage >= STAGES.length) return;
+  rolling = true; nextBtn.disabled = true; newBtn.disabled = true;
+
+  const i = stage, s = STAGES[i];
+  const finalVal = queued[s.key];
+  const valEl = document.getElementById("val"+i);
+  const rowEl = document.getElementById("row"+i);
+
+  valEl.className = "row-value rolling";
+  rowEl.classList.add("revealed");
+
+  const flashes = 10 + i * 3;
+  const exclude = i===1 ? [queued.genre1] : [];
+
+  for (let f = 0; f < flashes; f++) {
+    valEl.textContent = rand(s.pool, exclude);
+    await sleep(48 + f * 6);
+  }
+
+  valEl.textContent = finalVal;
+  valEl.className = "row-value done land";
+  setTimeout(() => valEl.classList.remove("land"), 300);
+  rowEl.className = "row revealed";
+  picked[s.key] = finalVal;
+  stage++;
+
+  if (stage < STAGES.length) {
+    document.getElementById("row"+stage).classList.add("current");
+    const hints = ["GENRE B IS NEXT","NOW THE CORE RULE","NOW CHOOSE A SETTING","FINAL PIECE — THE THEME"];
+    setPrompt(hints[stage-1] || "PRESS REVEAL");
+    nextBtn.textContent = "REVEAL NEXT";
+  } else {
+    recentKeys.unshift(buildKey(picked));
+    if (recentKeys.length > 500) recentKeys.pop();
+    queued = rollFull();
+    ideaCount++;
+    countEl.textContent = ideaCount + " IDEA" + (ideaCount===1?"":"S") + " GENERATED";
+    nextBtn.textContent = "DONE";
+    nextBtn.disabled = true;
+    setPrompt("IDEA COMPLETE — POST IT OR ROLL A NEW ONE");
+    postBtn.className = "post-btn visible";
+    forumStatus.textContent = "READY TO POST → game_idea_forums.html";
+    forumStatus.className = "forum-status";
+  }
+
+  rolling = false; newBtn.disabled = false;
+  if (stage < STAGES.length) nextBtn.disabled = false;
+}
+
+function postToForum() {
+  const title = `${picked.genre1} + ${picked.genre2}`;
+  const description =
+    `Genre Mix: ${picked.genre1} + ${picked.genre2}\n\n` +
+    `Core Rule: ${picked.rule}\n\n` +
+    `Setting: ${picked.setting}\n\n` +
+    `Theme: ${picked.theme}`;
+
+  const genre = mapGenre(picked.genre1);
+
+  const payload = {
+    id: Date.now().toString(),
+    title,
+    description,
+    genre,
+    upvotes: 0,
+    downvotes: 0,
+    score: 0,
+    timestamp: Date.now()
+  };
+
+  try {
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+    const url = `https://12leocheung.github.io/game-ideas-forum/#inject=${encoded}`;
+    window.open(url, "_blank");
+
+    postBtn.className = "post-btn posted";
+    postBtn.textContent = "OPENED ✓";
+    forumStatus.textContent = "FORUM OPENED — IDEA WILL AUTO-POST ON ARRIVAL";
+    forumStatus.className = "forum-status ok";
+  } catch(e) {
+    forumStatus.textContent = "ERROR: FAILED TO ENCODE IDEA";
+    forumStatus.className = "forum-status err";
+  }
+}
+
+nextBtn.addEventListener("click", reveal);
+postBtn.addEventListener("click", () => {
+  if (postBtn.classList.contains("posted")) return;
+  postToForum();
+});
+newBtn.addEventListener("click", () => { if(!rolling){ queued=rollFull(); reset(); } });
+copyBtn.addEventListener("click", async () => {
+  if (stage < STAGES.length) { setPrompt("FINISH THE REVEAL FIRST"); return; }
+  const t = `GAME IDEA\nGenre A: ${picked.genre1}\nGenre B: ${picked.genre2}\nCore Rule: ${picked.rule}\nSetting: ${picked.setting}\nTheme: ${picked.theme}`;
+  try { await navigator.clipboard.writeText(t); copyBtn.textContent="COPIED"; }
+  catch { copyBtn.textContent="FAILED"; }
+  setTimeout(()=>copyBtn.textContent="COPY", 900);
+});
+
+reset();
+</script>
+</body>
+</html>

@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ MAXIMUM EXPOSURE: EVERY POSSIBLE DATA POINT ⚡</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, monospace;
+        }
+        body {
+            background: #0b0e14;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 1600px;
+            width: 100%;
+        }
+        h1 {
+            color: #f0c45a;
+            text-align: center;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            border-bottom: 2px dashed #f0c45a55;
+            padding-bottom: 15px;
+            margin-top: 5px;
+            font-size: 2.4rem;
+            text-shadow: 0 0 6px #f0c45a;
+        }
+        .badge {
+            background: #2a1e3a;
+            color: #b7a1e0;
+            padding: 10px 20px;
+            border-radius: 40px;
+            text-align: center;
+            display: inline-block;
+            margin: 5px auto 25px;
+            border-left: 4px solid #b784db;
+            font-weight: 600;
+            box-shadow: 0 0 12px #b784db77;
+            backdrop-filter: blur(2px);
+            font-size: 1.2rem;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: #141b29dd;
+            backdrop-filter: blur(8px);
+            border: 1px solid #3e4b6b;
+            border-radius: 24px;
+            padding: 20px 18px;
+            box-shadow: 0 15px 30px -10px #00000080, 0 0 0 1px #5f72a4 inset;
+            transition: all 0.1s ease;
+            color: #e3e9ff;
+        }
+        .card:hover {
+            border-color: #b784db;
+            box-shadow: 0 0 20px #b784db, 0 0 0 1px #b784db inset;
+        }
+        .card h2 {
+            margin-top: 0;
+            margin-bottom: 16px;
+            font-weight: 300;
+            font-size: 1.5rem;
+            border-left: 6px solid #f0c45a;
+            padding-left: 12px;
+            color: #f0e6b0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .info-block {
+            background: #0f1422cc;
+            border-radius: 18px;
+            padding: 14px;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            border: 1px solid #2d3d62;
+            word-break: break-word;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .key {
+            color: #aabae3;
+            font-weight: 600;
+            display: inline-block;
+            min-width: 150px;
+            margin-right: 6px;
+        }
+        .value {
+            color: #f2e9c2;
+            font-family: 'Fira Code', monospace;
+            background: #1e2640;
+            padding: 2px 8px;
+            border-radius: 20px;
+            border: 1px solid #6078b0;
+            display: inline-block;
+            margin: 2px 0;
+            max-width: 100%;
+            overflow-x: auto;
+        }
+        .dodgy-tag {
+            background: #a64d79;
+            color: white;
+            font-size: 0.65rem;
+            padding: 4px 8px;
+            border-radius: 30px;
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: 1px;
+            margin-left: 8px;
+            display: inline-block;
+            vertical-align: middle;
+            border: 1px solid #ffa3d0;
+        }
+        .footer-note {
+            margin-top: 40px;
+            color: #b7b7c7;
+            background: #1a1f2f;
+            border-radius: 30px;
+            padding: 15px 25px;
+            text-align: center;
+            border: 1px solid #404c70;
+            font-size: 1rem;
+        }
+        .footer-note span {
+            color: #f08181;
+            font-weight: bold;
+        }
+        .mouse-track {
+            background: #0f1422;
+            border: 2px solid #b784db;
+            border-radius: 30px;
+            padding: 15px 25px;
+            margin: 20px 0;
+            text-align: center;
+            font-size: 1.3rem;
+            letter-spacing: 1px;
+        }
+        .keystroke-log {
+            background: #1a1f2f;
+            border: 1px solid #f0c45a;
+            border-radius: 16px;
+            padding: 10px;
+            margin-top: 10px;
+            font-family: monospace;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🔍 TOTAL RECON: EVERYTHING + KEYSTROKES + MORE</h1>
+    <div style="text-align: center;">
+        <span class="badge">⚠️ ULTIMATE EXPERIMENTAL — 150+ DATA POINTS — NOTHING SENT ⚠️</span>
+    </div>
+
+    <!-- Mouse + Keyboard tracking -->
+    <div class="mouse-track">
+        <div>🖱️ mouse: <span id="mouseX">—</span> , <span id="mouseY">—</span> | 
+        ⌨️ last key: <span id="lastKey">—</span> (scancode: <span id="keyCode">—</span>) |
+        🖱️ clicks: <span id="clickCount">0</span></div>
+        <div class="keystroke-log" id="keystrokeLog">[keystroke log will appear here]</div>
+    </div>
+
+    <div class="grid">
+        <!-- Card 1: HTTP & Network Deep -->
+        <div class="card">
+            <h2>🌐 HTTP DEEP <span class="dodgy-tag">headers+</span></h2>
+            <div class="info-block">
+                <div><span class="key">User-Agent:</span> <span class="value" id="ua"></span></div>
+                <div><span class="key">Accept-Language:</span> <span class="value" id="lang"></span></div>
+                <div><span class="key">Referer:</span> <span class="value" id="referer"></span></div>
+                <div><span class="key">Sec-CH-UA:</span> <span class="value" id="secChUa"></span></div>
+                <div><span class="key">Sec-CH-UA-Mobile:</span> <span class="value" id="secChUaMobile"></span></div>
+                <div><span class="key">Sec-CH-UA-Platform:</span> <span class="value" id="secChUaPlatform"></span></div>
+                <div><span class="key">Sec-CH-UA-Arch:</span> <span class="value" id="secChUaArch"></span></div>
+                <div><span class="key">Sec-CH-UA-Bitness:</span> <span class="value" id="secChUaBitness"></span></div>
+                <div><span class="key">Sec-CH-UA-Model:</span> <span class="value" id="secChUaModel"></span></div>
+                <div><span class="key">Sec-CH-UA-Platform-Version:</span> <span class="value" id="secChUaPlatformVersion"></span></div>
+                <div><span class="key">Sec-CH-UA-Full-Version:</span> <span class="value" id="secChUaFullVersion"></span></div>
+                <div><span class="key">Downlink (est):</span> <span class="value" id="downlink"></span></div>
+                <div><span class="key">RTT:</span> <span class="value" id="rtt"></span></div>
+                <div><span class="key">Data Saver:</span> <span class="value" id="dataSaver"></span></div>
+                <div><span class="key">Connection Type:</span> <span class="value" id="connType"></span></div>
+                <div><span class="key">Save Data:</span> <span class="value" id="saveData"></span></div>
+            </div>
+        </div>
+
+        <!-- Card 2: System/Hardware -->
+        <div class="card">
+            <h2>💻 SYSTEM DEEP <span class="dodgy-tag">hardware</span></h2>
+            <div class="info-block">
+                <div><span class="key">Platform:</span> <span class="value" id="platform"></span></div>
+                <div><span class="key">OS CPU:</span> <span class="value" id="oscpu"></span></div>
+                <div><span class="key">Vendor:</span> <span class="value" id="vendor"></span></div>
+                <div><span class="key">Product:</span> <span class="value" id="product"></span></div>
+                <div><span class="key">Device Memory:</span> <span class="value" id="deviceMem"></span></div>
+                <div><span class="key">Hardware Concurrency:</span> <span class="value" id="hwConcurrency"></span></div>
+                <div><span class="key">CPU Cores logical:</span> <span class="value" id="cpuCores"></span></div>
+                <div><span class="key">Max TouchPoints:</span> <span class="value" id="touchPoints"></span></div>
+                <div><span class="key">Pointer Types:</span> <span class="value" id="pointerTypes"></span></div>
+                <div><span class="key">GPU (WebGL):</span> <span class="value" id="webglRenderer"></span></div>
+                <div><span class="key">GPU Vendor:</span> <span class="value" id="webglVendor"></span></div>
+                <div><span class="key">GPU (Canvas):</span> <span class="value" id="canvasGpu"></span></div>
+                <div><span class="key">Math acos precision:</span> <span class="value" id="mathPrecision"></span></div>
+            </div>
+        </div>
+
+        <!-- Card 3: Display & Media -->
+        <div class="card">
+            <h2>🖥️ DISPLAY/MEDIA</h2>
+            <div class="info-block">
+                <div><span class="key">Screen Res:</span> <span class="value" id="screenRes"></span></div>
+                <div><span class="key">Avail Size:</span> <span class="value" id="availSize"></span></div>
+                <div><span class="key">Color Depth:</span> <span class="value" id="colorDepth"></span></div>
+                <div><span class="key">Pixel Ratio:</span> <span class="value" id="pixelRatio"></span></div>
+                <div><span class="key">Window Inner:</span> <span class="value" id="winSize"></span></div>
+                <div><span class="key">Window Outer:</span> <span class="value" id="outerSize"></span></div>
+                <div><span class="key">Screen Orientation:</span> <span class="value" id="orientation"></span></div>
+                <div><span class="key">Device Pixel Ratio:</span> <span class="value" id="devicePxRatio"></span></div>
+                <div><span class="key">Media Devices:</span> <span class="value" id="mediaDevices"></span></div>
+                <div><span class="key">Video Inputs:</span> <span class="value" id="videoInputs"></span></div>
+                <div><span class="key">Audio Inputs:</span> <span class="value" id="audioInputs"></span></div>
+                <div><span class="key">Audio Outputs:</span> <span class="value" id="audioOutputs"></span></div>
+            </div>
+        </div>
+
+        <!-- Card 4: Location/Sensors -->
+        <div class="card">
+            <h2>📍 LOCATION/SENSORS</h2>
+            <div class="info-block">
+                <div><span class="key">GPS:</span> <span class="value" id="gps"></span></div>
+                <div><span class="key">Timezone:</span> <span class="value" id="timezone"></span></div>
+                <div><span class="key">Timezone Offset:</span> <span class="value" id="tzOffset"></span></div>
+                <div><span class="key">Locale:</span> <span class="value" id="locale"></span></div>
+                <div><span class="key">Languages:</span> <span class="value" id="acceptLang"></span></div>
+                <div><span class="key">Battery:</span> <span class="value" id="batteryInfo"></span></div>
+                <div><span class="key">Ambient Light:</span> <span class="value" id="ambientLight"></span></div>
+                <div><span class="key">Device Motion:</span> <span class="value" id="deviceMotion"></span></div>
+                <div><span class="key">Device Orientation:</span> <span class="value" id="deviceOrientation"></span></div>
+            </div>
+        </div>
+
+        <!-- Card 5: Fingerprinting Heavy -->
+        <div class="card">
+            <h2>🔬 FINGERPRINT <span class="dodgy-tag">advanced</span></h2>
+            <div class="info-block">
+                <div><span class="key">Canvas FP:</span> <span class="value" id="canvasHash"></span></div>
+                <div><span class="key">WebGL FP:</span> <span class="value" id="webglHash"></span></div>
+                <div><span class="key">Audio FP:</span> <span class="value" id="audioFingerprint"></span></div>
+                <div><span class="key">Fonts installed:</span> <span class="value" id="fontList"></span></div>
+                <div><span class="key">Plugins:</span> <span class="value" id="pluginsList"></span></div>
+                <div><span class="key">MIME types:</span> <span class="value" id="mimeTypes"></span></div>
+                <div><span class="key">PDF viewer:</span> <span class="value" id="pdfViewer"></span></div>
+                <div><span class="key">AdBlock detected:</span> <span class="value" id="adblock"></span></div>
+                <div><span class="key">DoNotTrack:</span> <span class="value" id="dnt"></span></div>
+                <div><span class="key">Cookies enabled:</span> <span class="value" id="cookiesEnabled"></span></div>
+                <div><span class="key">Session Storage:</span> <span class="value" id="sessionStorageCheck"></span></div>
+                <div><span class="key">Local Storage:</span> <span class="value" id="localStorageCheck"></span></div>
+                <div><span class="key">IndexedDB:</span> <span class="value" id="idbCheck"></span></div>
+            </div>
+        </div>
+
+        <!-- Card 6: Network/IP/WebRTC -->
+        <div class="card">
+            <h2>🌍 NETWORK LEAKS</h2>
+            <div class="info-block">
+                <div><span class="key">Public IP (WebRTC):</span> <span class="value" id="publicIP">gathering...</span></div>
+                <div><span class="key">Local IP:</span> <span class="value" id="localIP">gathering...</span></div>
+                <div><span class="key">IPv6:</span> <span class="value" id="ipv6Addr">gathering...</span></div>
+                <div><span class="key">WebRTC available:</span> <span class="value" id="webRTCSupported"></span></div>
+                <div><span class="key">IP via fetch:</span> <span class="value" id="ipFetch">checking...</span></div>
+                <div><span class="key">Network type:</span> <span class="value" id="netType"></span></div>
+                <div><span class="key">Effective type:</span> <span class="value" id="effType"></span></div>
+                <div><span class="key">RTT (est):</span> <span class="value" id="rttEst"></span></div>
+                <div><span class="key">Downlink max:</span> <span class="value" id="downlinkMax"></span></div>
+            </div>
+        </div>
+
+        <!-- Card 7: Permissions & Clipboard -->
+        <div class="card">
+            <h2>🔐 PERMISSIONS/CLIP <span class="dodgy-tag">stealth</span></h2>
+            <div class="info-block">
+                <div><span class="key">Clipboard read:</span> <span class="value" id="clipboard"></span></div>
+                <div><span class="key">Clipboard write:</span> <span class="value" id="clipboardWrite"></span></div>
+                <div><span class="key">Permission camera:</span> <span class="value" id="camPermission"></span></div>
+                <div><span class="key">Permission mic:</span> <span class="value" id="micPermission"></span></div>
+                <div><span class="key">Permission geo:</span> <span class="value" id="geoPermission"></span></div>
+                <div><span class="key">Permission notif:</span> <span class="value" id="notifPermission"></span></div>
+                <div><span class="key">Permission sensors:</span> <span class="value" id="sensorPermission"></span></div>
+                <div><span class="key">Payment handlers:</span> <span class="value" id="payment"></span></div>
+                <div><span class="key">Credentials:</span> <span class="value" id="credentials"></span></div>
+            </div>
+        </div>
+
+        <!-- Card 8: History & Keystrokes -->
+        <div class="card">
+            <h2>📜 HISTORY/KEYS <span class="dodgy-tag">live</span></h2>
+            <div class="info-block">
+                <div><span class="key">History sniff:</span> <span class="value" id="historySniff"></span></div>
+                <div><span class="key">Visited sites:</span> <span class="value" id="visitedSites"></span></div>
+                <div><span class="key">Keystroke count:</span> <span class="value" id="keyCount">0</span></div>
+                <div><span class="key">Last key pressed:</span> <span class="value" id="lastKeyPress"></span></div>
+                <div><span class="key">Key hold time:</span> <span class="value" id="keyHold"></span></div>
+                <div><span class="key">Typing speed:</span> <span class="value" id="typingSpeed"></span></div>
+                <div><span class="key">Mouse clicks:</span> <span class="value" id="mouseClicks"></span></div>
+                <div><span class="key">Mouse distance:</span> <span class="value" id="mouseDistance">0px</span></div>
+            </div>
+        </div>
+
+        <!-- Card 9: Advanced JS Quirks -->
+        <div class="card">
+            <h2>🧩 JS QUIRKS</h2>
+            <div class="info-block">
+                <div><span class="key">User Activation:</span> <span class="value" id="userActivation"></span></div>
+                <div><span class="key">Cookie write:</span> <span class="value" id="cookieTest"></span></div>
+                <div><span class="key">Session write:</span> <span class="value" id="sessionTest"></span></div>
+                <div><span class="key">Local write:</span> <span class="value" id="localTest"></span></div>
+                <div><span class="key">Evercookie possible:</span> <span class="value" id="evercookieTest"></span></div>
+                <div><span class="key">Touch support:</span> <span class="value" id="touchSupport"></span></div>
+                <div><span class="key">Online status:</span> <span class="value" id="onlineStatus"></span></div>
+                <div><span class="key">Java enabled:</span> <span class="value" id="javaEnabled"></span></div>
+                <div><span class="key">PDF viewer:</span> <span class="value" id="pdfEnabled"></span></div>
+            </div>
+        </div>
+
+        <!-- Card 10: Crypto & Random -->
+        <div class="card">
+            <h2>🔑 CRYPTO/RANDOM</h2>
+            <div class="info-block">
+                <div><span class="key">Random bytes:</span> <span class="value" id="randomBytes"></span></div>
+                <div><span class="key">Crypto subtle:</span> <span class="value" id="cryptoSubtle"></span></div>
+                <div><span class="key">WebAuthn:</span> <span class="value" id="webAuthn"></span></div>
+                <div><span class="key">PublicKey cred:</span> <span class="value" id="pubKeyCred"></span></div>
+                <div><span class="key">Security policy:</span> <span class="value" id="secPolicy"></span></div>
+            </div>
+        </div>
+
+        <!-- Card 11: Storage Deep -->
+        <div class="card">
+            <h2>💾 STORAGE DEEP</h2>
+            <div class="info-block">
+                <div><span class="key">Cache API:</span> <span class="value" id="cacheAPI"></span></div>
+                <div><span class="key">Service Worker:</span> <span class="value" id="serviceWorker"></span></div>
+                <div><span class="key">Storage quota:</span> <span class="value" id="storageQuota"></span></div>
+                <div><span class="key">Storage usage:</span> <span class="value" id="storageUsage"></span></div>
+                <div><span class="key">Persistent storage:</span> <span class="value" id="persistentStorage"></span></div>
+            </div>
+        </div>
+
+        <!-- Card 12: Performance & Timing -->
+        <div class="card">
+            <h2>⏱️ PERFORMANCE</h2>
+            <div class="info-block">
+                <div><span class="key">Navigation type:</span> <span class="value" id="navType"></span></div>
+                <div><span class="key">Load time:</span> <span class="value" id="loadTime"></span></div>
+                <div><span class="key">DOM complete:</span> <span class="value" id="domComplete"></span></div>
+                <div><span class="key">Redirect count:</span> <span class="value" id="redirectCount"></span></div>
+                <div><span class="key">FP precision:</span> <span class="value" id="fpPrecision"></span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Raw dump area -->
+    <div style="margin: 30px 0; background: #0a0f1c; border-radius: 20px; padding: 20px;">
+        <h2 style="color:#b3bbf0; margin:0 0 10px 0;">📦 COMPLETE RAW BROWSER STATE</h2>
+        <pre id="rawDump" style="background: #020617; color: #bbd0ff; padding: 20px; border-radius: 16px; overflow-x: auto; max-height: 400px; border: 1px solid #2f4177; font-size: 0.75rem;">collecting 150+ data points...</pre>
+    </div>
+
+    <div class="footer-note">
+        <span>🔬 ULTIMATE EXPERIMENTAL PAGE</span> — 150+ data points including mouse tracking, keystroke dynamics, clipboard attempts, WebRTC leaks, canvas fingerprinting, font enumeration, battery API, device sensors, network information, and history sniffing. <span style="color:#f0c45a;">Everything is client-side only.</span>
+    </div>
+</div>
+
+<script>
+(function() {
+    // ========== HELPER FUNCTIONS ==========
+    function setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.innerText = (value !== undefined && value !== null) ? value : '❓';
+    }
+
+    // ========== MOUSE + KEYBOARD TRACKING ==========
+    let clickCount = 0;
+    let keyCount = 0;
+    let mouseDistance = 0;
+    let lastX = 0, lastY = 0;
+    let keystrokeLog = [];
+    let keyTimers = {};
+    let typingSpeedSamples = [];
+
+    document.addEventListener('mousemove', function(e) {
+        const x = e.clientX;
+        const y = e.clientY;
+        document.getElementById('mouseX').innerText = x;
+        document.getElementById('mouseY').innerText = y;
+        
+        if (lastX && lastY) {
+            const dist = Math.sqrt(Math.pow(x - lastX, 2) + Math.pow(y - lastY, 2));
+            mouseDistance += dist;
+            document.getElementById('mouseDistance').innerText = Math.round(mouseDistance) + 'px';
+        }
+        lastX = x;
+        lastY = y;
+    });
+
+    document.addEventListener('click', function() {
+        clickCount++;
+        document.getElementById('clickCount').innerText = clickCount;
+        document.getElementById('mouseClicks').innerText = clickCount;
+    });
+
+    document.addEventListener('keydown', function(e) {
+        keyCount++;
+        const key = e.key;
+        const code = e.code;
+        document.getElementById('lastKey').innerText = key;
+        document.getElementById('keyCode').innerText = code;
+        document.getElementById('keyCount').innerText = keyCount;
+        document.getElementById('lastKeyPress').innerText = `${key} (${code})`;
+        
+        // Key hold timing
+        if (!keyTimers[code]) {
+            keyTimers[code] = Date.now();
+        }
+        
+        // Update keystroke log
+        keystrokeLog.unshift(`${key} [${code}]`);
+        if (keystrokeLog.length > 10) keystrokeLog.pop();
+        document.getElementById('keystrokeLog').innerText = keystrokeLog.join(' · ');
+        
+        // Typing speed (keys per minute)
+        typingSpeedSamples.push(Date.now());
+        if (typingSpeedSamples.length > 10) typingSpeedSamples.shift();
+        if (typingSpeedSamples.length > 1) {
+            const timeSpan = typingSpeedSamples[typingSpeedSamples.length-1] - typingSpeedSamples[0];
+            const speed = Math.round((typingSpeedSamples.length-1) / (timeSpan / 60000));
+            document.getElementById('typingSpeed').innerText = speed + ' KPM';
+        }
+    });
+
+    document.addEventListener('keyup', function(e) {
+        const code = e.code;
+        if (keyTimers[code]) {
+            const holdTime = Date.now() - keyTimers[code];
+            document.getElementById('keyHold').innerText = holdTime + 'ms';
+            delete keyTimers[code];
+        }
+    });
+
+    // ========== CLIPBOARD ATTEMPT ==========
+    navigator.clipboard?.readText().then(text => {
+        setText('clipboard', text ? 'data present' : 'empty');
+    }).catch(() => setText('clipboard', 'denied/unavailable'));
+
+    setText('clipboardWrite', navigator.clipboard ? 'API present' : 'missing');
+
+    // ========== ADVANCED CLIENT HINTS ==========
+    if (navigator.userAgentData) {
+        setText('secChUa', navigator.userAgentData.brands?.map(b => `${b.brand} v${b.version}`).join(', ') || 'N/A');
+        setText('secChUaMobile', navigator.userAgentData.mobile ? '📱 mobile' : '💻 desktop');
+        setText('secChUaPlatform', navigator.userAgentData.platform || 'unknown');
+        
+        // Get high entropy values
+        navigator.userAgentData.getHighEntropyValues([
+            'architecture', 'bitness', 'model', 'platformVersion', 'fullVersionList'
+        ]).then(highEntropy => {
+            setText('secChUaArch', highEntropy.architecture || 'unknown');
+            setText('secChUaBitness', highEntropy.bitness || 'unknown');
+            setText('secChUaModel', highEntropy.model || 'unknown');
+            setText('secChUaPlatformVersion', highEntropy.platformVersion || 'unknown');
+            if (highEntropy.fullVersionList) {
+                setText('secChUaFullVersion', highEntropy.fullVersionList.map(v => `${v.brand} ${v.version}`).join(', '));
+            }
+        }).catch(() => {});
+    } else {
+        setText('secChUa', 'not supported');
+        setText('secChUaMobile', 'unsupported');
+        setText('secChUaPlatform', 'unsupported');
+        setText('secChUaArch', 'N/A');
+        setText('secChUaBitness', 'N/A');
+        setText('secChUaModel', 'N/A');
+    }
+
+    // ========== NETWORK INFORMATION ==========
+    if (navigator.connection) {
+        const conn = navigator.connection;
+        setText('downlink', conn.downlink + ' Mbps');
+        setText('rtt', conn.rtt + ' ms');
+        setText('dataSaver', conn.saveData ? 'on' : 'off');
+        setText('connType', conn.effectiveType || 'unknown');
+        setText('effType', conn.effectiveType);
+        setText('rttEst', conn.rtt + 'ms');
+        setText('downlinkMax', conn.downlinkMax + ' Mbps' || 'unknown');
+    }
+
+    // ========== SYSTEM INFO ==========
+    setText('platform', navigator.platform);
+    setText('oscpu', navigator.oscpu || 'unknown');
+    setText('vendor', navigator.vendor);
+    setText('product', navigator.product);
+    setText('deviceMem', navigator.deviceMemory ?? 'unknown');
+    setText('hwConcurrency', navigator.hardwareConcurrency);
+    setText('cpuCores', navigator.hardwareConcurrency);
+    setText('touchPoints', navigator.maxTouchPoints);
+    
+    // Pointer types
+    const pointerTypes = [];
+    if (window.matchMedia) {
+        if (matchMedia('(pointer:fine)').matches) pointerTypes.push('fine');
+        if (matchMedia('(pointer:coarse)').matches) pointerTypes.push('coarse');
+        if (matchMedia('(hover:hover)').matches) pointerTypes.push('hover');
+    }
+    setText('pointerTypes', pointerTypes.join(', ') || 'unknown');
+
+    // ========== DISPLAY ==========
+    setText('screenRes', screen.width + 'x' + screen.height);
+    setText('availSize', screen.availWidth + 'x' + screen.availHeight);
+    setText('colorDepth', screen.colorDepth + '-bit');
+    setText('pixelRatio', window.devicePixelRatio);
+    setText('winSize', window.innerWidth + 'x' + window.innerHeight);
+    setText('outerSize', window.outerWidth + 'x' + window.outerHeight);
+    setText('devicePxRatio', window.devicePixelRatio);
+
+    if (screen.orientation) {
+        setText('orientation', screen.orientation.type + ' / angle ' + screen.orientation.angle);
+    }
+
+    // ========== MEDIA DEVICES ==========
+    if (navigator.mediaDevices?.enumerateDevices) {
+        navigator.mediaDevices.enumerateDevices().then(devices => {
+            setText('mediaDevices', devices.length + ' total');
+            const video = devices.filter(d => d.kind === 'videoinput').length;
+            const audio = devices.filter(d => d.kind === 'audioinput').length;
+            const output = devices.filter(d => d.kind === 'audiooutput').length;
+            setText('videoInputs', video);
+            setText('audioInputs', audio);
+            setText('audioOutputs', output);
+        }).catch(() => {});
+    }
+
+    // ========== LOCATION ==========
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+            const { latitude, longitude, accuracy } = pos.coords;
+            setText('gps', `${latitude.toFixed(4)}, ${longitude.toFixed(4)} (±${accuracy}m)`);
+        }, () => setText('gps', 'denied'));
+    }
+
+    setText('timezone', Intl.DateTimeFormat().resolvedOptions().timeZone);
+    setText('tzOffset', new Date().getTimezoneOffset() + ' min');
+    setText('locale', Intl.DateTimeFormat().resolvedOptions().locale);
+    setText('acceptLang', navigator.languages?.join(', ') || 'n/a');
+
+    // ========== BATTERY ==========
+    if ('getBattery' in navigator) {
+        navigator.getBattery().then(battery => {
+            const level = Math.round(battery.level * 100) + '%';
+            const charging = battery.charging ? 'charging' : 'not charging';
+            const time = battery.charging ? 
+                (battery.chargingTime === Infinity ? '∞' : battery.chargingTime + 's') :
+                (battery.dischargingTime === Infinity ? '∞' : battery.dischargingTime + 's');
+            setText('batteryInfo', `${level}, ${charging}, time: ${time}`);
+        }).catch(() => setText('batteryInfo', 'unavailable'));
+    }
+
+    // ========== SENSORS ==========
+    if ('AmbientLightSensor' in window) {
+        try {
+            const sensor = new AmbientLightSensor();
+            sensor.addEventListener('reading', () => setText('ambientLight', sensor.illuminance + ' lux'));
+            sensor.start();
+        } catch {}
+    }
+
+    if ('DeviceMotionEvent' in window) {
+        window.addEventListener('devicemotion', e => {
+            const acc = e.acceleration;
+            if (acc) setText('deviceMotion', `x:${acc.x?.toFixed(1)}, y:${acc.y?.toFixed(1)}, z:${acc.z?.toFixed(1)}`);
+        }, { once: true });
+    }
+
+    // ========== FINGERPRINTING ==========
+    // Canvas fingerprint
+    (function() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 200; canvas.height = 50;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+            ctx.fillStyle = '#f0c45a';
+            ctx.fillRect(10, 10, 80, 30);
+            ctx.fillStyle = '#121212';
+            ctx.font = '16px "Arial"';
+            ctx.fillText('fp🍪', 30, 32);
+            ctx.font = '12px "Courier New"';
+            ctx.fillText(navigator.userAgent.slice(0, 10), 20, 45);
+            const dataURL = canvas.toDataURL();
+            let hash = 0;
+            for (let i = 0; i < dataURL.length; i++) {
+                hash = ((hash << 5) - hash) + dataURL.charCodeAt(i);
+                hash |= 0;
+            }
+            setText('canvasHash', hash);
+            
+            // GPU from canvas
+            const gl = canvas.getContext('webgl');
+            if (gl) {
+                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                if (debugInfo) {
+                    setText('webglRenderer', gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL));
+                    setText('webglVendor', gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL));
+                }
+            }
+        }
+    })();
+
+    // WebGL fingerprint
+    (function() {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (gl) {
+            const params = [];
+            params.push(gl.getParameter(gl.MAX_TEXTURE_SIZE));
+            params.push(gl.getParameter(gl.MAX_VERTEX_ATTRIBS));
+            params.push(gl.getParameter(gl.ALIASED_LINE_WIDTH_RANGE));
+            setText('webglHash', params.join('|'));
+            
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            if (debugInfo) {
+                setText('canvasGpu', gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL));
+            }
+        }
+    })();
+
+    // Audio fingerprint
+    (function() {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) {
+                const ctx = new AudioContext();
+                setText('audioFingerprint', 'AudioContext created');
+                ctx.close();
+            }
+        } catch {}
+    })();
+
+    // Font detection
+    (function() {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+            const fonts = ['Arial', 'Helvetica', 'Times New Roman', 'Courier New', 'Verdana', 'Georgia', 'Comic Sans MS', 'Impact', 'Tahoma', 'Trebuchet MS', 'Roboto', 'Open Sans', 'Segoe UI', 'SF Pro Text'];
+            const testStr = 'abcdefghijklmnopqrstuvwxyz';
+            const baseline = ctx.measureText(testStr).width;
+            const detected = [];
+            
+            fonts.forEach(font => {
+                ctx.font = `16px "${font}", monospace`;
+                const width = ctx.measureText(testStr).width;
+                if (Math.abs(width - baseline) > 2) detected.push(font);
+            });
+            
+            setText('fontList', detected.slice(0, 8).join(', ') + (detected.length > 8 ? '...' : ''));
+        }
+    })();
+
+    // Plugins
+    const plugins = [];
+    for (let i = 0; i < navigator.plugins.length; i++) {
+        plugins.push(navigator.plugins[i].name);
+    }
+    setText('pluginsList', plugins.slice(0, 5).join(', ') + (plugins.length > 5 ? '...' : ''));
+
+    // MIME types
+    const mimes = [];
+    try {
+        for (let i = 0; i < navigator.mimeTypes.length; i++) {
+            mimes.push(navigator.mimeTypes[i].type);
+        }
+    } catch {}
+    setText('mimeTypes', mimes.slice(0, 4).join(', ') + (mimes.length > 4 ? '...' : ''));
+
+    // AdBlock detection
+    const adBlock = document.createElement('div');
+    adBlock.innerHTML = '&nbsp;';
+    adBlock.className = 'adsbox';
+    adBlock.style.display = 'none';
+    document.body.appendChild(adBlock);
+    setTimeout(() => {
+        setText('adblock', adBlock.offsetHeight === 0 ? 'possibly blocked' : 'not detected');
+        document.body.removeChild(adBlock);
+    }, 100);
+
+    // ========== WEBRTC IP LEAK ==========
+    setText('webRTCSupported', typeof RTCPeerConnection != 'undefined' ? 'yes' : 'no');
+    if (typeof RTCPeerConnection != 'undefined') {
+        const pc = new RTCPeerConnection({ iceServers: [] });
+        pc.createDataChannel('');
+        pc.createOffer().then(offer => pc.setLocalDescription(offer)).catch(()=>{});
+        let ips = new Set();
+        pc.onicecandidate = (e) => {
+            if (!e.candidate) return;
+            const cand = e.candidate.candidate;
+            const parts = cand.split(' ');
+            const ipPart = parts[4];
+            if (ipPart && !ips.has(ipPart)) {
+                ips.add(ipPart);
+                if (ipPart.includes(':')) {
+                    setText('ipv6Addr', ipPart);
+                } else if (ipPart.startsWith('192.168.') || ipPart.startsWith('10.') || ipPart.startsWith('172.16.')) {
+                    setText('localIP', ipPart);
+                } else {
+                    setText('publicIP', ipPart);
+                }
+            }
+        };
+        setTimeout(() => {
+            if (ips.size === 0) setText('publicIP', 'no candidates');
+        }, 2000);
+    }
+
+    // IP via fetch
+    fetch('https://api.ipify.org?format=json')
+        .then(r => r.json())
+        .then(d => setText('ipFetch', d.ip))
+        .catch(() => setText('ipFetch', 'failed'));
+
+    // ========== PERMISSIONS ==========
+    if (navigator.permissions) {
+        navigator.permissions.query({ name: 'geolocation' }).then(s => setText('geoPermission', s.state));
+        navigator.permissions.query({ name: 'camera' }).then(s => setText('camPermission', s.state));
+        navigator.permissions.query({ name: 'microphone' }).then(s => setText('micPermission', s.state));
+        navigator.permissions.query({ name: 'notifications' }).then(s => setText('notifPermission', s.state));
+        navigator.permissions.query({ name: 'accelerometer' }).then(s => setText('sensorPermission', s.state)).catch(()=>{});
+    }
+
+    // ========== HISTORY SNIFFING ==========
+    (function() {
+        const sites = ['google', 'facebook', 'youtube', 'amazon', 'reddit', 'twitter', 'github', 'stackoverflow', 'wikipedia', 'netflix'];
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.visibility = 'hidden';
+        container.style.left = '-1000px';
+        document.body.appendChild(container);
+        
+        const links = [];
+        sites.forEach((site, i) => {
+            const a = document.createElement('a');
+            a.href = 'https://www.' + site + '.com';
+            a.id = 'hist' + i;
+            container.appendChild(a);
+            links.push(a);
+        });
+
+        setTimeout(() => {
+            const visited = [];
+            links.forEach((link, i) => {
+                const color = window.getComputedStyle(link).color;
+                if (color !== 'rgb(0, 0, 0)' && color !== 'rgb(0, 0, 238)') {
+                    visited.push(sites[i]);
+                }
+            });
+            
+            setText('historySniff', visited.length ? 'detected ' + visited.length : 'none detected');
+            setText('visitedSites', visited.slice(0, 5).join(', ') + (visited.length > 5 ? '...' : ''));
+            document.body.removeChild(container);
+        }, 200);
+    })();
+
+    // ========== STORAGE DEEP ==========
+    setText('cookiesEnabled', navigator.cookieEnabled);
+    setText('sessionStorageCheck', typeof sessionStorage != 'undefined' ? 'yes' : 'no');
+    setText('localStorageCheck', typeof localStorage != 'undefined' ? 'yes' : 'no');
+    setText('idbCheck', typeof indexedDB != 'undefined' ? 'yes' : 'no');
+    setText('cacheAPI', typeof caches != 'undefined' ? 'yes' : 'no');
+    setText('serviceWorker', navigator.serviceWorker ? 'present' : 'no');
+    
+    if (navigator.storage && navigator.storage.estimate) {
+        navigator.storage.estimate().then(est => {
+            const used = (est.usage / 1024 / 1024).toFixed(2);
+            const quota = (est.quota / 1024 / 1024).toFixed(2);
+            setText('storageUsage', used + ' MB');
+            setText('storageQuota', quota + ' MB');
+        });
+    }
+
+    // ========== PERFORMANCE ==========
+    if (performance && performance.timing) {
+        const timing = performance.timing;
+        setText('navType', performance.navigation.type);
+        setText('loadTime', (timing.loadEventEnd - timing.navigationStart) + 'ms');
+        setText('domComplete', (timing.domComplete - timing.domLoading) + 'ms');
+        setText('redirectCount', performance.navigation.redirectCount);
+    }
+
+    // ========== CRYPTO ==========
+    const rand = new Uint32Array(2);
+    crypto.getRandomValues(rand);
+    setText('randomBytes', rand.join(','));
+    setText('cryptoSubtle', crypto.subtle ? 'yes' : 'no');
+    setText('webAuthn', typeof PublicKeyCredential != 'undefined' ? 'yes' : 'no');
+
+    // ========== MISC ==========
+    setText('dnt', navigator.doNotTrack || window.doNotTrack || 'unspecified');
+    setText('touchSupport', 'ontouchstart' in window ? 'yes' : 'no');
+    setText('onlineStatus', navigator.onLine ? 'online' : 'offline');
+    setText('javaEnabled', navigator.javaEnabled ? navigator.javaEnabled() : 'unknown');
+    setText('pdfEnabled', navigator.pdfViewerEnabled ?? 'unknown');
+    setText('userActivation', navigator.userActivation ? 'yes' : 'no');
+    setText('mathPrecision', (Math.acos(0.5) * 100).toFixed(20));
+    
+    // Cookie test
+    document.cookie = "test=1; path=/; max-age=10";
+    setText('cookieTest', document.cookie.includes('test') ? 'writable' : 'failed');
+    try { sessionStorage.setItem('test', '1'); sessionStorage.removeItem('test'); setText('sessionTest', 'works'); } catch { setText('sessionTest', 'denied'); }
+    try { localStorage.setItem('test', '1'); localStorage.removeItem('test'); setText('localTest', 'works'); } catch { setText('localTest', 'denied'); }
+    setText('evercookieTest', 'multiple storages available');
+
+    // ========== RAW DUMP ==========
+    const raw = {};
+    for (let key in navigator) {
+        try {
+            if (typeof navigator[key] != 'function' && typeof navigator[key] != 'object') {
+                raw[key] = navigator[key];
+            }
+        } catch {}
+    }
+    document.getElementById('rawDump').innerText = JSON.stringify(raw, null, 2) + '\n\n... plus all other data shown above ...';
+})();
+</script>
+</body>
+</html>

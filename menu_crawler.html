@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minecraft Mega-Menu: CHAOS EDITION + LEVELS</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+    body, html {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      overflow: hidden; background: #0a0a0a;
+      font-family: 'VT323', monospace;
+    }
+    
+    canvas { 
+        display: block; 
+        background: radial-gradient(circle, #1a1a1a 0%, #000 100%);
+    }
+
+    #timer-overlay {
+      position: absolute; top: 15px; left: 15px;
+      color: #FF5555; font-size: 28px;
+      text-shadow: 2px 2px #000;
+      pointer-events: none;
+      z-index: 10;
+    }
+    #level-indicator {
+      position: absolute; top: 15px; right: 15px;
+      color: #55FF55; font-size: 28px;
+      text-shadow: 2px 2px #000;
+      pointer-events: none;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+
+<div id="timer-overlay">⏱️ TIME: <span id="timer">0.00</span></div>
+<div id="level-indicator">📌 <span id="level-name">MEGA SETTINGS</span></div>
+<canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const timerEl = document.getElementById('timer');
+const levelNameEl = document.getElementById('level-name');
+
+let gameStarted = false;
+let startTime = null;
+let GRAVITY = 0.4; 
+const FRICTION = 0.85;
+const JUMP_POWER = -11; 
+const DASH_POWER = 28;
+
+let colliders = [];
+let particles = [];
+let currentRoom = "MEGA SETTINGS";
+
+// List of all levels (including the original menu + new platforming levels)
+const LEVELS = [
+    "MEGA SETTINGS",   // index 0
+    "THE PITS",        // index 1
+    "CROSSROADS",      // index 2
+    "OBSIDIAN SPIRAL", // index 3
+    "ENDER BLUFF",     // index 4
+    "GLITCH SANCTUM"   // index 5
+];
+
+let currentLevelIndex = 0; // start with MEGA SETTINGS
+
+const player = {
+    x: 100, y: 0, w: 20, h: 20,
+    vx: 0, vy: 0, facing: 1,
+    jumpsUsed: 0,
+    canAirDash: true,
+    hue: 120
+};
+
+const keys = {};
+
+class Particle {
+    constructor(x, y, color) {
+        this.x = x; this.y = y;
+        this.vx = (Math.random() - 0.5) * 15;
+        this.vy = (Math.random() - 0.5) * 15;
+        this.life = 1.0;
+        this.color = color;
+    }
+    update() {
+        this.x += this.vx; this.y += this.vy;
+        this.life -= 0.04;
+    }
+}
+
+class MenuButton {
+    constructor(x, y, w, h, label, color, action = null, isHeader = false) {
+        this.x = x; this.y = y; this.w = w; this.h = h;
+        this.label = label;
+        this.color = color;
+        this.action = action;
+        this.isHeader = isHeader;
+        this.isHovered = false;
+    }
+    draw() {
+        if (this.isHeader) {
+            ctx.fillStyle = "#fff";
+            ctx.font = "70px VT323";
+            ctx.textAlign = "center";
+            ctx.fillText(this.label, this.x + this.w/2, this.y + 60);
+            return;
+        }
+
+        ctx.fillStyle = "#000"; 
+        ctx.fillRect(this.x, this.y, this.w, this.h);
+        ctx.fillStyle = this.isHovered ? "#fff" : "#222"; 
+        ctx.fillRect(this.x + 2, this.y + 2, this.w - 4, this.h - 4);
+        ctx.fillStyle = this.isHovered ? this.color : "#333"; 
+        ctx.fillRect(this.x + 4, this.y + 4, this.w - 8, this.h - 8);
+
+        ctx.fillStyle = this.isHovered ? "#fff" : "#aaa";
+        ctx.font = "20px VT323";
+        ctx.textAlign = "center";
+        ctx.fillText(this.label, this.x + this.w/2, this.y + this.h/2 + 7);
+    }
+}
+
+function triggerGlitch() {
+    const effects = [
+        () => { player.w = 40; player.h = 10; setTimeout(() => { player.w = 20; player.h = 20; }, 3000); }, // Flatten
+        () => { GRAVITY = 0.2; setTimeout(() => { GRAVITY = 0.4; }, 2000); }, // Low Gravity
+        () => { player.hue = Math.random() * 360; }, // Color Shift
+        () => { for(let i=0; i<30; i++) particles.push(new Particle(player.x, player.y, "#FF5555")); } // Explosion
+    ];
+    effects[Math.floor(Math.random() * effects.length)]();
+}
+
+// Function to switch levels (by name)
+function goToLevel(levelName) {
+    // update index for indicator
+    let idx = LEVELS.indexOf(levelName);
+    if (idx === -1) idx = 0; // fallback
+    currentLevelIndex = idx;
+    buildMenu(levelName);
+}
+
+function buildMenu(menuName) {
+    currentRoom = menuName;
+    levelNameEl.innerText = menuName;
+    colliders = [];
+    const cx = canvas.width / 2;
+    const groundY = canvas.height - 40;
+
+    // base floor (shared by most levels)
+    colliders.push({x: 0, y: groundY, w: canvas.width, h: 40, type: 'floor'});
+
+    // HEADER (title) - always show
+    colliders.push(new MenuButton(cx - 300, 20, 600, 80, menuName, "#FF55FF", null, true));
+
+    // Helper to create button with optional glitch action
+    const btn = (x, y, w, h, txt, color, target, glitch = false) => {
+        const action = glitch 
+            ? () => { triggerGlitch(); goToLevel("GLITCH!"); } 
+            : () => goToLevel(target);
+        colliders.push(new MenuButton(x, y, w, h, txt, color, action));
+    };
+
+    // ----- LEVEL DESIGN -----
+    if (menuName === "MEGA SETTINGS" || menuName === "GLITCH!") {
+        // Main hub: 16 buttons (4x4) that lead to platforming levels or back to hub
+        const cols = [cx - 600, cx - 250, cx + 100, cx + 450];
+        const rows = [groundY-550, groundY-400, groundY-250, groundY-100];
+
+        const labels = [
+            ["THE PITS", "CROSSROADS", "OBSIDIAN SPIRAL", "ENDER BLUFF"],
+            ["GLITCH SANCTUM", "RESET TIME", "???", "HELP"],
+            ["Video", "Audio", "Controls", "Difficulty"],
+            ["Skins", "Chat", "Store", "Accessibility"]
+        ];
+
+        const colors = ["#55FFFF", "#FFFF55", "#FF55FF", "#FFAA00"];
+
+        for(let r=0; r<4; r++) {
+            for(let c=0; c<4; c++) {
+                let label = labels[r][c];
+                let targetLevel = label;
+                // Map special labels to actual level names or actions
+                if (label === "RESET TIME") {
+                    btn(cols[c], rows[r], 180, 50, label, colors[r], "MEGA SETTINGS", false);
+                } else if (label === "???") {
+                    btn(cols[c], rows[r], 180, 50, label, colors[r], "GLITCH SANCTUM", true);
+                } else if (label === "HELP") {
+                    btn(cols[c], rows[r], 180, 50, label, colors[r], "MEGA SETTINGS", false);
+                } else if (["Video","Audio","Controls","Difficulty","Skins","Chat","Store","Accessibility"].includes(label)) {
+                    // These just go to a generic sub menu (which we treat as MEGA SETTINGS for simplicity, but we add glitch flavor)
+                    btn(cols[c], rows[r], 180, 50, label, colors[r], "MEGA SETTINGS", (r+c)%3===0);
+                } else {
+                    // Platforming levels: check if it's in LEVELS list, else fallback
+                    if (LEVELS.includes(label)) {
+                        btn(cols[c], rows[r], 180, 50, label, colors[r], label, false);
+                    } else {
+                        btn(cols[c], rows[r], 180, 50, label, colors[r], "MEGA SETTINGS", true);
+                    }
+                }
+            }
+        }
+
+        // Also add a "QUIT" button near bottom as extra
+        btn(cx - 100, groundY - 50, 200, 40, "QUIT", "#FF5555", "MEGA SETTINGS", true);
+    }
+    else {
+        // ----- PLATFORMING LEVELS (THE PITS, CROSSROADS, OBSIDIAN SPIRAL, ENDER BLUFF, GLITCH SANCTUM) -----
+        // Each level has unique platforms and obstacles. Also includes a return button to hub.
+        
+        const groundLevel = groundY - player.h;
+        player.y = groundLevel; // default spawn on floor, but we may adjust per level
+        
+        // Add specific platforms based on level
+        if (menuName === "THE PITS") {
+            // floating islands over a pit
+            colliders.push({x: 200, y: groundY - 150, w: 150, h: 20});  // platform
+            colliders.push({x: 500, y: groundY - 250, w: 150, h: 20});  
+            colliders.push({x: 800, y: groundY - 200, w: 150, h: 20});  
+            colliders.push({x: 1100, y: groundY - 100, w: 150, h: 20}); 
+            // spike pits? we'll just make gaps by removing floor sections? But floor is full width, so add deadly areas?
+            // Let's add some buttons that act as "danger" but we'll treat as normal colliders for now.
+            // Add a glitchy button that teleports to hub.
+            btn(canvas.width - 250, groundY - 80, 200, 40, "BACK TO HUB", "#55FF55", "MEGA SETTINGS");
+        }
+        else if (menuName === "CROSSROADS") {
+            // two big platforms crossing
+            colliders.push({x: 100, y: groundY - 120, w: 300, h: 20});
+            colliders.push({x: 650, y: groundY - 220, w: 300, h: 20});
+            colliders.push({x: 400, y: groundY - 320, w: 200, h: 20});
+            btn(canvas.width - 250, groundY - 80, 200, 40, "RETURN", "#55FF55", "MEGA SETTINGS");
+        }
+        else if (menuName === "OBSIDIAN SPIRAL") {
+            // spiral stairs effect
+            for (let i = 0; i < 6; i++) {
+                colliders.push({x: 200 + i * 150, y: groundY - 100 - i * 70, w: 100, h: 20});
+            }
+            btn(canvas.width - 250, groundY - 80, 200, 40, "EXIT", "#FFAA00", "MEGA SETTINGS");
+        }
+        else if (menuName === "ENDER BLUFF") {
+            // high platforms, narrow
+            colliders.push({x: 400, y: groundY - 300, w: 120, h: 20});
+            colliders.push({x: 700, y: groundY - 400, w: 120, h: 20});
+            colliders.push({x: 1000, y: groundY - 350, w: 120, h: 20});
+            colliders.push({x: 1300, y: groundY - 250, w: 120, h: 20});
+            btn(100, groundY - 80, 200, 40, "BACK", "#55FF55", "MEGA SETTINGS");
+        }
+        else if (menuName === "GLITCH SANCTUM") {
+            // unstable platforms, some are buttons that trigger glitch
+            colliders.push({x: 300, y: groundY - 180, w: 150, h: 20});
+            colliders.push({x: 700, y: groundY - 280, w: 150, h: 20});
+            colliders.push({x: 1100, y: groundY - 200, w: 150, h: 20});
+            // Glitch buttons floating
+            btn(500, groundY - 380, 150, 40, "GLITCH", "#FF55FF", "MEGA SETTINGS", true);
+            btn(900, groundY - 380, 150, 40, "CHAOS", "#FF55FF", "MEGA SETTINGS", true);
+            btn(100, groundY - 80, 150, 40, "ESCAPE", "#55FF55", "MEGA SETTINGS");
+        }
+        else {
+            // fallback generic level (should not happen)
+            btn(cx - 150, groundY - 300, 300, 60, "RETURN TO ROOT", "#55FF55", "MEGA SETTINGS");
+        }
+
+        // Ensure there's always at least one return button in non-hub levels
+        // We already added some, but also add a small back button at bottom right?
+        // Actually we already have, but if none added, add generic.
+        // But we added per level. Good.
+    }
+
+    // Reset player state when entering new level
+    player.x = 100;
+    player.y = Math.min(player.y, canvas.height - player.h - 10); // avoid spawning inside floor
+    player.vx = 0; player.vy = 0;
+    player.jumpsUsed = 0;
+    player.canAirDash = true;
+}
+
+function update() {
+    if (keys['ArrowLeft'] || keys['a']) { player.vx -= 1.5; player.facing = -1; }
+    else if (keys['ArrowRight'] || keys['d']) { player.vx += 1.5; player.facing = 1; }
+    else { player.vx *= FRICTION; }
+
+    player.vy += GRAVITY;
+    player.x += player.vx;
+    checkCollision('x');
+    player.y += player.vy;
+    checkCollision('y');
+
+    // Keep player within horizontal bounds (vertical bounds handled by floor)
+    if (player.x < 0) player.x = 0;
+    if (player.x + player.w > canvas.width) player.x = canvas.width - player.w;
+    
+    particles.forEach((p, i) => {
+        p.update();
+        if(p.life <= 0) particles.splice(i, 1);
+    });
+
+    if (startTime) timerEl.innerText = ((Date.now() - startTime) / 1000).toFixed(2);
+}
+
+function checkCollision(axis) {
+    colliders.forEach(c => {
+        if (c.isHeader) return; // headers don't collide
+        if (player.x < c.x + c.w && player.x + player.w > c.x &&
+            player.y < c.y + c.h && player.y + player.h > c.y) {
+            
+            if (axis === 'x') {
+                if (player.vx > 0) player.x = c.x - player.w;
+                else if (player.vx < 0) player.x = c.x + c.w;
+                player.vx = 0;
+            } else {
+                if (player.vy > 0) {
+                    player.y = c.y - player.h;
+                    player.vy = 0;
+                    player.jumpsUsed = 0;
+                    player.canAirDash = true;
+                    
+                    if (c instanceof MenuButton) {
+                        c.isHovered = true;
+                        if(!gameStarted) { gameStarted = true; startTime = Date.now(); }
+                        if (c.action) {
+                            const act = c.action;
+                            c.action = null; // Prevent double-triggering
+                            setTimeout(() => act(), 100);
+                        }
+                    }
+                } else if (player.vy < 0) {
+                    player.y = c.y + c.h;
+                    player.vy = 0;
+                }
+            }
+        } else {
+            if (c instanceof MenuButton) c.isHovered = false;
+        }
+    });
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    particles.forEach(p => {
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, 5, 5);
+    });
+    ctx.globalAlpha = 1.0;
+
+    colliders.forEach(c => {
+        if (c instanceof MenuButton) c.draw();
+        else {
+            // Draw platforms with a stone-like texture
+            ctx.fillStyle = "#555";
+            ctx.fillRect(c.x, c.y, c.w, c.h);
+            ctx.fillStyle = "#777";
+            ctx.fillRect(c.x+2, c.y+2, c.w-4, c.h-4);
+        }
+    });
+
+    // Player with glow
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = `hsl(${player.hue}, 100%, 50%)`;
+    ctx.fillStyle = `hsl(${player.hue}, 100%, 50%)`;
+    ctx.fillRect(player.x, player.y, player.w, player.h);
+    ctx.shadowBlur = 0;
+}
+
+window.addEventListener('keydown', e => {
+    keys[e.key] = true;
+    if ((e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') && player.jumpsUsed < 999) {
+        player.vy = JUMP_POWER;
+        player.jumpsUsed++;
+        for(let i=0; i<10; i++) particles.push(new Particle(player.x + 10, player.y + 20, "#FFF"));
+    }
+    if (e.key === 'Shift' && player.canAirDash) {
+        player.vx = player.facing * DASH_POWER;
+        player.vy = 0;
+        if (player.jumpsUsed > 0) player.canAirDash = false; 
+        for(let i=0; i<25; i++) particles.push(new Particle(player.x, player.y, `hsl(${player.hue}, 100%, 50%)`));
+    }
+    // Quick level switching with number keys for testing (optional)
+    if (e.key === '1') goToLevel("MEGA SETTINGS");
+    if (e.key === '2') goToLevel("THE PITS");
+    if (e.key === '3') goToLevel("CROSSROADS");
+    if (e.key === '4') goToLevel("OBSIDIAN SPIRAL");
+    if (e.key === '5') goToLevel("ENDER BLUFF");
+    if (e.key === '6') goToLevel("GLITCH SANCTUM");
+});
+
+window.addEventListener('keyup', e => keys[e.key] = false);
+window.addEventListener('resize', () => { 
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight; buildMenu(currentRoom); 
+});
+
+canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+buildMenu("MEGA SETTINGS");
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+loop();
+</script>
+</body>
+</html>

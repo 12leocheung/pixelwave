@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏛️ Infinite Procedural Museum</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #blocker { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; cursor: pointer; z-index: 10; text-align: center; }
+        #instructions { padding: 20px; border: 1px solid #444; background: rgba(20,20,20,0.5); }
+        #plaque { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); background: rgba(255, 255, 255, 0.95); color: #111; padding: 25px; border-left: 8px solid #b8860b; display: none; z-index: 5; pointer-events: none; width: 350px; box-shadow: 0px 10px 30px rgba(0,0,0,0.5); }
+        .crosshair { position: absolute; top: 50%; left: 50%; width: 6px; height: 6px; background: rgba(255,255,255,0.5); border-radius: 50%; transform: translate(-50%, -50%); z-index: 1; pointer-events: none; border: 1px solid rgba(0,0,0,0.2);}
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
+</head>
+<body>
+
+    <div id="blocker">
+        <div id="instructions">
+            <h1 style="margin-top:0">Infinite Procedural Museum</h1>
+            <p>Click to start your tour</p>
+            <p style="font-size: 14px; color: #aaa;">(W,A,S,D to Walk | Mouse to Look)</p>
+        </div>
+    </div>
+    
+    <div class="crosshair"></div>
+    <div id="plaque">
+        <h2 id="plaque-title" style="margin: 0 0 5px 0; font-size: 18px; text-transform: uppercase; letter-spacing: 1px;">Title</h2>
+        <p id="plaque-desc" style="margin: 0; font-size: 14px; font-style: italic; color: #444;">Description</p>
+    </div>
+
+    <script>
+        // --- 1. CONFIG & ENGINE ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0a0a);
+        scene.fog = new THREE.Fog(0x0a0a0a, 5, 45);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+
+        // --- 2. MOVEMENT CONTROLS ---
+        const controls = new THREE.PointerLockControls(camera, document.body);
+        const blocker = document.getElementById('blocker');
+        blocker.addEventListener('click', () => controls.lock());
+        controls.addEventListener('lock', () => blocker.style.display = 'none');
+        controls.addEventListener('unlock', () => blocker.style.display = 'flex');
+
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+
+        const onKeyDown = (e) => {
+            switch (e.code) {
+                case 'KeyW': moveForward = true; break;
+                case 'KeyA': moveLeft = true; break;
+                case 'KeyS': moveBackward = true; break;
+                case 'KeyD': moveRight = true; break;
+            }
+        };
+        const onKeyUp = (e) => {
+            switch (e.code) {
+                case 'KeyW': moveForward = false; break;
+                case 'KeyA': moveLeft = false; break;
+                case 'KeyS': moveBackward = false; break;
+                case 'KeyD': moveRight = false; break;
+            }
+        };
+        document.addEventListener('keydown', onKeyDown);
+        document.addEventListener('keyup', onKeyUp);
+
+        // --- 3. PROCEDURAL CONTENT DATA ---
+        const adjs = ["Melancholic", "Digital", "Silent", "Infinite", "Fractured", "Ephemeral", "Neon", "Brutalist", "Kinetic", "Liminal", "Cold", "Ethereal"];
+        const nouns = ["Void", "Geometry", "Echo", "Structure", "Memory", "Algorithm", "Synthesis", "Prism", "Monolith", "Iteration", "Static", "Flow"];
+        const artists = ["Aris Thole", "V.N. Vector", "The Architect", "Sys.Admin", "Eliza-01", "K. Malevich (Revived)"];
+        
+        function generatePlaqueText() {
+            const title = `${adjs[Math.floor(Math.random() * adjs.length)]} ${nouns[Math.floor(Math.random() * nouns.length)]}`;
+            const artist = artists[Math.floor(Math.random() * artists.length)];
+            const year = 2024 + Math.floor(Math.random() * 50);
+            return { title: `"${title}"`, desc: `By ${artist}, ${year}. This procedural artifact explores the boundary between ${adjs[Math.floor(Math.random()*adjs.length)].toLowerCase()} space and human perception.` };
+        }
+
+        // --- 4. ART GENERATORS ---
+        
+        function createProceduralPainting() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            const hueBase = Math.random() * 360;
+            
+            // Background
+            ctx.fillStyle = `hsl(${hueBase}, 20%, 15%)`;
+            ctx.fillRect(0, 0, 512, 512);
+
+            const style = Math.floor(Math.random() * 4);
+            if (style === 0) { // Abstract Circles
+                for(let i = 0; i < 20; i++) {
+                    ctx.fillStyle = `hsla(${hueBase + Math.random()*40}, 70%, 50%, 0.5)`;
+                    ctx.beginPath();
+                    ctx.arc(Math.random()*512, Math.random()*512, Math.random()*150, 0, Math.PI*2);
+                    ctx.fill();
+                }
+            } else if (style === 1) { // Geometric / Brutalist
+                for(let i = 0; i < 15; i++) {
+                    ctx.fillStyle = `hsl(${hueBase + 180}, ${Math.random()*80}%, ${Math.random()*60}%)`;
+                    ctx.fillRect(Math.random()*512, Math.random()*512, Math.random()*250, Math.random()*250);
+                }
+            } else if (style === 2) { // Glitch / Lines
+                for(let i = 0; i < 50; i++) {
+                    ctx.strokeStyle = `hsl(${hueBase}, 100%, 70%)`;
+                    ctx.lineWidth = Math.random() * 5;
+                    ctx.beginPath();
+                    ctx.moveTo(0, Math.random()*512);
+                    ctx.lineTo(512, Math.random()*512);
+                    ctx.stroke();
+                }
+            } else { // Gradients
+                const grad = ctx.createRadialGradient(256, 256, 10, 256, 256, 300);
+                grad.addColorStop(0, `hsl(${hueBase}, 80%, 60%)`);
+                grad.addColorStop(1, `#000`);
+                ctx.fillStyle = grad;
+                ctx.fillRect(0,0,512,512);
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const w = 2 + Math.random() * 2;
+            const h = 2 + Math.random() * 2;
+            
+            const group = new THREE.Group();
+            // Frame
+            const frame = new THREE.Mesh(new THREE.BoxGeometry(w+0.2, h+0.2, 0.1), new THREE.MeshStandardMaterial({color: 0x111111}));
+            // Canvas
+            const painting = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: texture }));
+            painting.position.z = 0.06;
+            group.add(frame, painting);
+            return group;
+        }
+
+        function createProceduralSculpture() {
+            const group = new THREE.Group();
+            const isNeon = Math.random() > 0.8;
+            const isWireframe = Math.random() > 0.7;
+            const hue = Math.random() * 360;
+            
+            const mat = isNeon ? 
+                new THREE.MeshBasicMaterial({ color: new THREE.Color(`hsl(${hue}, 100%, 60%)`), wireframe: isWireframe }) :
+                new THREE.MeshStandardMaterial({ color: new THREE.Color(`hsl(${hue}, 50%, 50%)`), metalness: 0.9, roughness: 0.1, wireframe: isWireframe });
+
+            const count = 3 + Math.floor(Math.random() * 5);
+            for(let i=0; i<count; i++) {
+                const geos = [new THREE.BoxGeometry(1,1,1), new THREE.TorusGeometry(0.5, 0.2, 8, 16), new THREE.SphereGeometry(0.6, 12, 12), new THREE.CylinderGeometry(0.2, 0.2, 2)];
+                const mesh = new THREE.Mesh(geos[Math.floor(Math.random()*geos.length)], mat);
+                mesh.position.set((Math.random()-0.5)*1.5, Math.random()*2, (Math.random()-0.5)*1.5);
+                mesh.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, 0);
+                group.add(mesh);
+            }
+            return group;
+        }
+
+        // --- 5. WORLD GENERATION ---
+        const roomLen = 20;
+        let lastZ = 10;
+        const interactables = [];
+
+        function spawnSegment(z) {
+            // Floor & Ceiling
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, roomLen), new THREE.MeshStandardMaterial({color: 0x111111}));
+            floor.rotation.x = -Math.PI/2;
+            floor.position.set(0, 0, z);
+            scene.add(floor);
+
+            const ceil = new THREE.Mesh(new THREE.PlaneGeometry(12, roomLen), new THREE.MeshStandardMaterial({color: 0x050505}));
+            ceil.rotation.x = Math.PI/2;
+            ceil.position.set(0, 10, z);
+            scene.add(ceil);
+
+            // Walls
+            const wallLeft = new THREE.Mesh(new THREE.BoxGeometry(1, 10, roomLen), new THREE.MeshStandardMaterial({color: 0x222222}));
+            wallLeft.position.set(-6, 5, z);
+            scene.add(wallLeft);
+
+            const wallRight = new THREE.Mesh(new THREE.BoxGeometry(1, 10, roomLen), new THREE.MeshStandardMaterial({color: 0x222222}));
+            wallRight.position.set(6, 5, z);
+            scene.add(wallRight);
+
+            // Populate Art
+            for (let i = 0; i < 2; i++) {
+                const side = i === 0 ? -1 : 1;
+                const artZ = z + (Math.random() - 0.5) * 15;
+                
+                if (Math.random() > 0.4) {
+                    const p = createProceduralPainting();
+                    p.position.set(5.4 * side, 4, artZ);
+                    p.rotation.y = (Math.PI/2) * side;
+                    p.userData = generatePlaqueText();
+                    scene.add(p);
+                    interactables.push(p.children[1]); // Interact with the canvas plane
+                    
+                    const light = new THREE.PointLight(0xffffff, 0.5, 10);
+                    light.position.set(3 * side, 6, artZ);
+                    scene.add(light);
+                }
+            }
+
+            if (Math.random() > 0.5) {
+                const ped = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshStandardMaterial({color: 0x050505}));
+                const sculZ = z + (Math.random() - 0.5) * 10;
+                ped.position.set(3.5 * (Math.random() > 0.5 ? 1 : -1), 0.6, sculZ);
+                scene.add(ped);
+
+                const s = createProceduralSculpture();
+                s.position.copy(ped.position);
+                s.position.y += 0.6;
+                scene.add(s);
+
+                const hit = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 2), new THREE.MeshBasicMaterial({visible: false}));
+                hit.position.copy(s.position);
+                hit.userData = generatePlaqueText();
+                scene.add(hit);
+                interactables.push(hit);
+            }
+        }
+
+        // Initial setup
+        for(let i=0; i<5; i++) { spawnSegment(lastZ); lastZ -= roomLen; }
+
+        // --- 6. INTERACTION & ANIMATION ---
+        const raycaster = new THREE.Raycaster();
+        const plaqueUI = document.getElementById('plaque');
+        const pTitle = document.getElementById('plaque-title');
+        const pDesc = document.getElementById('plaque-desc');
+
+        let prevTime = performance.now();
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = performance.now();
+
+            if (controls.isLocked) {
+                const delta = (time - prevTime) / 1000;
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
+                direction.z = Number(moveForward) - Number(moveBackward);
+                direction.x = Number(moveRight) - Number(moveLeft);
+                direction.normalize();
+
+                if (moveForward || moveBackward) velocity.z -= direction.z * 50.0 * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * 50.0 * delta;
+
+                controls.moveRight(-velocity.x * delta);
+                controls.moveForward(-velocity.z * delta);
+
+                if (camera.position.x > 4.5) camera.position.x = 4.5;
+                if (camera.position.x < -4.5) camera.position.x = -4.5;
+
+                // Infinite Spawn
+                if (camera.position.z < lastZ + 60) {
+                    spawnSegment(lastZ);
+                    lastZ -= roomLen;
+                }
+
+                // Raycast for Plaques
+                raycaster.setFromCamera(new THREE.Vector2(), camera);
+                const hits = raycaster.intersectObjects(interactables);
+                if (hits.length > 0 && hits[0].distance < 7) {
+                    const d = hits[0].object.userData;
+                    pTitle.innerText = d.title;
+                    pDesc.innerText = d.desc;
+                    plaqueUI.style.display = 'block';
+                } else {
+                    plaqueUI.style.display = 'none';
+                }
+            }
+            prevTime = time;
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>

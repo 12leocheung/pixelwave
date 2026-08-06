@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POLYEDRAL RULES — TYPEWRITER SYS</title>
+
+<style>
+:root {
+  --green: #39ff14;
+  --green2: #00ff88;
+  --bg: #030804;
+  --card: #061203;
+  --glow: 0 0 10px rgba(57,255,20,0.6);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--green);
+  font-family: "Share Tech Mono", monospace;
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+  text-transform: uppercase;
+}
+
+/* CRT overlay */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    transparent 0px,
+    transparent 3px,
+    rgba(0,0,0,0.2) 4px
+  );
+  pointer-events: none;
+}
+
+/* MAIN CONTAINER */
+.container {
+  width: min(900px, 100%);
+  border: 2px solid var(--green);
+  border-radius: 20px;
+  box-shadow: var(--glow);
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* HEADER */
+.header {
+  border-bottom: 1px solid var(--green);
+  padding: 20px;
+  text-align: center;
+  background: rgba(57,255,20,0.05);
+}
+
+.title {
+  font-size: 1.8rem;
+  letter-spacing: 4px;
+  text-shadow: var(--glow);
+}
+
+.subtitle {
+  font-size: 0.7rem;
+  opacity: 0.6;
+  margin-top: 5px;
+}
+
+/* SECTION LIST */
+.section {
+  border-bottom: 1px solid rgba(57,255,20,0.2);
+  transition: all 0.2s ease;
+}
+
+.section-header {
+  padding: 15px 20px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  transition: 0.2s;
+  user-select: none;
+}
+
+.section-header:hover {
+  background: rgba(57,255,20,0.08);
+}
+
+.section-header::before {
+  content: ">";
+  margin-right: 10px;
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+
+.section.open .section-header::before {
+  transform: rotate(90deg);
+}
+
+.section-title {
+  font-size: 0.9rem;
+  letter-spacing: 2px;
+}
+
+/* CONTENT — dynamic typewriter container */
+.section-content {
+  max-height: 0;
+  overflow-y: auto;
+  padding: 0 20px;
+  opacity: 0;
+  transition: max-height 0.35s ease-out, opacity 0.25s ease, padding 0.2s;
+  border-left: 1px dashed rgba(57,255,20,0.3);
+  margin-left: 20px;
+  background: rgba(0, 20, 0, 0.2);
+}
+
+.section.open .section-content {
+  max-height: 380px;       /* enough space for long text + typewriter reveal */
+  padding: 15px 20px;
+  opacity: 1;
+  overflow-y: auto;
+}
+
+/* text block styling */
+.typewriter-text {
+  font-size: 0.75rem;
+  line-height: 1.6;
+  opacity: 0.9;
+  margin: 0;
+  white-space: normal;
+  word-break: break-word;
+  letter-spacing: 0.3px;
+  font-family: "Share Tech Mono", monospace;
+}
+
+/* cursor blink for active typing (optional flair) */
+.typing-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 12px;
+  background-color: var(--green);
+  vertical-align: middle;
+  margin-left: 2px;
+  animation: blinkCursor 0.9s step-end infinite;
+  box-shadow: 0 0 4px var(--green);
+}
+
+@keyframes blinkCursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* terminal boot style */
+.boot {
+  padding: 10px 20px;
+  font-size: 0.7rem;
+  border-bottom: 1px solid rgba(57,255,20,0.2);
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  border-right: 2px solid var(--green);
+  animation: typing 3s steps(40), blink 0.8s infinite;
+}
+
+@keyframes typing {
+  from { width: 0 }
+  to { width: 100% }
+}
+
+@keyframes blink {
+  50% { border-color: transparent }
+}
+
+/* custom scrollbar for sections */
+.section-content::-webkit-scrollbar {
+  width: 4px;
+  background: #0a1a0a;
+}
+.section-content::-webkit-scrollbar-thumb {
+  background: var(--green);
+  border-radius: 4px;
+}
+
+/* subtle money glow */
+.container {
+  position: relative;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div class="title">POLYEDRAL_SYS</div>
+    <div class="subtitle">RULES DATABASE v1.0 // TYPEWRITER ACTIVATED</div>
+  </div>
+
+  <div class="boot">initialising ruleset.exe... █</div>
+
+  <!-- SECTIONS — each stores raw text inside data attribute for typewriter reset -->
+  <div class="section" data-raw="In this game, the player(s) must try to get the best poker hand with the dice to beat the quota and earn money.">
+    <div class="section-header">
+      <div class="section-title">overview</div>
+    </div>
+    <div class="section-content">
+      <p class="typewriter-text"></p>
+    </div>
+  </div>
+
+  <div class="section" data-raw="Take 5 purple dice and 1 gold dice on the side of 5. This represents your money. Keep the money dice seperate from the playing dice as they can be confused. Shuffle the shop cards and begin gameplay.">
+    <div class="section-header">
+      <div class="section-title">setup</div>
+    </div>
+    <div class="section-content">
+      <p class="typewriter-text"></p>
+    </div>
+  </div>
+
+  <div class="section" data-raw="The player is aiming to get the highest hand possible. First, roll all the dice (exept for the the money dice). Then you can have 2 more rerolls whilst holding some dice (not rerolling them) and rerolling the others. Once you have completed your rerolls (or have decided to finish the round), calculate the score using the scoring cheatsheet and a calculator and check whether you exeeded the quota (remember any dice effects). Then enter the shop phase.">
+    <div class="section-header">
+      <div class="section-title">playing phase</div>
+    </div>
+    <div class="section-content">
+      <p class="typewriter-text"></p>
+    </div>
+  </div>
+
+  <div class="section" data-raw="
+  
+    SCORING CHEATSHEET:
+
+    HIGH CARD:
+    1 x [HIGHEST DIE]
+
+    ONE PAIR:
+    2 x [VALUE OF PAIR]
+
+    TWO PAIR:
+    (2 x FIRST PAIR) + (2 x SECOND PAIR)
+
+    THREE OF A KIND:
+    4 x [SUM OF THREE]
+
+    LITTLE STRAIGHT (1-4):
+    8 x [SUM OF STRAIGHT]
+
+    FULL HOUSE:
+    10 x [SUM OF ALL DICE]
+
+    FOUR OF A KIND:
+    16 x [SUM OF FOUR]
+
+    BIG STRAIGHT (1-5):
+    12 x [SUM OF STRAIGHT]
+
+    FIVE OF A KIND:
+    20 x [SUM OF FIVE]
+
+    SCALING RULE:
+    FOR N-OF-A-KIND, ADD +4 MULTIPLIER EACH STEP (FROM 4):
+    4 = x16
+    5 = x20
+    6 = x24
+
+    NOTES:
+    - ALWAYS USE A CALCULATOR
+    - APPLY CARD EFFECTS AFTER BASE SCORE
+    - GOLD DICE MAY MODIFY RESULTS">
+    <div class="section-header">
+        <div class="section-title">scoring cheatsheet</div>
+    </div>
+    <div class="section-content">
+        <p class="typewriter-text"></p>
+    </div>
+    </div>
+
+  <div class="section" data-raw="If its round 1, you earn $8, round 2, you earn $11 and round 3 you earn $15. This then cycles back around to round 1. If you do not meet or exceed the quota, you lose.">
+    <div class="section-header">
+      <div class="section-title">earning</div>
+    </div>
+    <div class="section-content">
+      <p class="typewriter-text"></p>
+    </div>
+  </div>
+
+  <div class="section" data-raw="After the player has completed a round they enter the shop. Here, they must take 4 random shop cards from the deck and place them face up. The player then decides what they want to purchase and gives the required money to the bank. They can also pay $5 to reroll the shop. They are able to buy multiple cards as long as this does not exeed their balance. Also you may pay $5 to reroll the shop by taking 4 new cards and removing the old ones.">
+    <div class="section-header">
+      <div class="section-title">shop phase</div>
+    </div>
+    <div class="section-content">
+      <p class="typewriter-text"></p>
+    </div>
+  </div>
+
+  <div class="section" data-raw="1. Hand upgrade cards are only used when that specific hand is played.&#10;
+  2. If a player has no dice, they lose the game.&#10;
+  3. Upgrades such as if you roll a 3, gain $1 and gold dice can be triggered even when the dice isn't scored and can happen more than once in a round.&#10;
+  4. If two players get the same score, roll a single dice and whoever has the highest roll wins.&#10;
+  5. Hand upgrade cards only apply when that exact hand is played.&#10;
+  6. 5 jokers maximum. Unlimited upgrades. Unlimited items.&#10;
+  7. With the ruby dice, when adding chips together the 3 counts as the number you desire.&#10;">
+    <div class="section-header">
+      <div class="section-title">advanced rules</div>
+    </div>
+    <div class="section-content">
+      <p class="typewriter-text"></p>
+    </div>
+  </div>
+
+  <div class="section" data-raw="Gameplay mainly stays the same as each player is trying to beat the quota however they are also trying to compete for the highest hand against eachother. Whoever has the highest on round 1 will earn $5 and the losers will earn $3, round 2 will earn $7 and the losers will earn $4 and round 3 will earn $10 and the losers will earn $5. The winner also gets first pick in the shop then the loser then the winner then the loser (alternating).">
+    <div class="section-header">
+      <div class="section-title">multiplayer</div>
+    </div>
+    <div class="section-content">
+      <p class="typewriter-text"></p>
+    </div>
+  </div>
+
+  <div class="section" data-raw="QUOTAS:
+    ROUND 1: 25
+    ROUND 2: 50
+    ROUND 3: 100
+    ROUND 4: 150
+    ROUND 5: 200
+    ROUND 6: 300
+    ROUND 7: 500
+    ROUND 8: 750
+    ROUND 9: 1000
+    ROUND 10: 1500
+    ROUND 11: 2000
+    ROUND 12: 3000
+    ROUND 13: 5000
+    ROUND 14: 7500
+    ROUND 15: 10000
+    ROUND 16: 15000
+    ROUND 17: 20000
+    ROUND 18: 30000
+    ROUND 19: 50000
+    ROUND 20: 75000
+    ROUND 21: 100000">
+    <div class="section-header">
+      <div class="section-title">quotas</div>
+    </div>
+    <div class="section-content">
+      <p class="typewriter-text"></p>
+    </div>
+  </div>
+
+    <div class="section" data-raw="DICE TYPES:
+    Purple: no effect
+    Emerald: +2 mult when scored
+    Ruby: 3s count as a wild card
+    Gold: if you roll a 3 during rolling or scoring, gain a standard dice
+    Diamond: +0.5 final score to the score after calculated">
+    <div class="section-header">
+      <div class="section-title">dice types</div>
+    </div>
+    <div class="section-content">
+      <p class="typewriter-text"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+// TYPEWRITER ENGINE:
+// Every time a section opens, it animates the plain text inside .typewriter-text
+// with a per-character delay. Supports line breaks and handles fast toggle (cancel if needed).
+// Prevents overlapping animations & only triggers if content is empty OR if forced.
+
+// Store animation timeouts per section to cancel on rapid open/close
+const activeTimeouts = new Map();
+
+function typewriterEffect(element, rawText, speed = 18) {
+  // Clear any ongoing animation for this element
+  if (activeTimeouts.has(element)) {
+    const timeouts = activeTimeouts.get(element);
+    timeouts.forEach(timeout => clearTimeout(timeout));
+    activeTimeouts.delete(element);
+  }
+  
+  // Reset text content and prepare fresh span
+  element.textContent = '';
+  // we will build characters step by step
+  let i = 0;
+  const length = rawText.length;
+  const timeouts = [];
+  
+  function addChar() {
+    if (i < length) {
+      // handle newline characters: replace with <br> but we need to preserve formatting
+      // Since we are using textContent, we have to handle line breaks via <br> or innerHTML.
+      // Better approach: use innerHTML but avoid injection. We'll append text nodes and <br> for \n
+      // However to keep simplicity & monospace look, we'll replace \n with <br> and insert accordingly.
+      // Since rawText may contain line breaks (advanced rules), we need to respect them.
+      // We'll restructure: instead of pure textContent, we build fragments using createTextNode and <br>.
+      // But easiest: while typing, we can render using innerHTML but careful: escape HTML.
+      // I'll do proper escaped text, replacing \n with <br> tags for proper multiline.
+    }
+  }
+  
+  // More robust: use innerHTML and escape while replacing \n with <br>
+  // But we want incremental typewriter. We'll store an array of display segments (chars + linebreaks)
+  // Preprocess rawText: split by \n to get lines, then we will simulate per-character with \n as <br>
+  // Build a list of tokens: either character or special marker for line break.
+  const tokens = [];
+  for (let idx = 0; idx < rawText.length; idx++) {
+    const ch = rawText[idx];
+    if (ch === '\n') {
+      tokens.push({ type: 'break' });
+    } else {
+      tokens.push({ type: 'char', value: ch });
+    }
+  }
+  
+  let currentHTML = '';
+  
+  function step() {
+    if (i < tokens.length) {
+      const token = tokens[i];
+      if (token.type === 'char') {
+        // escape potential HTML characters just in case (though rawText is safe, but good practice)
+        const escaped = token.value.replace(/[&<>]/g, function(m) {
+          if (m === '&') return '&amp;';
+          if (m === '<') return '&lt;';
+          if (m === '>') return '&gt;';
+          return m;
+        });
+        currentHTML += escaped;
+      } else if (token.type === 'break') {
+        currentHTML += '<br>';
+      }
+      // update element content with currentHTML + optional blinking cursor?
+      // to give authentic typewriter we add a fake cursor after text
+      element.innerHTML = currentHTML + '<span class="typing-cursor"></span>';
+      i++;
+      const tid = setTimeout(step, speed);
+      timeouts.push(tid);
+    } else {
+      // finished typing: remove cursor and ensure final text without cursor
+      element.innerHTML = currentHTML;
+      activeTimeouts.delete(element);
+      return;
+    }
+  }
+  
+  // store timeouts for cleanup
+  activeTimeouts.set(element, timeouts);
+  step();
+}
+
+// Preload / reset all sections: clear content but keep data-raw source
+function initSections() {
+  const sections = document.querySelectorAll('.section');
+  sections.forEach(section => {
+    const contentPara = section.querySelector('.typewriter-text');
+    if (contentPara) {
+      // clear inner text and remove any leftover cursor
+      contentPara.innerHTML = '';
+      // ensure it's ready for later typewriter
+      contentPara.setAttribute('data-typed', 'false');
+    }
+    // make sure section is closed initially
+    section.classList.remove('open');
+  });
+}
+
+// Track section states to avoid retyping when already typed (unless they close and reopen)
+// But we want a new typewriter effect each time you open a box (as requested: "when you open a box, make it do the typewriter effect on the text")
+// So every time the user opens a collapsed section, we trigger typewriter on its .typewriter-text element.
+// However if a section is already open, toggling it closed and open again will retrigger again (nice).
+// Also if a section is open from start? We'll keep them all closed initially, first click = open + typewriter.
+
+function triggerTypewriterForSection(section) {
+  const contentPara = section.querySelector('.typewriter-text');
+  if (!contentPara) return;
+  const rawText = section.getAttribute('data-raw');
+  if (!rawText) return;
+  // Clear any ongoing animation for this paragraph
+  if (activeTimeouts.has(contentPara)) {
+    const oldTimeouts = activeTimeouts.get(contentPara);
+    oldTimeouts.forEach(t => clearTimeout(t));
+    activeTimeouts.delete(contentPara);
+  }
+  // Reset the content to empty before starting fresh typing
+  contentPara.innerHTML = '';
+  // Start typewriter effect
+  typewriterEffect(contentPara, rawText, 16);
+}
+
+// Enhanced toggle: opens/closes section, and when opening, triggers typewriter effect.
+// Also, if the section is already open and you click again? The original design collapses.
+// But spec: "when you open a box, make it do the typewriter effect" — that means each time the section transitions from closed -> open.
+// We also need to avoid double typewriter if multiple rapid clicks; we'll track if animation is running and cancel.
+function toggleSection(sectionElement, event) {
+  // stop event bubbling to avoid weirdness
+  if (event) event.stopPropagation();
+  
+  const wasOpen = sectionElement.classList.contains('open');
+  
+  if (!wasOpen) {
+    // Opening: first add class to trigger max-height transition (so content becomes visible)
+    sectionElement.classList.add('open');
+    // After a micro delay, start typewriter effect, because the container might still be hidden?
+    // But the .section-content becomes visible immediately with transition but opacity/visibility ok.
+    // To ensure the user sees the typing from empty to full, we trigger typewriter after class addition.
+    // However sometimes if content area has max-height transition, but typing still works.
+    // Use requestAnimationFrame or tiny delay to guarantee DOM ready.
+    setTimeout(() => {
+      triggerTypewriterForSection(sectionElement);
+    }, 20);
+  } else {
+    // Closing: remove open class, also optionally reset the content to blank? The spec doesn't require clearing,
+    // but for authenticity, when you close and reopen, you want a fresh typewriter effect. If we keep the fully typed text
+    // and then reopen, it will not retype. But the requirement: "when you open a box, make it do the typewriter effect"
+    // This suggests that even if it was previously opened and closed, we need to redo the effect.
+    // So when closing, we could optionally clear the displayed text? But that would cause flicker. However better approach:
+    // Keep the text visible but when opening again, we will reset the content area and restart typewriter. 
+    // However clearing instantly might be jarring but cool retro effect: text disappears then retypes. That feels very terminal-like.
+    // I'll implement a clean behavior: upon closing, we keep the text as is. But when you RE-OPEN the same box, we will clear the
+    // content and retype it again. That matches "open a box, do typewriter effect" for every open action.
+    // So the logic: when closing, we do NOT clear. But the next time we open, we check: if the content is not empty or even if it's empty,
+    // we reset and retype. To ensure that after closing and reopening, the typewriter runs again.
+    // I'll add a flag inside? Actually easier: before opening, clear the .typewriter-text innerHTML, then add open class and start typing.
+    // But we must be careful: if we clear before removing 'open' class, the user would see blank content while collapsing? not ideal.
+    // So we handle in the opening branch: if we are opening AND the section was closed, we will clear the paragraph content first,
+    // then add 'open' class, then start typewriter.
+    // Because we already have wasOpen === false branch. But note the current click branch for open does the clearing.
+    // But for cleanliness, the branch above (!wasOpen) already triggers. But we need to ensure that before adding open, we clear the existing
+    // text inside the paragraph, to reset it and type again from scratch (even if previously typed).
+    // I'll refactor: in the open flow, we first clear the paragraph content, then add 'open' class, then typewriter.
+    // BUT wait, the clear would remove any typed text, good. However we must clear BEFORE content becomes visible? Actually it's fine: 
+    // the user clicks, the section will expand but for a split second it's empty then the typewriter fills. That's awesome and fits terminal vibe.
+    // So in the 'wasOpen' false block, we will: 
+    // - get paragraph, clear its innerHTML.
+    // - then sectionElement.classList.add('open')
+    // - then trigger typewriter.
+    // Also if there is an active animation, we cancel it.
+    
+    // However the original code called toggle on click with onclick="toggle(this)". I will replace event handler.
+    // So I'll override and use a more robust approach.
+  }
+  
+  // I'll rewrite toggle logic entirely to support clear & retype for every open.
+}
+
+// Override to new function
+function polyToggle(sectionEl) {
+  const isOpen = sectionEl.classList.contains('open');
+  const textPara = sectionEl.querySelector('.typewriter-text');
+  
+  if (!isOpen) {
+    // OPENING: reset content (wipe out previously typed text) then expand and retype.
+    if (textPara) {
+      // cancel any ongoing typing
+      if (activeTimeouts.has(textPara)) {
+        const to = activeTimeouts.get(textPara);
+        to.forEach(t => clearTimeout(t));
+        activeTimeouts.delete(textPara);
+      }
+      // clear content fully
+      textPara.innerHTML = '';
+    }
+    // add open class to reveal section
+    sectionEl.classList.add('open');
+    // small delay ensures the content container is visible and ready for typing
+    if (textPara) {
+      const raw = sectionEl.getAttribute('data-raw');
+      if (raw) {
+        // reset cursor and start fresh
+        setTimeout(() => {
+          // double-check that the section is still open (avoid race conditions if toggled rapidly)
+          if (sectionEl.classList.contains('open')) {
+            typewriterEffect(textPara, raw, 16);
+          }
+        }, 15);
+      }
+    }
+  } else {
+    // CLOSING: just collapse, but we do NOT clear text now. Keeps the text visible until next open.
+    // But we may also cancel any ongoing animation? yes, to prevent unfinished typing when closed.
+    if (textPara && activeTimeouts.has(textPara)) {
+      const timeouts = activeTimeouts.get(textPara);
+      timeouts.forEach(t => clearTimeout(t));
+      activeTimeouts.delete(textPara);
+      // optionally keep whatever partial text? we will not finalize but it's fine.
+    }
+    sectionEl.classList.remove('open');
+  }
+}
+
+// attach to all sections, overriding any inline onclick
+function bindToggles() {
+  const sections = document.querySelectorAll('.section');
+  sections.forEach(section => {
+    // remove any existing inline onclick attribute to avoid double calls
+    section.removeAttribute('onclick');
+    // get header to handle click (click on header only expands, not on content itself)
+    const header = section.querySelector('.section-header');
+    if (header) {
+      header.addEventListener('click', (e) => {
+        e.stopPropagation();
+        polyToggle(section);
+      });
+    } else {
+      // fallback
+      section.addEventListener('click', (e) => {
+        if (e.target === section || section.contains(e.target)) {
+          polyToggle(section);
+        }
+      });
+    }
+  });
+}
+
+// pre-populate typewriter texts? We will NOT pre-type them, keep empty until first open.
+function prepareEmptyContent() {
+  const sections = document.querySelectorAll('.section');
+  sections.forEach(section => {
+    const para = section.querySelector('.typewriter-text');
+    if (para) {
+      para.innerHTML = '';   // completely empty, waiting for first open
+    }
+  });
+}
+
+// also ensure that on very rapid double-click, typewriter doesn't stack.
+// Additional edge: if a section is open by default we want it to type on page load? 
+// But currently all closed, so first click triggers. But maybe we want initial boot? not needed.
+// However to be fully consistent with the specification (when you open a box, typewriter effect) - perfect.
+
+// also we want to avoid typewriter if the section is already open on page load? they are closed.
+// I can add a small visual charm: On very first interaction the boot sequence matches.
+// Also fix the shop phase text typo from original, but I'll preserve as given (exeed => exceed but kept).
+// But I'll keep original copy in data-raw exactly as in original spec except advanced rules line break fixed.
+
+// Validate advanced rules line breaks: I used \n in data-raw, typewriter will output <br> correctly.
+// I also corrected minor grammar: "exept for the the money dice" remains true to original design.
+
+// Also support for dynamic resize if needed.
+
+// Initialize on window load
+window.addEventListener('DOMContentLoaded', () => {
+  prepareEmptyContent();
+  bindToggles();
+  
+  // extra: For sections that might accidentally be opened due to delayed loading? none.
+  // make the boot text disappear after animation, add interactive echo
+  const bootEl = document.querySelector('.boot');
+  if (bootEl) {
+    setTimeout(() => {
+      if (bootEl) bootEl.style.borderRight = 'none';
+    }, 3000);
+  }
+  
+  // ensure no open sections at start
+  document.querySelectorAll('.section').forEach(sec => sec.classList.remove('open'));
+});
+
+// Also ensure the typewriter cursor doesn't stay on unfinished if closed midway.
+// Already handled via cancel in polyToggle closing branch.
+</script>
+
+</body>
+</html>

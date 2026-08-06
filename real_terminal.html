@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Single File Linux VM</title>
+    
+    <script src="https://unpkg.com/v86@0.10.2/build/libv86.js"></script>
+    
+    <style>
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 20px;
+        }
+        #terminal-container {
+            white-space: pre;
+            font-size: 16px;
+            line-height: 1.2;
+            outline: none;
+        }
+        .loading {
+            color: #00ff00;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="status" class="loading">Connecting to engine and booting Linux...</div>
+    <pre id="terminal-container"></pre>
+
+    <script>
+        window.onload = function() {
+            // Double check that the library actually loaded to prevent unhandled crashes
+            if (typeof V86Starter === "undefined") {
+                document.getElementById("status").innerHTML = 
+                    "<span style='color:red;'>Error: Browser blocked the emulator script. Try using a different browser or checking your extensions.</span>";
+                return;
+            }
+
+            var emulator = new V86Starter({
+                // Hardcoded to match the exact library version pulled above
+                wasm_path: "https://unpkg.com/v86@0.10.2/build/v86.wasm",
+                memory_size: 32 * 1024 * 1024, 
+                vga_memory_size: 2 * 1024 * 1024,
+                screen_container: document.getElementById("terminal-container"),
+                
+                // Using a reliable jsDelivr mirror for the actual OS disk image
+                fda: {
+                    url: "https://cdn.jsdelivr.net/gh/copy/v86@0.10.2/images/linux.img"
+                },
+                autostart: true,
+            });
+
+            emulator.add_listener("emulator-started", function() {
+                document.getElementById("status").style.display = "none";
+            });
+        };
+    </script>
+</body>
+</html>

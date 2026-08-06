@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Block Sandbox</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a1f;
+    color: #d0d0d0;
+    font-family: 'Courier New', monospace;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+  #toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #111116;
+    border-bottom: 2px solid #333;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  #toolbar h1 {
+    font-size: 13px;
+    color: #888;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-right: 8px;
+  }
+  .tool-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 6px 8px;
+    background: #1e1e26;
+    border: 1px solid #333;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.1s;
+    min-width: 54px;
+  }
+  .tool-btn:hover { border-color: #666; background: #252530; }
+  .tool-btn.active { border-color: #7af; background: #1a2535; box-shadow: 0 0 8px rgba(119,170,255,0.3); }
+  .tool-btn img { width: 32px; height: 32px; image-rendering: pixelated; }
+  .tool-btn span { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+  .tool-btn.active span { color: #7af; }
+  .sep { width: 1px; height: 48px; background: #333; margin: 0 4px; }
+  #controls {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+    align-items: center;
+  }
+  .ctrl-btn {
+    padding: 5px 12px;
+    background: #252530;
+    border: 1px solid #444;
+    border-radius: 3px;
+    color: #aaa;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    transition: all 0.1s;
+  }
+  .ctrl-btn:hover { background: #303040; border-color: #666; color: #ddd; }
+  .ctrl-btn.run { border-color: #4a8; color: #4a8; }
+  .ctrl-btn.run:hover { background: #1a2e20; }
+  .ctrl-btn.run.running { border-color: #f84; color: #f84; }
+  .ctrl-btn.run.running:hover { background: #2e1a10; }
+  #main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+  #canvas-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: auto;
+    background: #13131a;
+    background-image: radial-gradient(circle at 50% 50%, #1a1a24 0%, #0e0e14 100%);
+  }
+  canvas {
+    cursor: crosshair;
+    image-rendering: pixelated;
+  }
+  #info-panel {
+    width: 180px;
+    background: #111116;
+    border-left: 2px solid #222;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  #info-panel h3 {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #555;
+    border-bottom: 1px solid #222;
+    padding-bottom: 6px;
+  }
+  #info-content {
+    font-size: 11px;
+    color: #777;
+    line-height: 1.6;
+  }
+  #info-content .name { color: #aad4ff; font-size: 13px; margin-bottom: 4px; }
+  #info-content .desc { color: #888; }
+  #step-info {
+    font-size: 10px;
+    color: #555;
+    margin-top: auto;
+  }
+  .erase-btn { border-color: #844 !important; }
+  .erase-btn.active { border-color: #f66 !important; background: #2a1515 !important; box-shadow: 0 0 8px rgba(255,100,100,0.3) !important; }
+  .erase-btn.active span { color: #f66 !important; }
+</style>
+</head>
+<body>
+<div id="toolbar">
+  <h1>Sandbox</h1>
+  <div id="block-tools"></div>
+  <div class="sep"></div>
+  <button class="tool-btn erase-btn" id="erase-tool" onclick="selectTool('erase')">
+    <svg width="32" height="32" viewBox="0 0 16 16" style="image-rendering:pixelated">
+      <rect x="2" y="5" width="12" height="8" rx="1" fill="#a44" opacity="0.8"/>
+      <rect x="2" y="5" width="6" height="8" rx="1" fill="#c55"/>
+      <rect x="10" y="9" width="4" height="3" fill="#1a1a1f"/>
+    </svg>
+    <span>Erase</span>
+  </button>
+  <div class="sep"></div>
+  <div id="controls">
+    <span style="font-size:11px;color:#555;">Tick: <span id="tick-count">0</span></span>
+    <button class="ctrl-btn run" id="run-btn" onclick="toggleRun()">▶ RUN</button>
+    <button class="ctrl-btn" onclick="stepOnce()">STEP</button>
+    <button class="ctrl-btn" onclick="clearGrid()">CLEAR</button>
+  </div>
+</div>
+<div id="main">
+  <div id="canvas-wrap">
+    <canvas id="grid-canvas"></canvas>
+  </div>
+  <div id="info-panel">
+    <h3>Block Info</h3>
+    <div id="info-content">
+      <div class="name">—</div>
+      <div class="desc">Select a block to place it on the grid.</div>
+    </div>
+    <div id="step-info">Tick: <span id="step-num">0</span></div>
+  </div>
+</div>
+
+<script>
+const SPRITES = {
+  "block": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAlklEQVR4nO3QsREAEADAQGzL/j1jfCE/QS5zn3PHx5YO0BqgA7QG6ACtATpAa4AO0BqgA7QG6ACtATpAa4AO0BqgA7QG6ACtATpAa4AO0BqgA7QG6ACtATpAa4AO0BqgA7QG6ACtATpAa4AO0BqgA7QG6ACtATpAa4AO0BqgA7QG6ACtATpAa4AO0BqgA7QG6ACtATpAe+IaArymtPrGAAAAAElFTkSuQmCC",
+  "destroyer": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAuklEQVR4nO3WsQ3DMBDAQMfwRJolY3oWr+RsEFXJwRDZ6guCeOD1Ose4t4XZtYCmAFpAUwAtoCmAFtAUQAtoCqAFNAXQApoCaAFNAbSApgBaQFMALaApgBbQFEALaAqgBTTHbOB9Xf/w+BnnGF/fl9+AAmgBTQG0gKYAWkAz/QfM7ujTWX4DCqAFNAXQApoCaAFNAbSApgBaQFMALaApgBbQFEALaAqgBTQF0AKaAmgBTQG0gKYAWkDzARO6BqOPORxaAAAAAElFTkSuQmCC",
+  "duper": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAA0UlEQVR4nO3bsQ3CMBQAUUAslFkyD1XmYRZGgoIeN5Efku/aFD6dfhF9y9f92N6XhblpAU0BtICmAFpAUwAtoLnPPvD5eP38vh/bJJMvy09AAbSApgBaQFMALaApgBbQFEALaAqgBTQF0AKaAmgBTQG0gGa4Exzt8M7m7PNGO8blJ6AAWkBTAC2gKYAW0Az/A86+q+tu8M8ogBbQFEALaAqgBTQF0AKaAmgBTQG0gKYAWkBTAC2gKYAW0Ex/LzB75zdi+QkogBbQFEALaAqgBTQfc7kPlUn/fTcAAAAASUVORK5CYII=",
+  "light_off": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAA+ElEQVR4nO2bMQoCMRAAPbX2RVY+ShDEQgTBd/kie9H6UhhCVsewM51NGIbNcuI57Xe31yIxS1qAxgC0AM06+sDN9hl95IzHfRV6XvoJMAAtQNO9A8o7fzwfeo/8yOV0nX3u3QnpJ8AAtADN1Ppd4Nd3vkbvTkg/AQagBWiqO+Df7nyN1p2QfgIMQAvQGIAWoDEALUBjAFqAxgC0AI0BaAEaA9ACNAagBWgMQAvQGIAWoDEALUDjb4ORMiNiAFqApnkHlPiO0OAYgBag6d4BJb4rPBgGoAVoDEAL0BiAFqAxAC1AYwBagCb8f4PRz+rfJv0EGIAWoHkDg1EzwCtwBVAAAAAASUVORK5CYII=",
+  "light_on": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAABEElEQVR4nO2bKw7CQBQAy0dzIhQnqSTBcwh8E2QPw4nwBHRXsGnegxFvxtVsJ5PdF9KWzfV0ew+F2dICNAagBWj22Qsejq/sJRc8H7vU9crvAAPQAjThGdCe+ct5ji75lWkYF9fRmVB+BxiAFqBZPQP+feZb2vtFZ0L5HWAAWoCmOwPoM98jOhPK7wAD0AI0BqAFaAxAC9AYgBagMQAtQGMAWoDGALQAjQFoARoD0AI0BqAFaAxAC9B03wu0z9Xb5+70e4LpPi6ufTe4EgPQAjSrvw+gZ0L0zLeU3wEGoAVowt8J9mZCNn4rnIwBaAEaA9ACNAagBWgMQAvQGIAWoEn/32D2b/VfU34HGIAWoPkA4H8t3YE1Ha8AAAAASUVORK5CYII=",
+  "logic_off": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAA50lEQVR4nO3YwQ3DMAzF0KboFt5/tMyR3nULYvsF0OcALkFIhpvjGuP6NOarBTQJoAU0CaAFNAmgBTS/2Qce5zn1vGuMqedV2k9AAmgBzeM7oO787J1dfX77CUgALaC5fQes3slKPX/277efgATQAprbd8Dqna/kHbCYBNACmunfA56y+53RfgISQAto+B2we+cr7ScgAbSAZvsdoHe+0n4CEkALaBJAC2gSQAtoEkALaBJAC2i2/xfQb/9K+wlIAC2gyfcA+usvIAG0gCbvAC2gSQAtoEkALaBJAC2gSQAtoEkALaD5A/5IJZwcYgooAAAAAElFTkSuQmCC",
+  "logic_on": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAA7ElEQVR4nO3YwQ3CMBAFUUDUkgu9pRh6y4Vm4L63KLYf0v4pwIxGu5bJfT+2760xDy2gSQAtoEkALaBJAC2geY4+8P36DD1vP7ah51XaT0ACaAHN5Tug7vzonZ19fvsJSAAtoDl9B8zeyUo9f/Tvt5+ABNACmtN3wOydr+QdMJkE0AKa4d8DrrL6ndF+AhJAC2j4HbB65yvtJyABtIBm+R2gd77SfgISQAtoEkALaBJAC2gSQAtoEkALaJb/F9Bv/0r7CUgALaDJ9wD6639AAmgBTd4BWkCTAFpAkwBaQJMAWkCTAFpAkwBaQPMDzF4moFH2KpYAAAAASUVORK5CYII=",
+  "power": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAA8klEQVR4nO3auw2DQBQFUWO5DHfhgqiNguiCPuwYJwjt5wTvTuYAMRo91rCwrPvxfRTmqQU0CaAFNAmgBTQJoAU0CaAFNAmgBTSv2SfcPu/T73U/ZiucKD8BCaAFNAmgBTQJoAU03e8DWv/nZ98nlJ+ABNACmuY1oPc1+3/86DWh/AQkgBbQLHffDern+d7nLz8BCaAFNAmgBTQJoAU0CaAFNAmgBTS39wNmP69nP2AwCaAFNM17gr3XhLwXmEwCaAFN93eDV2vC3eNHU34CEkALaIZ/J6i/A7yi/AQkgBbQJIAW0CSAFtAkgBbQJIAW0PwAgl00++ZQar0AAAAASUVORK5CYII=",
+  "pusher": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAA4UlEQVR4nO3a0QmDUBAF0SSkjHSRgqwtBdmFfSQdZD8ey3mwd34FHYZ1UfF+nNf3NpiHFtAkgBbQJIAW0CSAFtAkgBbQJIAW0DxXT/B5v/4eP85r9RKtjJ+ABNACmuUdUN3ju++I8ROQAFpAs7wDKnbfEeMnIAG0gKZ9B1ToHTF+AhJAC2j4Dqjo3hHjJyABtIAmAbSAJgG0gGb754C8CzSTAFpAw3dAvgliEkALaNp3gL7HK8ZPQAJoAU3+EdICmgTQApr2f4R2Z/wEJIAW0CSAFtAkgBbQJIAW0CSAFtD8AHWOKPPFUEL+AAAAAElFTkSuQmCC",
+  "solid": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAlklEQVR4nO3QQRHAMADDsKz8OXcw9KiFwOdv293Djg7QGqADtAboAK0BOkBrgA7QGqADtAboAK0BOkBrgA7QGqADtAboAK0BOkBrgA7QGqADtAboAK0BOkBrgA7QGqADtAboAK0BOkBrgA7QGqADtAboAK0BOkBrgA7QGqADtAboAK0BOkBrgA7QGqADtAboAK0BOkD7AVC0AX8AKmT5AAAAAElFTkSuQmCC",
+  "sticky": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAl0lEQVR4nO3QURUAEADAQAQRVHli3Iddgr3Nc/cdH1s6QGuADtAaoAO0BugArQE6QGuADtAaoAO0BugArQE6QGuADtAaoAO0BugArQE6QGuADtAaoAO0BugArQE6QGuADtAaoAO0BugArQE6QGuADtAaoAO0BugArQE6QGuADtAaoAO0BugArQE6QGuADtAaoAO0BugA7QF5nAMWzYBXqAAAAABJRU5ErkJggg==",
+};
+
+
+// ---- BLOCK DEFINITIONS ----
+const BLOCK_DEFS = {
+  block: {
+    name: "Block",
+    desc: "A standard movable block. Can be pushed, stuck, or destroyed.",
+    sprite: "block",
+    movable: true,
+    powered: false,
+  },
+  solid: {
+    name: "Solid",
+    desc: "An immovable wall. Cannot be pushed, stuck, or destroyed.",
+    sprite: "solid",
+    movable: false,
+    powered: false,
+  },
+  destroyer: {
+    name: "Destroyer",
+    desc: "Destroys all adjacent blocks (N/E/S/W) on each simulation tick.",
+    sprite: "destroyer",
+    movable: true,
+    powered: false,
+  },
+  duper: {
+    name: "Duper",
+    desc: "Duplicates the block to its left onto the tile to its right (or right→left).",
+    sprite: "duper",
+    movable: true,
+    powered: false,
+  },
+  pusher: {
+    name: "Pusher",
+    desc: "Moves in its direction each tick, pushing blocks in front of it like a vehicle. Blocked by solid/immovable blocks. Right-click to rotate.",
+    sprite: "pusher",
+    movable: true,
+    powered: false,
+    dir: 'right',
+  },
+  sticky: {
+    name: "Sticky",
+    desc: "Binds adjacent blocks together. When one moves, all connected sticky blocks move.",
+    sprite: "sticky",
+    movable: true,
+    powered: false,
+  },
+  power: {
+    name: "Power",
+    desc: "Provides power to adjacent logic and light blocks.",
+    sprite: "power",
+    movable: true,
+    powered: true,
+  },
+  logic: {
+    name: "Logic",
+    desc: "When adjacent to power: movable. Without power: immovable like a wall.",
+    sprite: "logic_off",
+    movable: false,
+    powered: false,
+  },
+  light: {
+    name: "Light",
+    desc: "Turns on (lights up) when adjacent to a power block.",
+    sprite: "light_off",
+    movable: true,
+    powered: false,
+  },
+};
+
+const GRID_W = 40;
+const GRID_H = 30;
+const CELL = 24;
+
+let grid = Array.from({length: GRID_H}, () => Array(GRID_W).fill(null));
+let selectedTool = 'block';
+let pusherDirs = {}; // key="x,y" -> dir
+let isRunning = false;
+let runInterval = null;
+let tickCount = 0;
+let mouseDown = false;
+let lastCell = null;
+let spriteImgs = {};
+
+// Load sprite images
+for (const [name, src] of Object.entries(SPRITES)) {
+  const img = new Image();
+  img.src = src;
+  spriteImgs[name] = img;
+}
+
+// ---- TOOLBAR SETUP ----
+const TOOL_ORDER = ['block','solid','destroyer','duper','pusher','sticky','power','logic','light'];
+
+function buildToolbar() {
+  const container = document.getElementById('block-tools');
+  container.style.display = 'flex';
+  container.style.gap = '6px';
+  for (const key of TOOL_ORDER) {
+    const def = BLOCK_DEFS[key];
+    const btn = document.createElement('div');
+    btn.className = 'tool-btn' + (key === selectedTool ? ' active' : '');
+    btn.id = 'tool-' + key;
+    btn.onclick = () => selectTool(key);
+    const img = document.createElement('img');
+    img.src = SPRITES[def.sprite];
+    const lbl = document.createElement('span');
+    lbl.textContent = def.name;
+    btn.appendChild(img);
+    btn.appendChild(lbl);
+    container.appendChild(btn);
+  }
+}
+
+function selectTool(key) {
+  selectedTool = key;
+  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('tool-' + key) || document.getElementById('erase-tool');
+  if (btn) btn.classList.add('active');
+  updateInfoPanel();
+}
+
+function updateInfoPanel() {
+  const el = document.getElementById('info-content');
+  if (selectedTool === 'erase') {
+    el.innerHTML = '<div class="name">Eraser</div><div class="desc">Click or drag to remove blocks from the grid.</div>';
+    return;
+  }
+  const def = BLOCK_DEFS[selectedTool];
+  if (def) {
+    el.innerHTML = `<div class="name">${def.name}</div><div class="desc">${def.desc}</div><div class="desc" style="margin-top:6px;color:#555;font-size:10px;">Right-click any placed block to rotate it.</div>`;
+  }
+}
+
+// ---- CANVAS ----
+const canvas = document.getElementById('grid-canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = GRID_W * CELL;
+canvas.height = GRID_H * CELL;
+
+function getCell(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const x = Math.floor((e.clientX - rect.left) * scaleX / CELL);
+  const y = Math.floor((e.clientY - rect.top) * scaleY / CELL);
+  if (x < 0 || x >= GRID_W || y < 0 || y >= GRID_H) return null;
+  return {x, y};
+}
+
+function placeBlock(x, y) {
+  if (selectedTool === 'erase') {
+    grid[y][x] = null;
+    if (pusherDirs[x+','+y]) delete pusherDirs[x+','+y];
+    return;
+  }
+  const def = BLOCK_DEFS[selectedTool];
+  if (!def) return;
+  const cell = { type: selectedTool, dir: 'right' };
+  grid[y][x] = cell;
+}
+
+canvas.addEventListener('mousedown', e => {
+  mouseDown = true;
+  const c = getCell(e);
+  if (!c) return;
+  lastCell = c;
+  // Right click on any block: cycle rotation
+  if (e.button === 2 && grid[c.y][c.x]) {
+    const dirs = ['right','down','left','up'];
+    const cur = grid[c.y][c.x].dir || 'right';
+    grid[c.y][c.x].dir = dirs[(dirs.indexOf(cur)+1)%4];
+    draw();
+    return;
+  }
+  if (e.button === 0) placeBlock(c.x, c.y);
+  draw();
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (!mouseDown || e.buttons !== 1) return;
+  const c = getCell(e);
+  if (!c || (lastCell && lastCell.x === c.x && lastCell.y === c.y)) return;
+  lastCell = c;
+  placeBlock(c.x, c.y);
+  draw();
+});
+
+canvas.addEventListener('mouseup', () => { mouseDown = false; lastCell = null; });
+canvas.addEventListener('mouseleave', () => { mouseDown = false; });
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+// ---- DRAWING ----
+const PUSHER_ARROWS = { right: '→', down: '↓', left: '←', up: '↑' };
+const PUSHER_DIR_DEG = { right: 0, down: 90, left: 180, up: 270 };
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // Grid lines
+  ctx.strokeStyle = '#1c1c24';
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x <= GRID_W; x++) {
+    ctx.beginPath(); ctx.moveTo(x*CELL, 0); ctx.lineTo(x*CELL, GRID_H*CELL); ctx.stroke();
+  }
+  for (let y = 0; y <= GRID_H; y++) {
+    ctx.beginPath(); ctx.moveTo(0, y*CELL); ctx.lineTo(GRID_W*CELL, y*CELL); ctx.stroke();
+  }
+  
+  // Cells
+  for (let y = 0; y < GRID_H; y++) {
+    for (let x = 0; x < GRID_W; x++) {
+      const cell = grid[y][x];
+      if (!cell) continue;
+      drawCell(cell, x, y);
+    }
+  }
+}
+
+function drawCell(cell, x, y) {
+  const def = BLOCK_DEFS[cell.type];
+  let spriteName = def.sprite;
+  
+  // Dynamic sprite selection
+  if (cell.type === 'logic') spriteName = cell._powered ? 'logic_on' : 'logic_off';
+  if (cell.type === 'light') spriteName = cell._powered ? 'light_on' : 'light_off';
+  
+  const img = spriteImgs[spriteName];
+  
+  // All blocks support rotation via right-click
+  const deg = PUSHER_DIR_DEG[cell.dir || 'right'];
+  if (deg !== 0) {
+    ctx.save();
+    ctx.translate(x*CELL + CELL/2, y*CELL + CELL/2);
+    ctx.rotate((deg * Math.PI) / 180);
+    if (img && img.complete) ctx.drawImage(img, -CELL/2, -CELL/2, CELL, CELL);
+    ctx.restore();
+  } else {
+    if (img && img.complete) ctx.drawImage(img, x*CELL, y*CELL, CELL, CELL);
+  }
+  
+  // Light glow effect
+  if (cell.type === 'light' && cell._powered) {
+    ctx.save();
+    ctx.globalAlpha = 0.25;
+    const grad = ctx.createRadialGradient(x*CELL+CELL/2, y*CELL+CELL/2, 2, x*CELL+CELL/2, y*CELL+CELL/2, CELL*1.5);
+    grad.addColorStop(0, '#ffe066');
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.fillRect(x*CELL - CELL/2, y*CELL - CELL/2, CELL*2, CELL*2);
+    ctx.restore();
+  }
+}
+
+// ---- SIMULATION ----
+function getNeighbors(x, y) {
+  return [
+    {nx: x, ny: y-1, dir: 'up'},
+    {nx: x+1, ny: y, dir: 'right'},
+    {nx: x, ny: y+1, dir: 'down'},
+    {nx: x-1, ny: y, dir: 'left'},
+  ].filter(({nx, ny}) => nx >= 0 && nx < GRID_W && ny >= 0 && ny < GRID_H);
+}
+
+function isPoweredAt(x, y) {
+  return getNeighbors(x, y).some(({nx, ny}) => grid[ny] && grid[ny][nx] && grid[ny][nx].type === 'power');
+}
+
+function isMovable(x, y) {
+  const cell = grid[y][x];
+  if (!cell) return true; // empty = movable
+  if (cell.type === 'solid') return false;
+  if (cell.type === 'logic') return isPoweredAt(x, y); // check live power state
+  return true;
+}
+
+function step() {
+  tickCount++;
+  document.getElementById('tick-count').textContent = tickCount;
+  document.getElementById('step-num').textContent = tickCount;
+  
+  // 1. Update power states for logic/light
+  for (let y = 0; y < GRID_H; y++) {
+    for (let x = 0; x < GRID_W; x++) {
+      const cell = grid[y][x];
+      if (!cell) continue;
+      if (cell.type === 'logic' || cell.type === 'light') {
+        cell._powered = isPoweredAt(x, y);
+      }
+    }
+  }
+  
+  // 2. Destroyer: destroy adjacent blocks
+  for (let y = 0; y < GRID_H; y++) {
+    for (let x = 0; x < GRID_W; x++) {
+      const cell = grid[y][x];
+      if (!cell || cell.type !== 'destroyer') continue;
+      for (const {nx, ny} of getNeighbors(x, y)) {
+        const neighbor = grid[ny][nx];
+        if (neighbor && neighbor.type !== 'solid' && neighbor.type !== 'destroyer') {
+          grid[ny][nx] = null;
+        }
+      }
+    }
+  }
+  
+  // 3. Duper: duplicate block left->right or right->left
+  // Process on a copy to avoid chain reactions this tick
+  const gridCopy = grid.map(row => row.map(c => c ? {...c} : null));
+  for (let y = 0; y < GRID_H; y++) {
+    for (let x = 0; x < GRID_W; x++) {
+      const cell = gridCopy[y][x];
+      if (!cell || cell.type !== 'duper') continue;
+      // Check left/right pair
+      if (x > 0 && x < GRID_W - 1) {
+        const left = gridCopy[y][x-1];
+        const right = gridCopy[y][x+1];
+        if (left && left.type !== 'duper' && (!right || right.type === 'block')) {
+          grid[y][x+1] = {...left};
+        } else if (right && right.type !== 'duper' && (!left || left.type === 'block')) {
+          grid[y][x-1] = {...right};
+        }
+      }
+      // Check up/down pair
+      if (y > 0 && y < GRID_H - 1) {
+        const above = gridCopy[y-1][x];
+        const below = gridCopy[y+1][x];
+        if (above && above.type !== 'duper' && (!below || below.type === 'block')) {
+          grid[y+1][x] = {...above};
+        } else if (below && below.type !== 'duper' && (!above || above.type === 'block')) {
+          grid[y-1][x] = {...below};
+        }
+      }
+    }
+  }
+  
+  // 4. Pusher: push block in front
+  // Collect sticky groups first
+  function getStickyGroup(sx, sy, visited = new Set()) {
+    const key = sx + ',' + sy;
+    if (visited.has(key)) return visited;
+    visited.add(key);
+    const cell = grid[sy][sx];
+    if (!cell) return visited;
+    if (cell.type === 'sticky') {
+      for (const {nx, ny} of getNeighbors(sx, sy)) {
+        if (grid[ny][nx]) getStickyGroup(nx, ny, visited);
+      }
+    } else {
+      // Check if adjacent to sticky
+      for (const {nx, ny} of getNeighbors(sx, sy)) {
+        const n = grid[ny][nx];
+        if (n && n.type === 'sticky') getStickyGroup(nx, ny, visited);
+      }
+    }
+    return visited;
+  }
+  
+  function tryMoveGroup(cells, dx, dy) {
+    // Check if all target cells are movable
+    for (const key of cells) {
+      const [cx, cy] = key.split(',').map(Number);
+      const tx = cx+dx, ty = cy+dy;
+      if (tx < 0 || tx >= GRID_W || ty < 0 || ty >= GRID_H) return false;
+      if (cells.has(tx+','+ty)) continue; // moving into another cell in group
+      if (!isMovable(tx, ty)) return false;
+    }
+    // Perform move
+    const moved = [];
+    for (const key of cells) {
+      const [cx, cy] = key.split(',').map(Number);
+      moved.push([cx, cy, grid[cy][cx]]);
+      grid[cy][cx] = null;
+    }
+    for (const [cx, cy, c] of moved) {
+      grid[cy+dy][cx+dx] = c;
+    }
+    return true;
+  }
+  
+  const DIRS = { right: [1,0], left: [-1,0], up: [0,-1], down: [0,1] };
+  
+  // Multiple pusher passes (left-to-right, or in push direction)
+  const pushers = [];
+  for (let y = 0; y < GRID_H; y++) {
+    for (let x = 0; x < GRID_W; x++) {
+      const cell = grid[y][x];
+      if (cell && cell.type === 'pusher') pushers.push({x, y, dir: cell.dir||'right'});
+    }
+  }
+  
+  for (const {x, y, dir} of pushers) {
+    const [dx, dy] = DIRS[dir];
+    const tx = x+dx, ty = y+dy;
+    if (tx < 0 || tx >= GRID_W || ty < 0 || ty >= GRID_H) continue;
+    const target = grid[ty][tx];
+    // Build group: pusher itself + sticky group of whatever is in front
+    // The pusher always tries to move forward; if something is in front, push it too
+    const group = new Set([x+','+y]);
+    if (target) {
+      const frontGroup = getStickyGroup(tx, ty);
+      for (const k of frontGroup) group.add(k);
+    }
+    // If nothing in front, pusher just moves freely into empty space
+    // If something is there but immovable, pusher is blocked
+    const moved = tryMoveGroup(group, dx, dy);
+  }
+  
+  // 5. Re-update power states after movement
+  for (let y = 0; y < GRID_H; y++) {
+    for (let x = 0; x < GRID_W; x++) {
+      const cell = grid[y][x];
+      if (!cell) continue;
+      if (cell.type === 'logic' || cell.type === 'light') {
+        cell._powered = isPoweredAt(x, y);
+      }
+    }
+  }
+  
+  draw();
+}
+
+function toggleRun() {
+  isRunning = !isRunning;
+  const btn = document.getElementById('run-btn');
+  if (isRunning) {
+    btn.textContent = '■ STOP';
+    btn.classList.add('running');
+    runInterval = setInterval(step, 250);
+  } else {
+    btn.textContent = '▶ RUN';
+    btn.classList.remove('running');
+    clearInterval(runInterval);
+  }
+}
+
+function stepOnce() {
+  if (isRunning) toggleRun();
+  step();
+}
+
+function clearGrid() {
+  if (isRunning) toggleRun();
+  grid = Array.from({length: GRID_H}, () => Array(GRID_W).fill(null));
+  tickCount = 0;
+  document.getElementById('tick-count').textContent = 0;
+  document.getElementById('step-num').textContent = 0;
+  draw();
+}
+
+// ---- INIT ----
+buildToolbar();
+updateInfoPanel();
+
+// Wait for images to load then draw
+let imgsLoaded = 0;
+const totalImgs = Object.keys(SPRITES).length;
+for (const img of Object.values(spriteImgs)) {
+  img.onload = () => {
+    imgsLoaded++;
+    if (imgsLoaded >= totalImgs) draw();
+  };
+}
+draw();
+</script>
+</body>
+</html>

@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PRIMORDIAL — Civilization Simulator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --gold:#c9a84c;--gold-dim:#7a6230;--gold-bright:#f0c96a;
+  --dark:#08090f;--dark2:#0e0f1a;--dark3:#161828;
+  --text:#d4cbb8;--text-dim:#7a7260;--text-muted:#3a3828;
+  --red:#c04040;--green:#4a9040;--blue:#4060b0;--cyan:#40a0a0;
+}
+body{background:var(--dark);color:var(--text);font-family:'Courier Prime',monospace;overflow:hidden;user-select:none;}
+#c{display:block;position:fixed;inset:0;}
+
+/* LOADING */
+#loading{position:fixed;inset:0;background:var(--dark);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;z-index:9999;transition:opacity 1s;}
+#loading h1{font-family:'Cinzel',serif;font-size:72px;letter-spacing:20px;color:var(--gold);text-shadow:0 0 60px rgba(201,168,76,0.3),0 0 120px rgba(201,168,76,0.1);}
+#loading p{font-size:11px;letter-spacing:6px;color:var(--text-dim);}
+#lbar-wrap{width:300px;height:1px;background:var(--text-muted);}
+#lbar{height:1px;background:var(--gold);width:0%;box-shadow:0 0 10px var(--gold);transition:width 0.4s;}
+#lstatus{font-size:10px;letter-spacing:3px;color:var(--text-muted);}
+
+/* HUD WRAPPER */
+#hud{position:fixed;inset:0;pointer-events:none;}
+
+/* TOP BAR */
+#topbar{position:absolute;top:0;left:0;right:0;height:52px;background:linear-gradient(to bottom,rgba(8,9,15,0.97),rgba(8,9,15,0));display:flex;align-items:center;justify-content:space-between;padding:0 24px;}
+#logo{font-family:'Cinzel',serif;font-size:22px;letter-spacing:10px;color:var(--gold);text-shadow:0 0 20px rgba(201,168,76,0.4);}
+#yearbox{text-align:right;}
+#yearlabel{font-size:9px;letter-spacing:4px;color:var(--text-muted);}
+#yearval{font-family:'Cinzel',serif;font-size:18px;color:var(--gold-bright);letter-spacing:4px;}
+#season-badge{font-size:9px;letter-spacing:3px;padding:3px 10px;border:1px solid;margin-left:auto;margin-right:20px;}
+#season-badge.spring{color:#6ab86a;border-color:rgba(106,184,106,0.3);}
+#season-badge.summer{color:#c8a040;border-color:rgba(200,160,64,0.3);}
+#season-badge.autumn{color:#c06830;border-color:rgba(192,104,48,0.3);}
+#season-badge.winter{color:#88a8c8;border-color:rgba(136,168,200,0.3);}
+
+/* SIDE PANELS */
+.panel{background:rgba(8,9,15,0.88);border:1px solid rgba(201,168,76,0.12);}
+.panel-title{font-size:8px;letter-spacing:4px;color:var(--gold-dim);border-bottom:1px solid rgba(201,168,76,0.1);padding-bottom:6px;margin-bottom:8px;}
+
+#panel-left{position:absolute;top:60px;left:16px;width:210px;padding:14px 16px;}
+.stat{display:flex;justify-content:space-between;font-size:10px;line-height:2;color:var(--text-dim);letter-spacing:1px;}
+.stat-v{color:var(--text);font-weight:bold;}
+.stat-bar{height:2px;background:var(--text-muted);margin:2px 0 6px;}
+.stat-bar-fill{height:2px;transition:width 0.5s;}
+
+#panel-right{position:absolute;top:60px;right:16px;width:200px;padding:14px 16px;max-height:440px;overflow:hidden;}
+.tribe-row{display:flex;align-items:center;gap:7px;font-size:10px;line-height:1.9;border-bottom:1px solid rgba(255,255,255,0.03);}
+.tdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.tname{color:var(--text);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:100px;}
+.tpop{color:var(--gold-dim);margin-left:auto;font-size:9px;}
+.ttrait{font-size:8px;color:var(--text-muted);letter-spacing:1px;}
+
+/* LOG */
+#logpanel{position:absolute;bottom:72px;left:16px;width:360px;padding:12px 14px;max-height:180px;overflow:hidden;}
+.log{font-size:10px;line-height:1.75;letter-spacing:0.5px;color:var(--text-muted);border-top:1px solid rgba(255,255,255,0.025);}
+.log.ev{color:var(--gold-dim);}
+.log.birth{color:#5a9858;}
+.log.death{color:#9a4040;}
+.log.tribe{color:#4878a8;}
+.log.war{color:#b04830;}
+.log.disco{color:#5080c8;}
+
+/* BOTTOM CONTROLS */
+#controls{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;pointer-events:all;}
+.btn{background:rgba(8,9,15,0.9);border:1px solid rgba(201,168,76,0.25);color:var(--gold-dim);font-family:'Courier Prime',monospace;font-size:10px;letter-spacing:2px;padding:7px 14px;cursor:pointer;transition:all .2s;}
+.btn:hover{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,0.08);}
+.btn.on{border-color:var(--gold);color:var(--gold-bright);background:rgba(201,168,76,0.15);}
+#speeddisplay{font-size:11px;color:var(--text-dim);letter-spacing:2px;min-width:72px;text-align:center;}
+
+/* NAV */
+#navhint{position:absolute;bottom:14px;right:16px;font-size:9px;color:var(--text-muted);letter-spacing:1px;line-height:2;text-align:right;}
+
+/* TOOLTIP */
+#tt{position:absolute;background:rgba(6,7,12,0.97);border:1px solid rgba(201,168,76,0.25);border-top:2px solid var(--gold);padding:10px 14px;font-size:10px;line-height:1.9;pointer-events:none;display:none;min-width:170px;letter-spacing:0.5px;}
+.tt-name{color:var(--text);font-size:13px;font-family:'Cinzel',serif;letter-spacing:2px;}
+.tt-tribe{color:var(--gold-dim);font-size:10px;}
+.tt-row{color:var(--text-dim);}
+.tt-row span{color:var(--text);}
+.tt-warn{color:var(--red);font-size:9px;}
+
+/* MINIMAP */
+#minimap{position:absolute;bottom:72px;right:16px;width:140px;height:140px;border:1px solid rgba(201,168,76,0.15);}
+#minimap canvas{width:100%;height:100%;}
+#minimap-label{position:absolute;top:-18px;left:0;font-size:8px;letter-spacing:3px;color:var(--text-muted);}
+
+/* EVENT FLASH */
+#flash{position:absolute;top:60px;left:50%;transform:translateX(-50%);background:rgba(6,7,12,0.92);border:1px solid;padding:8px 20px;font-size:11px;letter-spacing:3px;opacity:0;transition:opacity 0.5s;pointer-events:none;white-space:nowrap;}
+#flash.show{opacity:1;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="loading">
+  <h1>PRIMORDIAL</h1>
+  <p>A CIVILIZATION EMERGES FROM DUST</p>
+  <div id="lbar-wrap"><div id="lbar"></div></div>
+  <div id="lstatus">SHAPING THE WORLD...</div>
+</div>
+
+<div id="hud">
+  <div id="topbar">
+    <div id="logo">PRIMORDIAL</div>
+    <div id="season-badge" class="spring">SPRING</div>
+    <div id="yearbox">
+      <div id="yearlabel">YEAR OF CREATION</div>
+      <div id="yearval">0001</div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-left">
+    <div class="panel-title">WORLD STATUS</div>
+    <div class="stat"><span>POPULATION</span><span class="stat-v" id="s-pop">0</span></div>
+    <div class="stat-bar"><div class="stat-bar-fill" id="bar-pop" style="background:var(--green);width:0%"></div></div>
+    <div class="stat"><span>BIRTHS</span><span class="stat-v" id="s-births">0</span></div>
+    <div class="stat"><span>DEATHS</span><span class="stat-v" id="s-deaths">0</span></div>
+    <div class="stat"><span>TRIBES FORMED</span><span class="stat-v" id="s-tribes">0</span></div>
+    <div class="stat"><span>WANDERERS</span><span class="stat-v" id="s-lone">0</span></div>
+    <div class="stat"><span>DISCOVERIES</span><span class="stat-v" id="s-disco">0</span></div>
+    <div class="stat"><span>WARS FOUGHT</span><span class="stat-v" id="s-wars">0</span></div>
+    <div class="stat"><span>ELDEST (YRS)</span><span class="stat-v" id="s-old">0</span></div>
+    <div style="margin-top:10px" class="panel-title">CAUSE OF DEATH</div>
+    <div class="stat"><span>Starvation</span><span class="stat-v" id="d-starv">0</span></div>
+    <div class="stat"><span>Disease</span><span class="stat-v" id="d-dis">0</span></div>
+    <div class="stat"><span>Old Age</span><span class="stat-v" id="d-age">0</span></div>
+    <div class="stat"><span>Predators</span><span class="stat-v" id="d-pred">0</span></div>
+    <div class="stat"><span>Exposure</span><span class="stat-v" id="d-cold">0</span></div>
+    <div class="stat"><span>War</span><span class="stat-v" id="d-war">0</span></div>
+    <div class="stat"><span>Drowning</span><span class="stat-v" id="d-drown">0</span></div>
+    <div class="stat"><span>Famine</span><span class="stat-v" id="d-fam">0</span></div>
+  </div>
+
+  <div class="panel" id="panel-right">
+    <div class="panel-title">ACTIVE TRIBES</div>
+    <div id="tribes-list"><div style="color:var(--text-muted);font-size:10px">No tribes yet...</div></div>
+  </div>
+
+  <div class="panel" id="logpanel">
+    <div class="panel-title">CHRONICLE</div>
+    <div id="loglist"></div>
+  </div>
+
+  <div id="controls">
+    <button class="btn" id="btn-pause">⏸ PAUSE</button>
+    <button class="btn" id="btn-1">1×</button>
+    <button class="btn" id="btn-3">3×</button>
+    <button class="btn" id="btn-10">10×</button>
+    <button class="btn" id="btn-30">30×</button>
+    <button class="btn" id="btn-100">100×</button>
+    <span id="speeddisplay">1× SPEED</span>
+  </div>
+
+  <div id="navhint">WASD/ARROWS · MOVE<br>LEFT DRAG · ORBIT<br>SCROLL · ZOOM<br>RIGHT DRAG · PAN<br>CLICK · FOLLOW<br>HOVER · INSPECT</div>
+
+  <div id="tt"></div>
+
+  <div id="minimap">
+    <div id="minimap-label">OVERVIEW</div>
+    <canvas id="mmcanvas" width="140" height="140"></canvas>
+  </div>
+
+  <div id="flash"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+'use strict';
+// ═══════════════════════════════════════════════════════════════════════════
+// CONFIG (BALANCED FOR SURVIVAL)
+// ═══════════════════════════════════════════════════════════════════════════
+const C = {
+  W: 320,            // world size
+  SEG: 200,          // terrain segments
+  INIT_POP: 100,     // Increased start pop to guarantee tribe emergence
+  MAX_POP: 800,
+  TICKS_PER_YEAR: 200,
+  TRIBE_THRESHOLD: 6,
+  TRIBE_RADIUS: 25,
+  MAX_AGE_TICKS: 12000, // Equivalent to 60 years
+  MIN_BREED_AGE: 3000,  // 15 years
+  MAX_BREED_AGE: 9000,  // 45 years
+  BREED_CHANCE: 0.02,   
+  BREED_COOLDOWN: 400,  // 2 years between children
+  HUNGER_RATE: 0.035,   // Hunger depletion rate
+  FOOD_FIND_CHANCE: 0.15, 
+  DISEASE_CHANCE: 0.0001, 
+  RECOVER_CHANCE: 0.01,   
+  PRED_CHANCE: 0.0001,    
+  COLD_CHANCE: 0.0002,    
+  WAR_CHANCE: 0.0005,     
+  DROWN_CHANCE: 0.0001,   
+  FAMINE_HUNGER_THRESH: 90,
+  DISCOVERY_CHANCE: 0.0003,
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RENDERER
+// ═══════════════════════════════════════════════════════════════════════════
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x0a0c18, 0.0045);
+scene.background = new THREE.Color(0x080a14);
+
+const cam = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.5, 1200);
+cam.position.set(0, 120, 160);
+
+// Setup OrbitControls
+const controls = new THREE.OrbitControls(cam, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.maxPolarAngle = Math.PI / 2 - 0.02; // Keep camera above ground
+controls.minDistance = 15;
+controls.maxDistance = 280;
+controls.target.set(0, 0, 0);
+
+window.addEventListener('resize', ()=>{
+  cam.aspect = innerWidth/innerHeight;
+  cam.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LIGHTING
+// ═══════════════════════════════════════════════════════════════════════════
+const sunLight = new THREE.DirectionalLight(0xfff8e8, 1.6);
+sunLight.position.set(80, 140, 60);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.set(2048, 2048);
+const sc = sunLight.shadow.camera;
+sc.left=sc.bottom=-200; sc.right=sc.top=200; sc.near=1; sc.far=500;
+scene.add(sunLight);
+scene.add(new THREE.AmbientLight(0x203050, 0.9));
+const moonLight = new THREE.DirectionalLight(0x3050a0, 0.2);
+moonLight.position.set(-60, 80, -80);
+scene.add(moonLight);
+const rimLight = new THREE.DirectionalLight(0x602010, 0.15);
+rimLight.position.set(0, 20, -120);
+scene.add(rimLight);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TERRAIN
+// ═══════════════════════════════════════════════════════════════════════════
+function hash(n){ return Math.sin(n*127.1+311.7)*43758.5453%1; }
+function smoothNoise2D(x, z){
+  const ix=Math.floor(x), iz=Math.floor(z);
+  const fx=x-ix, fz=z-iz;
+  const ux=fx*fx*(3-2*fx), uz=fz*fz*(3-2*fz);
+  const a=hash(ix+iz*57), b=hash(ix+1+iz*57), c=hash(ix+(iz+1)*57), d=hash(ix+1+(iz+1)*57);
+  return a+(b-a)*ux + (c-a+(a-b-c+d)*ux)*uz;
+}
+function fbm(x, z, octs, lac, gain){
+  let v=0, amp=0.5, freq=1, max=0;
+  for(let i=0;i<octs;i++){
+    v += smoothNoise2D(x*freq, z*freq)*amp;
+    max+=amp; amp*=gain; freq*=lac;
+  }
+  return v/max;
+}
+function getH(x, z){
+  const hw=C.W*0.5;
+  const d = Math.sqrt(x*x+z*z)/hw;
+  const edge = Math.pow(Math.max(0, 1-d*0.98), 1.4);
+  const continent = fbm(x*0.012+10, z*0.012+10, 7, 2.1, 0.52) * 30;
+  const mountains = Math.max(0, fbm(x*0.007+50, z*0.007+50, 5, 2.3, 0.55)-0.3)*60;
+  const detail = fbm(x*0.05+3, z*0.05+3, 3, 2.0, 0.5)*4;
+  const river = Math.abs(Math.sin(x*0.015+fbm(x*0.01,z*0.01,2,2,0.5)*3)*Math.cos(z*0.012));
+  const riverCut = Math.pow(Math.max(0, 0.9-river), 6)*8;
+  return (continent + mountains*0.5 + detail) * edge - riverCut;
+}
+
+// Build terrain
+function loadBar(p, msg){
+  document.getElementById('lbar').style.width=p+'%';
+  if(msg) document.getElementById('lstatus').textContent=msg;
+}
+
+loadBar(5,'SCULPTING TERRAIN...');
+const tGeo = new THREE.PlaneGeometry(C.W, C.W, C.SEG, C.SEG);
+tGeo.rotateX(-Math.PI/2);
+const pos = tGeo.attributes.position.array;
+const cols = new Float32Array(pos.length);
+
+// Biome colors
+function biomeColor(h, nx, nz){
+  if(h<-0.5){ return [0.10,0.18,0.32]; }  // deep water
+  if(h<0.3){ return [0.14,0.24,0.40]; }    // shallow water
+  if(h<1.2){ return [0.72,0.66,0.48]; }    // beach/sand
+  if(h<3.5){ return [0.24,0.44,0.20]; }    // lowland grass
+  if(h<7){   return [0.28,0.48,0.22]; }    // rich forest
+  if(h<12){  return [0.22,0.36,0.18]; }    // highland
+  if(h<18){  return [0.36,0.30,0.24]; }    // rocky
+  if(h<24){  return [0.42,0.36,0.30]; }    // high rock
+  if(h<28){  return [0.70,0.72,0.75]; }    // snow line
+  return [0.88,0.90,0.95];                  // peak snow
+}
+
+const heightCache = new Map();
+const vCount = (C.SEG+1)*(C.SEG+1);
+for(let i=0; i<vCount; i++){
+  const x=pos[i*3], z=pos[i*3+2];
+  const h=getH(x,z);
+  pos[i*3+1]=h;
+  heightCache.set(`${Math.round(x)}_${Math.round(z)}`, h);
+  const [r,g,b]=biomeColor(h,x,z);
+  cols[i*3]=r; cols[i*3+1]=g; cols[i*3+2]=b;
+}
+tGeo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+tGeo.computeVertexNormals();
+
+const tMesh = new THREE.Mesh(tGeo, new THREE.MeshLambertMaterial({vertexColors:true}));
+tMesh.receiveShadow=true;
+scene.add(tMesh);
+
+// Water
+const wGeo = new THREE.PlaneGeometry(C.W*1.3, C.W*1.3, 2, 2);
+wGeo.rotateX(-Math.PI/2);
+const wMat = new THREE.MeshLambertMaterial({color:0x0f2040, transparent:true, opacity:0.75});
+const wMesh = new THREE.Mesh(wGeo, wMat);
+wMesh.position.y=0.15;
+scene.add(wMesh);
+
+// TERRAIN DEFORMATION FUNCTION (For Mining)
+function createCrater(cx, cz, radius, depthStep) {
+  const hw = C.W / 2;
+  const segSize = C.W / C.SEG;
+  const minX = Math.max(0, Math.floor((cx - radius + hw) / segSize));
+  const maxX = Math.min(C.SEG, Math.ceil((cx + radius + hw) / segSize));
+  const minZ = Math.max(0, Math.floor((cz - radius + hw) / segSize));
+  const maxZ = Math.min(C.SEG, Math.ceil((cz + radius + hw) / segSize));
+
+  let modified = false;
+  for(let iz = minZ; iz <= maxZ; iz++) {
+    for(let ix = minX; ix <= maxX; ix++) {
+      const i = iz * (C.SEG + 1) + ix;
+      let vx = pos[i*3], vz = pos[i*3+2];
+      let dx = vx - cx, dz = vz - cz;
+      let dist = Math.sqrt(dx*dx + dz*dz);
+      if(dist < radius) {
+        let falloff = Math.pow(1 - (dist / radius), 1.5);
+        let currentH = pos[i*3+1];
+        if (currentH > 1.0) { // Don't dig into water
+            pos[i*3+1] = Math.max(1.0, currentH - (depthStep * falloff));
+            // Darken / muddy the color to look like dug dirt/rock
+            cols[i*3] = Math.max(0.15, cols[i*3] * 0.7);
+            cols[i*3+1] = Math.max(0.12, cols[i*3+1] * 0.7);
+            cols[i*3+2] = Math.max(0.10, cols[i*3+2] * 0.7);
+            modified = true;
+            heightCache.set(`${Math.round(vx)}_${Math.round(vz)}`, pos[i*3+1]);
+        }
+      }
+    }
+  }
+  if(modified) {
+    tGeo.attributes.position.needsUpdate = true;
+    tGeo.attributes.color.needsUpdate = true;
+    tGeo.computeVertexNormals();
+  }
+}
+
+loadBar(20,'GROWING FORESTS...');
+
+// Shared geometries
+const treeGeos = [
+  new THREE.ConeGeometry(1.4, 3, 6),
+  new THREE.ConeGeometry(1.1, 2.2, 5),
+  new THREE.SphereGeometry(1.2, 5, 4),
+  new THREE.ConeGeometry(0.8, 4, 4), // pine
+];
+const treeMats = [
+  new THREE.MeshLambertMaterial({color:0x1a3d10}),
+  new THREE.MeshLambertMaterial({color:0x2a5020}),
+  new THREE.MeshLambertMaterial({color:0x3a6828}),
+  new THREE.MeshLambertMaterial({color:0x243818}),
+  new THREE.MeshLambertMaterial({color:0x5c3a1a}), // autumn
+  new THREE.MeshLambertMaterial({color:0x8a2010}), // autumn red
+];
+const trunkMat = new THREE.MeshLambertMaterial({color:0x3a2010});
+const trunkGeo = new THREE.CylinderGeometry(0.12,0.2,1.2,5);
+const rockGeo = new THREE.DodecahedronGeometry(1,0);
+const rockMat = new THREE.MeshLambertMaterial({color:0x504840});
+
+function getHeightAt(x,z){
+  const gx = Math.round(x), gz = Math.round(z);
+  const key=`${gx}_${gz}`;
+  if(heightCache.has(key)) return heightCache.get(key);
+  return getH(x,z);
+}
+
+// Vegetation
+const placedVeg = [];
+for(let i=0; i<2200; i++){
+  const a=Math.random()*Math.PI*2, r=Math.random()*C.W*0.47;
+  const x=Math.cos(a)*r, z=Math.sin(a)*r;
+  const h=getH(x,z);
+  if(h<1.5||h>22) continue;
+  const g=new THREE.Group();
+  const isHighland = h>12;
+  const isPine = h>8||Math.random()<0.2;
+  const tGeoIdx = isPine?3:(isHighland?1:Math.floor(Math.random()*3));
+  const tMatIdx = Math.random()<0.15?4+(Math.random()<0.5?0:1):Math.floor(Math.random()*4);
+  const trunk=new THREE.Mesh(trunkGeo, trunkMat);
+  const height = 1.0+Math.random()*2.0;
+  trunk.scale.y=height/1.2;
+  trunk.position.y=(height/1.2)*0.6;
+  const canopy=new THREE.Mesh(treeGeos[tGeoIdx], treeMats[tMatIdx]);
+  canopy.position.y=height*1.1;
+  canopy.scale.setScalar(0.7+Math.random()*0.6);
+  g.add(trunk,canopy);
+  g.position.set(x,h,z);
+  g.rotation.y=Math.random()*Math.PI*2;
+  g.castShadow=true;
+  scene.add(g);
+  placedVeg.push({x,z,h});
+}
+
+// Rocks
+for(let i=0;i<600;i++){
+  const a=Math.random()*Math.PI*2, r=Math.random()*C.W*0.48;
+  const x=Math.cos(a)*r, z=Math.sin(a)*r;
+  const h=getH(x,z);
+  if(h<0.8) continue;
+  const rock=new THREE.Mesh(rockGeo, new THREE.MeshLambertMaterial({color:
+    new THREE.Color().setHSL(0.07,0.08,0.28+Math.random()*0.2)}));
+  const s=0.3+Math.random()*1.6;
+  rock.scale.set(s,s*(0.4+Math.random()*0.6),s*(0.6+Math.random()*0.8));
+  rock.position.set(x,h+s*0.3,z);
+  rock.rotation.set(Math.random(),Math.random()*6,Math.random());
+  rock.castShadow=true;
+  scene.add(rock);
+}
+
+loadBar(40,'SEEDING RESOURCES...');
+
+// Resource nodes
+const RESOURCE_TYPES = [
+  {name:'berry_bush', color:0x8a2060, h:[1.5,8], count:120, cat:'food'},
+  {name:'mushroom',   color:0xa06020, h:[2,10],  count:100, cat:'food'},
+  {name:'grain_field',color:0xc8b040, h:[1.5,5], count:80, cat:'food'},
+  {name:'fish_spot',  color:0x2060a0, h:[-0.5,0.5], count:60, cat:'food'},
+  {name:'herb_patch', color:0x50a840, h:[2,12],  count:90, cat:'food'},
+  {name:'nut_grove',  color:0x604020, h:[3,10],  count:70, cat:'food'},
+  {name:'salt_flat',  color:0xd0ccc0, h:[0.5,2], count:40, cat:'mat'},
+  {name:'clay_bank',  color:0xa07030, h:[0.3,3], count:50, cat:'mat'},
+  {name:'flint_field',color:0x808090, h:[5,15],  count:60, cat:'mat'},
+  {name:'timber_stand', color:0x3a2010, h:[3,12], count:90, cat:'mat'},
+];
+const resGeo = new THREE.OctahedronGeometry(0.4,0);
+const resourceNodes = [];
+RESOURCE_TYPES.forEach(rt=>{
+  for(let i=0;i<rt.count;i++){
+    const a=Math.random()*Math.PI*2, r=Math.random()*C.W*0.46;
+    const x=Math.cos(a)*r, z=Math.sin(a)*r;
+    const h=getH(x,z);
+    if(h<rt.h[0]||h>rt.h[1]) continue;
+    const m=new THREE.Mesh(resGeo, new THREE.MeshLambertMaterial({color:rt.color}));
+    m.scale.setScalar(0.5+Math.random()*0.5);
+    m.position.set(x,h+0.5,z);
+    m.userData={type:rt.name, cat:rt.cat, depleted:false, regenTimer:0};
+    scene.add(m);
+    resourceNodes.push({x,z,h,type:rt.name,cat:rt.cat,mesh:m,depleted:false,regenTimer:0});
+  }
+});
+
+loadBar(55,'AWAKENING SPIRITS...');
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NAMES & LORE
+// ═══════════════════════════════════════════════════════════════════════════
+const NAMES_M=['Arak','Bren','Celd','Dorn','Eryn','Feln','Gort','Helm','Ivar','Joran',
+ 'Kael','Loth','Morn','Neth','Orin','Pela','Reth','Sorn','Thal','Ulen',
+ 'Vorn','Welt','Xand','Yeld','Zorn','Adak','Bruk','Caen','Drev','Edis'];
+const NAMES_F=['Aela','Bryn','Cala','Dari','Elia','Fara','Gwyn','Heva','Iona','Jura',
+ 'Kela','Lyra','Mira','Neva','Opal','Pela','Reva','Syla','Tova','Ulna',
+ 'Vera','Wyna','Xara','Yeva','Zola','Arla','Beva','Ceva','Deva','Elva'];
+const TRIBE_NAMES=['Ashwalkers','Stonekeep','Redmoon','Ironbark','Saltwind',
+ 'Deeproot','Goldfire','Frostborn','Mudclan','Thornridge','Rivermaw','Skydrift',
+ 'Emberveil','Coldmarsh','Sunpeak','Blackthorn','Greymist','Dawnfire',
+ 'Ironclad','Stonewall','Nightfall','Duskborn','Fireheart','Coldwater'];
+const PROFESSIONS=['Hunter','Gatherer','Fisher','Herbalist','Builder','Scout',
+ 'Shaman','Elder','Farmer','Warrior','Trader','Healer','Weaver','Smith'];
+const DISCOVERIES=['fire-making','tool crafting','primitive shelter','river fishing',
+ 'berry cultivation','hide tanning','bone carving','clay pottery','herb medicine',
+ 'tribal storytelling','war paint','ritual dance','crude weapons','food preservation'];
+
+const TRIBE_COLORS=[
+ 0xe04848,0x4870e0,0x48c048,0xe0c048,0xc048e0,
+ 0x48e0c0,0xe07830,0x30a0d8,0xa0d830,0xd030a0,
+ 0x48d0d8,0xd05848,0x9848e0,0xe0a048,0x48e888,
+ 0xff6b35,0x35a0ff,0x35ff8a,0xffdd35,0xff35dd,
+ 0x35ffee,0xff8835,0x3588ff,0x88ff35,0xff3588,
+];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════════════
+let tick=0, speed=1, paused=false;
+let totalBirths=0, totalDeaths=0, totalWars=0, totalDiscos=0;
+const deathCounts={starv:0,dis:0,age:0,pred:0,cold:0,war:0,drown:0,fam:0};
+let nextPid=0, nextTid=0;
+const people=new Map(), tribes=new Map();
+let followedPerson = null;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PERSON GEOMETRY
+// ═══════════════════════════════════════════════════════════════════════════
+const pBodyGeo = new THREE.CylinderGeometry(0.15,0.2,0.65,6);
+const pHeadGeo = new THREE.IcosahedronGeometry(0.18,0);
+const pBaseMat = new THREE.MeshLambertMaterial({color:0xc89050});
+
+function makePerson(color){
+  const g=new THREE.Group();
+  const body=new THREE.Mesh(pBodyGeo, new THREE.MeshLambertMaterial({color}));
+  body.position.y=0.32; body.castShadow=true;
+  const head=new THREE.Mesh(pHeadGeo, new THREE.MeshLambertMaterial({color:0xc89050}));
+  head.position.y=0.82; head.castShadow=true;
+  // tiny arms
+  const armGeo=new THREE.BoxGeometry(0.08,0.35,0.08);
+  const armL=new THREE.Mesh(armGeo, new THREE.MeshLambertMaterial({color}));
+  armL.position.set(-0.22,0.35,0); armL.rotation.z=0.3; armL.castShadow=true;
+  const armR=armL.clone(); armR.position.x=0.22; armR.rotation.z=-0.3;
+  
+  // carried resource block
+  const carryGeo=new THREE.BoxGeometry(0.25,0.25,0.25);
+  const carry=new THREE.Mesh(carryGeo, new THREE.MeshLambertMaterial({color:0xffffff}));
+  carry.position.set(0, 0.45, 0.3);
+  carry.visible = false;
+  carry.castShadow = true;
+  
+  g.add(body,head,armL,armR,carry);
+  return g;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SPAWN
+// ═══════════════════════════════════════════════════════════════════════════
+function clampW(v){ return Math.max(-C.W*0.46, Math.min(C.W*0.46, v)); }
+
+function spawnAt(x, z, tribeId=null, parentColor=null){
+  const id=nextPid++;
+  const sex=Math.random()<0.5?'M':'F';
+  const nameArr=sex==='M'?NAMES_M:NAMES_F;
+  const name=nameArr[Math.floor(Math.random()*nameArr.length)];
+  const prof=PROFESSIONS[Math.floor(Math.random()*PROFESSIONS.length)];
+  const tribe=tribeId!==null?tribes.get(tribeId):null;
+  const color=tribe?tribe.color:(parentColor||0xc09040);
+
+  let rx=x, rz=z, tries=0;
+  while(getH(rx,rz)<0.5&&tries<20){
+    rx=clampW(x+(Math.random()-0.5)*8);
+    rz=clampW(z+(Math.random()-0.5)*8);
+    tries++;
+  }
+
+  const mesh=makePerson(color);
+  const h=getH(rx,rz);
+  mesh.position.set(rx,h,rz);
+  scene.add(mesh);
+
+  const p={
+    id,name,sex,prof,tribeId,color,
+    x:rx,z:rz,tx:rx,tz:rx,
+    age:0,health:100,hunger:0,
+    diseased:false,diseaseTimer:0,
+    lastBreed:-C.BREED_COOLDOWN,
+    resources:{},
+    carrying:null,
+    mesh,
+    state:'wander',stateTimer:0,
+    targetEntity:null, actionTimer:0, carryType:null,
+    alive:true,
+    bobPhase:Math.random()*Math.PI*2,
+    discoveredThings:new Set(),
+    nearWater:false,
+    speedMod:0.8+Math.random()*0.4,
+  };
+  people.set(id,p);
+  if(tribe) tribe.members.add(id);
+  return p;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LOG & FLASH
+// ═══════════════════════════════════════════════════════════════════════════
+const logArr=[];
+function log(txt,type=''){
+  const yr=Math.floor(tick/C.TICKS_PER_YEAR);
+  logArr.unshift({txt:`[Y${String(yr).padStart(4,'0')}] ${txt}`,type});
+  if(logArr.length>40)logArr.pop();
+  renderLog();
+}
+function renderLog(){
+  document.getElementById('loglist').innerHTML=
+    logArr.slice(0,14).map(e=>`<div class="log ${e.type}">▸ ${e.txt}</div>`).join('');
+}
+let flashTimer=0;
+function flash(txt,color='var(--gold)'){
+  const el=document.getElementById('flash');
+  el.textContent=txt; el.style.borderColor=color; el.style.color=color;
+  el.classList.add('show'); flashTimer=180;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TRIBE
+// ═══════════════════════════════════════════════════════════════════════════
+function formTribe(founder, nearbyPeople){
+  const id=nextTid++;
+  const colorIdx=id%TRIBE_COLORS.length;
+  const color=TRIBE_COLORS[colorIdx];
+  const name=TRIBE_NAMES[id%TRIBE_NAMES.length]+(id>=TRIBE_NAMES.length?` ${Math.floor(id/TRIBE_NAMES.length)+1}`:'');
+  const trait=PROFESSIONS[Math.floor(Math.random()*PROFESSIONS.length)];
+
+  // Campfire light
+  const fire=new THREE.PointLight(color, 2.0, 20);
+  const fh=getH(founder.x,founder.z);
+  fire.position.set(founder.x,fh+2,founder.z);
+  scene.add(fire);
+
+  // Campfire mesh
+  const fireGeo=new THREE.ConeGeometry(0.4,0.8,5);
+  const fireMesh=new THREE.Mesh(fireGeo,new THREE.MeshLambertMaterial({color:0xff4800,emissive:new THREE.Color(0xff2200),emissiveIntensity:0.8}));
+  fireMesh.position.set(founder.x,fh+0.4,founder.z);
+  scene.add(fireMesh);
+
+  const tribe={id,name,color,trait,members:new Set(),campX:founder.x,campZ:founder.z,
+    fireLight:fire,fireMesh,discoveries:new Set(),age:0,warCount:0,materials:0,structures:[]};
+
+  [founder,...nearbyPeople].forEach(p=>{
+    if(p.tribeId===null){
+      p.tribeId=id;
+      p.color=color;
+      p.mesh.children[0].material.color.setHex(color);
+      p.mesh.children[2].material.color.setHex(color);
+      p.mesh.children[3].material.color.setHex(color);
+      tribe.members.add(p.id);
+    }
+  });
+
+  tribes.set(id,tribe);
+  log(`${name} tribe formed! (${tribe.members.size} members, trait: ${trait})`, 'tribe');
+  flash(`NEW TRIBE: ${name}`, '#4878a8');
+
+  // AI name via Anthropic
+  const biome = fh>14?'mountains':fh>6?'highlands':fh<2?'coast':'plains';
+  callAI(`Name a primitive human tribe in ${biome}. Their founding warrior is "${founder.name}", a ${founder.prof}. Existing tribes: ${[...tribes.values()].filter(t=>t.id!==id).map(t=>t.name).join(',')||'none'}. Reply with ONLY 1-3 words, no punctuation.`)
+    .then(n=>{if(n&&n.length<30){tribe.name=n;}});
+  return tribe;
+}
+
+function disbandTribe(tid){
+  const t=tribes.get(tid);
+  if(!t)return;
+  if(t.fireLight) scene.remove(t.fireLight);
+  if(t.fireMesh) scene.remove(t.fireMesh);
+  t.structures.forEach(h=>scene.remove(h));
+  tribes.delete(tid);
+  log(`${t.name} tribe has dissolved.`,'war');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AI
+// ═══════════════════════════════════════════════════════════════════════════
+const aiQueue=[];
+let aiCooldown=0;
+async function callAI(prompt){
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-haiku-4-5-20251001',
+        max_tokens:80,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const d=await r.json();
+    return d.content?.[0]?.text?.trim()||'';
+  }catch{return '';}
+}
+
+function queueAI(prompt, cb){
+  aiQueue.push({prompt,cb});
+}
+
+function processAI(){
+  if(aiQueue.length===0||aiCooldown>0)return;
+  const item=aiQueue.shift();
+  callAI(item.prompt).then(r=>{if(r&&item.cb)item.cb(r);});
+  aiCooldown=60;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ADVANCED BASE BUILDING
+// ═══════════════════════════════════════════════════════════════════════════
+function expandBase(t) {
+   t.materials -= 5;
+   const sCount = t.structures.length;
+   
+   const g = new THREE.Group();
+   
+   if (sCount < 6) {
+       // --- BUILD HUTS (Inner Circle) ---
+       const a = Math.random() * Math.PI * 2;
+       const r = 3 + Math.random() * 5;
+       const hx = clampW(t.campX + Math.cos(a)*r);
+       const hz = clampW(t.campZ + Math.sin(a)*r);
+       const hh = getH(hx, hz);
+       if(hh < 0.8) return; 
+       
+       const baseGeo = new THREE.CylinderGeometry(0.8, 0.8, 1.0, 6);
+       const baseMat = new THREE.MeshLambertMaterial({color: 0x5a4a3a});
+       const base = new THREE.Mesh(baseGeo, baseMat);
+       base.position.y = 0.5;
+       base.castShadow = true;
+       
+       const roofGeo = new THREE.ConeGeometry(1.3, 1.2, 6);
+       const roofMat = new THREE.MeshLambertMaterial({color: 0x3a2a1a});
+       const roof = new THREE.Mesh(roofGeo, roofMat);
+       roof.position.y = 1.6;
+       roof.castShadow = true;
+       
+       g.add(base, roof);
+       g.position.set(hx, hh, hz);
+       g.rotation.y = Math.random() * Math.PI;
+       
+       if(sCount === 0) flash(`${t.name} BUILT THEIR FIRST HUT`, '#c9a84c');
+   } else if (sCount < 26) {
+       // --- BUILD PALISADE WALLS (Outer Ring) ---
+       const wallIndex = sCount - 6; // 0 to 19
+       const a = (wallIndex / 20) * Math.PI * 2;
+       const r = 11;
+       const hx = clampW(t.campX + Math.cos(a)*r);
+       const hz = clampW(t.campZ + Math.sin(a)*r);
+       const hh = getH(hx, hz);
+       if(hh < 0.8) return;
+       
+       for(let i=0; i<4; i++) {
+           const logGeo = new THREE.CylinderGeometry(0.15, 0.2, 2.5 + Math.random()*0.5, 5);
+           const logMat = new THREE.MeshLambertMaterial({color: 0x2a1508});
+           const logMesh = new THREE.Mesh(logGeo, logMat);
+           logMesh.position.set((i-1.5)*0.4, 1.25, 0);
+           logMesh.rotation.x = (Math.random()-0.5)*0.2;
+           logMesh.rotation.z = (Math.random()-0.5)*0.2;
+           logMesh.castShadow = true;
+           g.add(logMesh);
+       }
+       g.position.set(hx, hh, hz);
+       g.rotation.y = -a; 
+       if(sCount === 6) flash(`${t.name} BEGAN BUILDING WALLS`, '#c9a84c');
+   } else {
+       // --- BIG WATCHTOWERS (Further out) ---
+       const a = Math.random() * Math.PI * 2;
+       const r = 13 + Math.random() * 3;
+       const hx = clampW(t.campX + Math.cos(a)*r);
+       const hz = clampW(t.campZ + Math.sin(a)*r);
+       const hh = getH(hx, hz);
+       if(hh < 0.8) return;
+       
+       const towGeo = new THREE.BoxGeometry(2, 5, 2);
+       const towMat = new THREE.MeshLambertMaterial({color: 0x4a3a2a});
+       const tow = new THREE.Mesh(towGeo, towMat);
+       tow.position.set(0, 2.5, 0);
+       tow.castShadow = true;
+       g.add(tow);
+       g.position.set(hx, hh, hz);
+   }
+   
+   scene.add(g);
+   t.structures.push(g);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MOVEMENT & AI BEHAVIOR
+// ═══════════════════════════════════════════════════════════════════════════
+function setTarget(p){
+  const tribe=p.tribeId!==null?tribes.get(p.tribeId):null;
+  let spread=30, baseX=p.x, baseZ=p.z;
+
+  if(tribe){
+    spread=15;
+    baseX=tribe.campX;
+    baseZ=tribe.campZ;
+    
+    let isFighter = p.prof==='Warrior' || p.prof==='Scout' || p.prof==='Hunter';
+    let isBuilder = p.prof==='Builder' || p.prof==='Smith' || p.prof==='Weaver';
+    let isGatherer = p.prof==='Gatherer' || p.prof==='Farmer' || p.prof==='Herbalist';
+    
+    if (isFighter) { spread = 40; } // Patrol the borders
+    else if (isGatherer) { spread = 25; } // Forage mid-range
+    else if (isBuilder) { spread = 12; } // Stay close to base to build
+    
+    // Distribute around the camp
+    baseX += (Math.random()-0.5)*spread;
+    baseZ += (Math.random()-0.5)*spread;
+  }
+
+  p.tx=clampW(baseX);
+  p.tz=clampW(baseZ);
+  let t2=0;
+  while(getH(p.tx,p.tz)<-0.3&&t2<10){
+    p.tx=clampW(baseX+(Math.random()-0.5)*spread);
+    p.tz=clampW(baseZ+(Math.random()-0.5)*spread);
+    t2++;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DEATH
+// ═══════════════════════════════════════════════════════════════════════════
+function kill(p, cause){
+  if(!p.alive)return;
+  p.alive=false;
+  totalDeaths++;
+  deathCounts[cause]=(deathCounts[cause]||0)+1;
+  if(p.tribeId!==null){
+    const t=tribes.get(p.tribeId);
+    if(t){t.members.delete(p.id);if(t.members.size<2)disbandTribe(p.tribeId);}
+  }
+  scene.remove(p.mesh);
+  people.delete(p.id);
+  const causeText={
+    starv:'starvation',dis:'disease',age:'old age',pred:'a predator',
+    cold:'cold exposure',war:'battle',drown:'drowning',fam:'famine'
+  }[cause]||cause;
+  log(`${p.name} (${p.prof}) died of ${causeText} at age ${Math.floor(p.age/C.TICKS_PER_YEAR)}.`,'death');
+  if(Math.random()<0.15){
+    queueAI(`In a primitive world, ${p.name} the ${p.prof} (age ${Math.floor(p.age/C.TICKS_PER_YEAR)}) died of ${causeText}. Write exactly one sentence (max 10 words) poetic and blunt about their death.`,
+      txt=>log(txt,'death'));
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BIRTH
+// ═══════════════════════════════════════════════════════════════════════════
+function breed(a, b){
+  if(people.size>=C.MAX_POP)return;
+  if(a.sex===b.sex)return;
+  if(a.age<C.MIN_BREED_AGE||b.age<C.MIN_BREED_AGE)return;
+  if(a.age>C.MAX_BREED_AGE||b.age>C.MAX_BREED_AGE)return;
+  if(tick-a.lastBreed<C.BREED_COOLDOWN||tick-b.lastBreed<C.BREED_COOLDOWN)return;
+  a.lastBreed=b.lastBreed=tick;
+  totalBirths++;
+  const bx=clampW((a.x+b.x)/2+(Math.random()-0.5)*3);
+  const bz=clampW((a.z+b.z)/2+(Math.random()-0.5)*3);
+  const child=spawnAt(bx,bz,a.tribeId??b.tribeId, a.color);
+  log(`${child.name} born to ${a.name} & ${b.name}.`,'birth');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SEASON
+// ═══════════════════════════════════════════════════════════════════════════
+const SEASONS=['SPRING','SUMMER','AUTUMN','WINTER'];
+function getSeason(){ return SEASONS[Math.floor((tick%C.TICKS_PER_YEAR)/(C.TICKS_PER_YEAR/4))]; }
+function getSeasonMod(s){ return {SPRING:1,SUMMER:1.2,AUTUMN:0.9,WINTER:0.5}[s]||1; }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN TICK
+// ═══════════════════════════════════════════════════════════════════════════
+function simTick(){
+  tick++;
+  const season=getSeason();
+  const sMod=getSeasonMod(season);
+
+  // Sun color
+  const sunColors={SPRING:0xfff0d0,SUMMER:0xffe8b0,AUTUMN:0xff9040,WINTER:0xb0c8e0};
+  sunLight.color.set(sunColors[season]);
+  sunLight.intensity=season==='WINTER'?0.8:season==='SUMMER'?1.8:1.4;
+
+  if(tick%80===0){
+    resourceNodes.forEach(r=>{
+      if(r.depleted){
+        r.regenTimer++;
+        if(r.regenTimer>60){
+            r.depleted=false; r.regenTimer=0; r.mesh.visible=true;
+            if (r.type === 'timber_stand') {
+                r.mesh.scale.set(0.5+Math.random()*0.5, 0.5+Math.random()*0.5, 0.5+Math.random()*0.5);
+                r.mesh.position.y = getH(r.x, r.z) + 0.5;
+            }
+        }
+      }
+    });
+  }
+
+  tribes.forEach(t=>{
+    if(t.fireLight){
+      t.fireLight.intensity=1.5+Math.sin(tick*0.25+t.id)*0.4;
+      if(t.fireMesh) t.fireMesh.rotation.y+=0.05;
+    }
+    t.age++;
+  });
+
+  for(const [id,p] of people){
+    if(!p.alive)continue;
+    p.age++;
+
+    let isMoving = false;
+    
+    // ─── STATE MACHINE ───
+    if (p.state === 'wander') {
+      if (tick % 15 === 0) {
+         let isFighter = p.prof==='Warrior' || p.prof==='Scout' || p.prof==='Hunter';
+         let isBuilder = p.prof==='Builder' || p.prof==='Smith' || p.prof==='Weaver';
+         let isGatherer = p.prof==='Gatherer' || p.prof==='Farmer' || p.prof==='Herbalist';
+         let isFisher = p.prof==='Fisher';
+
+         let aggro = isFighter ? 35 : 12;
+         const enemy = p.tribeId !== null ? [...people.values()].find(e => e.alive && e.tribeId !== null && e.tribeId !== p.tribeId && Math.hypot(e.x-p.x, e.z-p.z) < aggro) : null;
+         
+         if (enemy && Math.random() < (isFighter ? 0.8 : 0.2)) {
+            p.state = 'fight';
+            p.targetEntity = enemy;
+         } else {
+            let needsFood = p.hunger > (isFighter ? 60 : 35);
+            let wantsMat = isBuilder && p.tribeId !== null && Math.random() < 0.7;
+            let wantsFoodForTribe = isGatherer && p.tribeId !== null && Math.random() < 0.6 && p.hunger < 20;
+
+            if (needsFood || wantsMat || wantsFoodForTribe) {
+               let catType = (needsFood || wantsFoodForTribe) ? 'food' : 'mat';
+               
+               let validRes = [];
+               for(let i=0; i<resourceNodes.length; i++) {
+                 let r = resourceNodes[i];
+                 if(!r.depleted && r.cat === catType) {
+                   if(isFisher && catType === 'food' && r.type !== 'fish_spot') continue;
+                   if(!isFisher && r.type === 'fish_spot') continue; // Only fishers can fish
+                   
+                   let dist = Math.hypot(r.x-p.x, r.z-p.z);
+                   if(dist < 45) validRes.push({r, dist});
+                 }
+               }
+
+               if(validRes.length) {
+                  validRes.sort((a,b)=>a.dist-b.dist);
+                  const pickCount = Math.min(validRes.length, 4);
+                  const pick = validRes[Math.floor(Math.random() * pickCount)].r;
+                  p.state = 'gather';
+                  p.targetEntity = pick;
+               } else {
+                  if (Math.hypot(p.tx-p.x, p.tz-p.z) < 2) setTarget(p);
+               }
+            } else {
+               if (Math.hypot(p.tx-p.x, p.tz-p.z) < 2) setTarget(p);
+            }
+         }
+      }
+      isMoving = true;
+    } 
+    else if (p.state === 'gather') {
+      const r = p.targetEntity;
+      if (!r || r.depleted) {
+         p.state = 'wander'; p.targetEntity = null;
+      } else {
+         const dist = Math.hypot(r.x - p.x, r.z - p.z);
+         if (dist > 1.8) {
+            p.tx = r.x; p.tz = r.z;
+            isMoving = true;
+         } else {
+            p.actionTimer++;
+            p.bobPhase += 0.2; 
+            if (p.actionTimer > 50) {
+               r.depleted = true; 
+               
+               // Visual Consequences for resource destruction
+               if(r.cat === 'mat' && ['clay_bank', 'flint_field', 'salt_flat'].includes(r.type)) {
+                   r.mesh.visible = false;
+                   createCrater(r.x, r.z, 2.5, 0.8); // Deform the terrain!
+               } else if (r.type === 'timber_stand') {
+                   // Chop tree down into a stump
+                   r.mesh.scale.set(0.6, 0.15, 0.6);
+                   r.mesh.position.y -= 0.35;
+               } else {
+                   r.mesh.visible = false;
+               }
+
+               p.state = 'return';
+               p.carryType = r.cat;
+               p.mesh.children[4].material.color.setHex(r.mesh.material.color.getHex());
+               p.mesh.children[4].visible = true;
+               p.actionTimer = 0; p.targetEntity = null;
+            }
+         }
+      }
+    }
+    else if (p.state === 'return') {
+      const t = tribes.get(p.tribeId);
+      const cx = t ? t.campX : 0, cz = t ? t.campZ : 0;
+      const dist = Math.hypot(cx - p.x, cz - p.z);
+      if (dist > 4 && t) { 
+         p.tx = cx; p.tz = cz;
+         isMoving = true;
+      } else {
+         p.mesh.children[4].visible = false;
+         p.state = 'wander';
+         if (p.carryType === 'food') {
+            p.hunger = Math.max(0, p.hunger - 60);
+         } else if (t) {
+            t.materials++;
+            if (t.materials >= 5) expandBase(t); // Build physical settlements!
+         }
+         p.carryType = null;
+      }
+    }
+    else if (p.state === 'fight') {
+      const e = p.targetEntity;
+      if (!e || !e.alive) {
+         p.state = 'wander'; p.targetEntity = null;
+      } else {
+         const dist = Math.hypot(e.x - p.x, e.z - p.z);
+         if (dist > 2.0) {
+            p.tx = e.x; p.tz = e.z;
+            isMoving = true;
+         } else {
+            p.bobPhase += 0.3; 
+            if (tick % 10 === 0) {
+               e.health -= 10;
+               if (e.health <= 0) {
+                  kill(e, 'war');
+                  p.state = 'wander'; p.targetEntity = null;
+                  totalWars++;
+                  const t = tribes.get(p.tribeId); if(t) t.warCount++;
+               }
+            }
+         }
+      }
+    }
+
+    // ─── EXECUTE MOVEMENT ───
+    if (isMoving) {
+       const dx=p.tx-p.x, dz=p.tz-p.z;
+       const dist=Math.sqrt(dx*dx+dz*dz);
+       if(dist>0.1){
+         const spd=(0.10+0.04*(p.prof==='Scout'?1:0))*p.speedMod * (p.state === 'fight' ? 1.3 : 1.0); 
+         p.x+=dx/dist*spd; p.z+=dz/dist*spd;
+         p.x=clampW(p.x); p.z=clampW(p.z);
+         const h=getH(p.x,p.z);
+         p.mesh.position.set(p.x,h,p.z);
+         p.mesh.rotation.y=Math.atan2(dx,dz);
+       }
+    }
+
+    // ─── ANIMATION ───
+    p.bobPhase += isMoving ? 0.12 : 0.02;
+    p.mesh.children[1].position.y = 0.82 + Math.sin(p.bobPhase) * 0.03;
+    
+    const armSwing = (p.state==='gather'&&!isMoving) || (p.state==='fight'&&!isMoving) ? 0.8 : (isMoving ? 0.4 : 0.05);
+    p.mesh.children[2].rotation.x = Math.sin(p.bobPhase) * armSwing;
+    p.mesh.children[3].rotation.x = -Math.sin(p.bobPhase) * armSwing;
+
+    // ─── SURVIVAL MECHANICS ───
+    const hungerRate=C.HUNGER_RATE*(season==='WINTER'?2.0:season==='AUTUMN'?1.2:1.0);
+    p.hunger=Math.min(100, p.hunger+hungerRate);
+
+    if(p.hunger>70) p.health-=0.2;
+    if(p.hunger>C.FAMINE_HUNGER_THRESH) p.health-=0.5;
+    if(p.diseased) p.health-=season==='WINTER'?0.8:0.4;
+    if(season==='WINTER') p.health-=0.04;
+    p.health=Math.max(0,Math.min(100,p.health));
+
+    if(p.age>=C.MAX_AGE_TICKS){kill(p,'age');continue;}
+    if(p.health<=0){ kill(p,p.diseased?'dis':'starv'); continue; }
+    if(p.hunger>=100){ kill(p,'fam'); continue; }
+
+    const curH=getH(p.x,p.z);
+    p.nearWater=curH<0.8;
+    if(p.nearWater&&Math.random()<C.DROWN_CHANCE){kill(p,'drown');continue;}
+
+    if(Math.random()<C.PRED_CHANCE*(season==='WINTER'?1.8:1.0)*(p.tribeId===null?2:0.5)){
+      kill(p,'pred');continue;
+    }
+    if(season==='WINTER'&&Math.random()<C.COLD_CHANCE*(p.tribeId===null?2:0.8)){
+      kill(p,'cold');continue;
+    }
+
+    if(!p.diseased&&Math.random()<C.DISEASE_CHANCE){
+      p.diseased=true;
+      log(`${p.name} fell ill with fever.`,'death');
+    }
+    if(p.diseased&&Math.random()<C.RECOVER_CHANCE){p.diseased=false;}
+
+    if(Math.random()<C.BREED_CHANCE){
+      const near=[...people.values()].filter(q=>
+        q!==p&&q.alive&&q.sex!==p.sex&&
+        Math.hypot(q.x-p.x,q.z-p.z)<4
+      );
+      if(near.length)breed(p,near[0]);
+    }
+
+    if(Math.random()<C.DISCOVERY_CHANCE){
+      const disco=DISCOVERIES[Math.floor(Math.random()*DISCOVERIES.length)];
+      if(!p.discoveredThings.has(disco)){
+        p.discoveredThings.add(disco);
+        totalDiscos++;
+        log(`${p.name} discovered ${disco}!`,'disco');
+        if(p.tribeId!==null){const t=tribes.get(p.tribeId);if(t)t.discoveries.add(disco);}
+        if(Math.random()<0.2) flash(`DISCOVERY: ${disco.toUpperCase()}`, '#5080c8');
+      }
+    }
+
+    if(p.tribeId===null&&tick%(20+id%15)===0){
+      const nearby=[...people.values()].filter(q=>
+        q!==p&&q.alive&&q.tribeId===null&&
+        Math.hypot(q.x-p.x,q.z-p.z)<C.TRIBE_RADIUS
+      );
+      if(nearby.length>=C.TRIBE_THRESHOLD-1){
+        formTribe(p, nearby.slice(0,14));
+      } else if(nearby.length>=2){
+        const closeTribe=[...tribes.values()].find(t=>{
+          const campDist=Math.hypot(t.campX-p.x,t.campZ-p.z);
+          return campDist<C.TRIBE_RADIUS*0.8 && t.members.size<30;
+        });
+        if(closeTribe){
+          p.tribeId=closeTribe.id;
+          closeTribe.members.add(p.id);
+          p.color=closeTribe.color;
+          p.mesh.children[0].material.color.setHex(closeTribe.color);
+          p.mesh.children[2].material.color.setHex(closeTribe.color);
+          p.mesh.children[3].material.color.setHex(closeTribe.color);
+        }
+      }
+    }
+
+    if(p.tribeId!==null&&tick%(50+id%20)===0){
+      const t=tribes.get(p.tribeId);
+      if(t){
+        let cx=0,cz=0,cnt=0;
+        t.members.forEach(mid=>{const m=people.get(mid);if(m){cx+=m.x;cz+=m.z;cnt++;}});
+        if(cnt>0){
+          t.campX=cx/cnt; t.campZ=cz/cnt;
+          if(t.fireLight){const fh=getH(t.campX,t.campZ);t.fireLight.position.set(t.campX,fh+2,t.campZ);}
+          if(t.fireMesh){const fh=getH(t.campX,t.campZ);t.fireMesh.position.set(t.campX,fh+0.4,t.campZ);}
+        }
+      }
+    }
+  }
+
+  if(tick%30===0) processAI();
+  if(aiCooldown>0) aiCooldown--;
+
+  if(flashTimer>0){
+    flashTimer--;
+    if(flashTimer===0) document.getElementById('flash').classList.remove('show');
+  }
+
+  if(tick%6===0) updateHUD();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HUD UPDATE
+// ═══════════════════════════════════════════════════════════════════════════
+function updateHUD(){
+  const yr=Math.floor(tick/C.TICKS_PER_YEAR);
+  document.getElementById('yearval').textContent=String(yr+1).padStart(4,'0');
+  document.getElementById('s-pop').textContent=people.size;
+  document.getElementById('s-births').textContent=totalBirths;
+  document.getElementById('s-deaths').textContent=totalDeaths;
+  document.getElementById('s-tribes').textContent=tribes.size;
+  document.getElementById('s-lone').textContent=[...people.values()].filter(p=>p.tribeId===null).length;
+  document.getElementById('s-disco').textContent=totalDiscos;
+  document.getElementById('s-wars').textContent=totalWars;
+  const oldest=[...people.values()].reduce((a,b)=>b.age>(a?.age??0)?b:a,null);
+  document.getElementById('s-old').textContent=oldest?Math.floor(oldest.age/C.TICKS_PER_YEAR):0;
+  document.getElementById('bar-pop').style.width=Math.min(100,people.size/C.MAX_POP*100)+'%';
+
+  ['starv','dis','age','pred','cold','war','drown','fam'].forEach(k=>{
+    document.getElementById('d-'+k).textContent=deathCounts[k]||0;
+  });
+
+  const tl=document.getElementById('tribes-list');
+  const tArr=[...tribes.values()].sort((a,b)=>b.members.size-a.members.size);
+  if(tArr.length===0){
+    tl.innerHTML='<div style="color:var(--text-muted);font-size:10px">No tribes yet...</div>';
+  } else {
+    tl.innerHTML=tArr.map(t=>{
+      const hex='#'+t.color.toString(16).padStart(6,'0');
+      const disco=t.discoveries.size;
+      const struts=t.structures.length;
+      return `<div class="tribe-row">
+        <div class="tdot" style="background:${hex}"></div>
+        <div>
+          <div class="tname">${t.name}</div>
+          <div class="ttrait">${t.trait} · ${disco} disco · ${struts} structs</div>
+        </div>
+        <div class="tpop">${t.members.size}p</div>
+      </div>`;
+    }).join('');
+  }
+
+  const s=getSeason().toLowerCase();
+  const sb=document.getElementById('season-badge');
+  sb.textContent=getSeason();
+  sb.className=''; sb.id='season-badge'; sb.classList.add(s);
+
+  drawMinimap();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MINIMAP
+// ═══════════════════════════════════════════════════════════════════════════
+const mmCtx=document.getElementById('mmcanvas').getContext('2d');
+function drawMinimap(){
+  const mm=140, hw=C.W/2;
+  mmCtx.fillStyle='#08090f';
+  mmCtx.fillRect(0,0,mm,mm);
+  for(const [id,p] of people){
+    const px=(p.x+hw)/C.W*mm, py=(p.z+hw)/C.W*mm;
+    const hex='#'+p.color.toString(16).padStart(6,'0');
+    mmCtx.fillStyle=hex;
+    mmCtx.fillRect(px-0.8,py-0.8,1.6,1.6);
+  }
+  tribes.forEach(t=>{
+    const tx=(t.campX+hw)/C.W*mm, ty=(t.campZ+hw)/C.W*mm;
+    const hex='#'+t.color.toString(16).padStart(6,'0');
+    mmCtx.strokeStyle=hex;
+    mmCtx.lineWidth=1;
+    mmCtx.beginPath();mmCtx.arc(tx,ty,2.5,0,Math.PI*2);mmCtx.stroke();
+  });
+  mmCtx.strokeStyle='rgba(201,168,76,0.5)';
+  mmCtx.lineWidth=1;
+  const cx=(controls.target.x+hw)/C.W*mm, cy=(controls.target.z+hw)/C.W*mm;
+  mmCtx.beginPath();mmCtx.arc(cx,cy,3,0,Math.PI*2);mmCtx.stroke();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CAMERA MOVEMENT (WASD / KEYBOARD PANNING)
+// ═══════════════════════════════════════════════════════════════════════════
+const keys = {w:false, a:false, s:false, d:false, ArrowUp:false, ArrowLeft:false, ArrowDown:false, ArrowRight:false};
+window.addEventListener('keydown', e => { if(keys[e.key] !== undefined) keys[e.key] = true; });
+window.addEventListener('keyup', e => { if(keys[e.key] !== undefined) keys[e.key] = false; });
+
+function handleCameraPan() {
+  const speed = 1.5 * (cam.position.y / 50); // Scale speed by camera altitude
+  let dx = 0, dz = 0;
+  
+  if (keys.w || keys.ArrowUp) dz += 1;
+  if (keys.s || keys.ArrowDown) dz -= 1;
+  if (keys.a || keys.ArrowLeft) dx -= 1;
+  if (keys.d || keys.ArrowRight) dx += 1;
+
+  if (dx !== 0 || dz !== 0) {
+    followedPerson = null; // Break follow on manual pan
+    const forward = new THREE.Vector3();
+    cam.getWorldDirection(forward);
+    forward.y = 0;
+    forward.normalize();
+
+    const right = new THREE.Vector3();
+    right.crossVectors(forward, cam.up).normalize();
+
+    controls.target.addScaledVector(forward, dz * speed);
+    cam.position.addScaledVector(forward, dz * speed);
+    
+    controls.target.addScaledVector(right, dx * speed);
+    cam.position.addScaledVector(right, dx * speed);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PERSON SELECTION / FOLLOWING
+// ═══════════════════════════════════════════════════════════════════════════
+let startClick = {x:0, y:0};
+window.addEventListener('mousedown', e => { 
+  startClick = {x: e.clientX, y: e.clientY};
+  if (e.button === 2) followedPerson = null; // Right click pan breaks follow
+});
+
+window.addEventListener('mouseup', e => {
+  if (e.button !== 0) return;
+  // Increase drag tolerance for easier clicking on moving targets
+  if (Math.abs(e.clientX - startClick.x) > 15 || Math.abs(e.clientY - startClick.y) > 15) return;
+  
+  mouse2.x=(e.clientX/innerWidth)*2-1;
+  mouse2.y=-(e.clientY/innerHeight)*2+1;
+  ray.setFromCamera(mouse2,cam);
+  
+  // Check all meshes in the group recursively so head/arms register as a hit
+  const meshes=[...people.values()].map(p=>p.mesh);
+  const hits=ray.intersectObjects(meshes, true);
+  
+  if(hits.length){
+    const p=[...people.values()].find(p=>p.mesh.children.includes(hits[0].object));
+    if(p){
+      followedPerson = p;
+      flash(`FOLLOWING: ${p.name.toUpperCase()}`, '#f0c96a');
+    }
+  } else {
+    // If user clicked empty ground (and not the UI menus), stop following
+    if(!e.target.closest('#hud') && !e.target.closest('.panel') && !e.target.closest('.btn')) {
+       followedPerson = null;
+    }
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HOVER TOOLTIP
+// ═══════════════════════════════════════════════════════════════════════════
+const ray=new THREE.Raycaster();
+const mouse2=new THREE.Vector2();
+const tt=document.getElementById('tt');
+
+window.addEventListener('mousemove', e => {
+  mouse2.x=(e.clientX/innerWidth)*2-1;
+  mouse2.y=-(e.clientY/innerHeight)*2+1;
+  ray.setFromCamera(mouse2,cam);
+  
+  // Use recursive raycasting for hover as well
+  const meshes=[...people.values()].map(p=>p.mesh);
+  const hits=ray.intersectObjects(meshes, true);
+  
+  if(hits.length){
+    document.body.style.cursor = 'pointer';
+    const p=[...people.values()].find(p=>p.mesh.children.includes(hits[0].object));
+    if(p){
+      const tribe=p.tribeId!==null?tribes.get(p.tribeId):null;
+      const hex=tribe?'#'+tribe.color.toString(16).padStart(6,'0'):'var(--gold-dim)';
+      const followBadge = followedPerson === p ? '<div style="color:var(--gold-bright);font-weight:bold;margin-bottom:4px;letter-spacing:2px;font-size:9px">★ FOLLOWING</div>' : '';
+      
+      tt.innerHTML=`
+        ${followBadge}
+        <div class="tt-name">${p.name}</div>
+        <div class="tt-tribe" style="color:${hex}">${tribe?tribe.name:'Wanderer'}</div>
+        <div style="height:4px"></div>
+        <div class="tt-row">ROLE: <span>${p.prof}</span></div>
+        <div class="tt-row">AGE: <span>${Math.floor(p.age/C.TICKS_PER_YEAR)} years</span></div>
+        <div class="tt-row">SEX: <span>${p.sex==='M'?'♂ Male':'♀ Female'}</span></div>
+        <div class="tt-row">HEALTH: <span style="color:${p.health>60?'#5a9858':p.health>30?'#c8a040':'#c04040'}">${Math.floor(p.health)}%</span></div>
+        <div class="tt-row">HUNGER: <span style="color:${p.hunger<40?'#5a9858':p.hunger<70?'#c8a040':'#c04040'}">${Math.floor(p.hunger)}%</span></div>
+        ${p.diseased?'<div class="tt-warn">⚠ DISEASED</div>':''}
+        ${tribe?`<div class="tt-row">TRIBE DISCO: <span>${tribe.discoveries.size}</span></div>`:''}
+      `;
+      tt.style.display='block';
+      tt.style.left=(e.clientX+16)+'px';
+      tt.style.top=(e.clientY-8)+'px';
+      return;
+    }
+  } else {
+    document.body.style.cursor = 'default';
+  }
+  tt.style.display='none';
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CONTROLS
+// ═══════════════════════════════════════════════════════════════════════════
+let speedMult=1;
+function setSpeed(s){
+  speedMult=s; paused=false;
+  document.getElementById('speeddisplay').textContent=`${s}× SPEED`;
+  document.getElementById('btn-pause').textContent='⏸ PAUSE';
+  ['btn-1','btn-3','btn-10','btn-30','btn-100'].forEach(id=>document.getElementById(id).classList.remove('on'));
+  document.getElementById(`btn-${s}`).classList.add('on');
+}
+['1','3','10','30','100'].forEach(s=>document.getElementById(`btn-${s}`).addEventListener('click',()=>setSpeed(parseInt(s))));
+document.getElementById('btn-pause').addEventListener('click',()=>{
+  paused=!paused;
+  document.getElementById('btn-pause').textContent=paused?'▶ RESUME':'⏸ PAUSE';
+});
+setSpeed(1);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INITIAL SPAWN
+// ═══════════════════════════════════════════════════════════════════════════
+function doInitialSpawn(){
+  for(let i=0;i<C.INIT_POP;i++){
+    const a=Math.random()*Math.PI*2, r=8+Math.random()*40;
+    let x=Math.cos(a)*r, z=Math.sin(a)*r, tries=0;
+    while(getH(x,z)<0.5&&tries<30){
+      const a2=Math.random()*Math.PI*2, r2=8+Math.random()*45;
+      x=Math.cos(a2)*r2; z=Math.sin(a2)*r2; tries++;
+    }
+    spawnAt(x,z);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RENDER LOOP
+// ═══════════════════════════════════════════════════════════════════════════
+let lastT=0, accumT=0;
+function animate(ts){
+  requestAnimationFrame(animate);
+  const dt=Math.min((ts-lastT)/1000,0.05);
+  lastT=ts;
+  
+  handleCameraPan();
+
+  // Handle following logic
+  if (followedPerson) {
+    if (!followedPerson.alive) {
+      flash(`${followedPerson.name.toUpperCase()} HAS PERISHED`, '#c04040');
+      followedPerson = null;
+    } else {
+      const targetPos = new THREE.Vector3(followedPerson.x, getH(followedPerson.x, followedPerson.z) + 0.5, followedPerson.z);
+      const delta = new THREE.Vector3().subVectors(targetPos, controls.target);
+      
+      if (delta.lengthSq() > 0.001) {
+        delta.multiplyScalar(0.12); // Smooth follow interpolation
+        controls.target.add(delta);
+        cam.position.add(delta);
+      }
+    }
+  }
+
+  controls.update();
+
+  if(!paused){
+    accumT+=dt*speedMult*28;
+    const maxPerFrame=Math.min(80,speedMult*5);
+    let n=0;
+    while(accumT>=1&&n<maxPerFrame){
+      simTick(); accumT-=1; n++;
+    }
+    if(accumT>200)accumT=0;
+  }
+  renderer.render(scene,cam);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════════════════
+loadBar(80,'CALLING THE FIRST PEOPLE...');
+doInitialSpawn();
+loadBar(95,'LIGHTING THE FIRST FIRE...');
+log(`The world awakens. ${C.INIT_POP} souls emerge from the mist.`,'ev');
+log('They know nothing, but they will learn.','ev');
+
+setTimeout(()=>{
+  loadBar(100,'');
+  const ls=document.getElementById('loading');
+  ls.style.opacity='0';
+  setTimeout(()=>ls.style.display='none',1000);
+  animate(0);
+},700);
+</script>
+</body>
+</html>

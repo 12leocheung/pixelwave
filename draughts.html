@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROGUE DRAUGHTS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
+<style>
+  /* 8-colour palette (and nothing else) */
+  :root{
+    --c0:#1a1c2c; /* void navy   */
+    --c1:#5d275d; /* deep plum   */
+    --c2:#b13e53; /* ruby        */
+    --c3:#ef7d57; /* ember       */
+    --c4:#ffcd75; /* gold        */
+    --c5:#38b764; /* moss        */
+    --c6:#41a6f6; /* sky         */
+    --c7:#f4f4f4; /* bone        */
+  }
+  *{box-sizing:border-box;margin:0;padding:0;image-rendering:pixelated}
+  html,body{height:100%}
+  body{
+    background:var(--c0);
+    color:var(--c7);
+    font-family:"Courier New",ui-monospace,monospace;
+    font-weight:700;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    display:flex;justify-content:center;
+    padding:12px;
+    -webkit-user-select:none;user-select:none;
+  }
+  #app{width:100%;max-width:900px}
+  .screen{display:none}
+  .screen.on{display:block}
+  h1{
+    font-size:clamp(26px,6vw,44px);
+    text-align:center;color:var(--c4);
+    text-shadow:3px 3px 0 var(--c1), 6px 6px 0 var(--c0);
+    margin:24px 0 4px;
+  }
+  .sub{text-align:center;color:var(--c6);font-size:12px;margin-bottom:28px}
+  .px{ /* chunky pixel panel */
+    background:var(--c0);
+    border:3px solid var(--c7);
+    box-shadow:0 0 0 3px var(--c0), 0 0 0 6px var(--c1), 6px 6px 0 6px var(--c0);
+    padding:14px;
+  }
+  button{
+    font:inherit;letter-spacing:1px;text-transform:uppercase;
+    background:var(--c1);color:var(--c7);
+    border:3px solid var(--c7);
+    padding:10px 14px;cursor:pointer;
+    box-shadow:3px 3px 0 var(--c0);
+  }
+  button:hover{background:var(--c2)}
+  button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--c0)}
+  button:disabled{opacity:.45;cursor:default;background:var(--c1)}
+  button.gold{background:var(--c2)}
+  button.gold:hover{background:var(--c3);color:var(--c0)}
+  button:focus-visible{outline:3px solid var(--c4);outline-offset:2px}
+  input{
+    font:inherit;letter-spacing:2px;text-transform:uppercase;
+    background:var(--c0);color:var(--c4);
+    border:3px solid var(--c7);padding:10px;width:130px;text-align:center;
+  }
+  /* ---------- menu ---------- */
+  #menu .stack{display:flex;flex-direction:column;gap:14px;max-width:340px;margin:0 auto}
+  #menu .row{display:flex;gap:10px;justify-content:center}
+  #howto{font-size:11px;line-height:1.8;text-transform:none;letter-spacing:.5px;margin-top:18px;display:none;max-width:560px;margin-left:auto;margin-right:auto}
+  #howto b{color:var(--c4)}
+  #lobbyInfo{text-align:center;margin-top:16px;font-size:13px;color:var(--c6);min-height:20px}
+  #lobbyInfo .code{color:var(--c4);font-size:22px;letter-spacing:4px}
+  /* ---------- game ---------- */
+  #hud{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:12px}
+  .stat{border:3px solid var(--c1);padding:6px 10px;background:var(--c0)}
+  .stat b{color:var(--c4)}
+  #bossBanner{
+    display:none;text-align:center;padding:8px;margin-bottom:10px;
+    background:var(--c1);border:3px solid var(--c2);color:var(--c3);
+    font-size:13px;animation:pulse 1s steps(2) infinite;
+  }
+  @keyframes pulse{50%{border-color:var(--c4);color:var(--c4)}}
+  @keyframes bump{0%{transform:scale(1)}40%{transform:scale(1.4)}100%{transform:scale(1)}}
+  #hud b.bump{display:inline-block;animation:bump .28s steps(3)}
+  #board{transition:box-shadow .25s steps(3)}
+  #board.myturn{box-shadow:0 0 0 6px var(--c4), 8px 8px 0 6px var(--c0)}
+  @keyframes cardIn{from{transform:translateY(12px)}}
+  .card{animation:cardIn .3s steps(5) backwards}
+  .card:hover{transform:translateY(-3px);box-shadow:4px 7px 0 var(--c1)}
+  .card{transition:transform .12s steps(2),box-shadow .12s steps(2)}
+  @keyframes toastIn{from{transform:translateY(-14px)}}
+  .toast{animation:toastIn .18s steps(3)}
+  #turnTag{transition:border-color .2s steps(2),color .2s steps(2)}
+  @media (prefers-reduced-motion: reduce){#bossBanner,.card,.toast,#hud b.bump{animation:none}#board,.card,#turnTag{transition:none}}
+  #gameWrap{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
+  #board{
+    width:min(92vw,512px);height:min(92vw,512px);
+    border:3px solid var(--c7);
+    box-shadow:0 0 0 6px var(--c1), 8px 8px 0 6px var(--c0);
+    cursor:pointer;background:var(--c1);
+  }
+  #side{flex:1;min-width:230px;max-width:300px;display:flex;flex-direction:column;gap:10px}
+  #turnTag{padding:8px;text-align:center;border:3px solid var(--c7);font-size:13px}
+  #charmBox,#actBox{font-size:11px;border:3px solid var(--c1);padding:8px;min-height:34px}
+  #charmBox .t,#actBox .t{color:var(--c6);margin-bottom:6px}
+  .chip{display:inline-block;border:2px solid var(--c4);color:var(--c4);padding:2px 6px;margin:2px;font-size:10px}
+  .actBtn{display:block;width:100%;margin:4px 0;font-size:11px;padding:7px}
+  #log{font-size:10px;line-height:1.7;height:120px;overflow-y:auto;border:3px solid var(--c1);padding:8px;text-transform:none;letter-spacing:.5px}
+  #log .g{color:var(--c4)} #log .r{color:var(--c2)} #log .b{color:var(--c6)} #log .m{color:var(--c5)}
+  /* ---------- shop ---------- */
+  #shopHead{text-align:center;margin-bottom:6px}
+  #roundResult{text-align:center;font-size:14px;margin-bottom:14px;color:var(--c4)}
+  #payout{font-size:11px;text-transform:none;letter-spacing:.5px;text-align:center;color:var(--c7);margin-bottom:16px;line-height:1.8}
+  #shopMoney{text-align:center;font-size:18px;color:var(--c4);margin-bottom:14px}
+  #stock{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:16px}
+  .card{
+    width:170px;background:var(--c0);border:3px solid var(--c7);
+    box-shadow:4px 4px 0 var(--c1);padding:10px;text-align:center;font-size:11px;
+    display:flex;flex-direction:column;gap:6px;
+  }
+  .card.sold{opacity:.4}
+  .card canvas{width:64px;height:64px;margin:0 auto;background:var(--c1);border:2px solid var(--c1)}
+  .card .nm{color:var(--c4);font-size:12px}
+  .card .kind{color:var(--c6);font-size:9px}
+  .card .desc{text-transform:none;letter-spacing:.4px;line-height:1.5;min-height:48px;color:var(--c7)}
+  .card .pr{color:var(--c3);font-size:13px}
+  #shopBtns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  #waitOpp{text-align:center;color:var(--c6);font-size:12px;margin-top:12px;display:none}
+  /* ---------- game over ---------- */
+  #goTitle{font-size:clamp(24px,5vw,40px);text-align:center;margin:30px 0 10px;text-shadow:3px 3px 0 var(--c1)}
+  #goStats{text-align:center;font-size:13px;line-height:2;margin-bottom:24px}
+  #gameover .stack{display:flex;justify-content:center}
+  .toastWrap{position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:9;display:flex;flex-direction:column;gap:6px}
+  .toast{background:var(--c1);border:3px solid var(--c4);color:var(--c4);padding:8px 14px;font-size:12px}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- MENU -->
+  <div id="menu" class="screen on">
+    <h1>ROGUE DRAUGHTS</h1>
+    <div class="sub">a run-based checkers gauntlet &mdash; win, shop, survive the boss</div>
+    <div class="stack">
+      <button id="btnAI" class="gold">PLAY VS AI</button>
+      <button id="btnHost">HOST P2P GAME</button>
+      <div class="row">
+        <input id="joinCode" maxlength="4" placeholder="CODE">
+        <button id="btnJoin">JOIN</button>
+      </div>
+      <button id="btnDiff">AI: NORMAL</button>
+      <button id="btnRules">CAPTURES: FREE</button>
+      <button id="btnHow">HOW TO PLAY</button>
+    </div>
+    <div id="lobbyInfo"></div>
+    <div id="howto" class="px">
+      <b>THE RUN.</b> Up to 9 rounds of draughts. First to 5 round-wins takes the match.
+      Every 3rd round is a <b>BOSS</b> with a rule twist. Losing a round never knocks you
+      out &mdash; you just earn less gold for the shop.<br><br>
+      <b>DRAUGHTS.</b> Men move diagonally forward. Jumps need a space to land in, and they
+      chain &mdash; jump, land, jump again. Two enemies standing directly adjacent can never be
+      vaulted in one leap. Toggle whether captures are <b>forced</b> on the menu; in P2P the
+      host's setting applies. Reach the far row to crown a king. No pieces or no moves = round
+      lost. After 100 plies, material decides.<br><br>
+      <b>THE SHOP.</b> Spend gold between rounds on charms (passives), board upgrades
+      (extra men, kings, shields) and one-shot actions (retreat, swap, smite). Tiles spawn on
+      your half each round: <b>gold</b> pays out, <b>spring</b> lets a man leap like a king,
+      <b>warp pairs</b> teleport, <b>traps</b> destroy the first enemy to land, <b>forts</b>
+      make your piece unjumpable, and the <b>volcanist</b> erupts neutral lava for everyone.
+      Upgrades persist for the whole run, Balatro-style &mdash; stack them and late rounds get
+      gloriously chaotic.<br><br>
+      <b>P2P.</b> Host shares the 4-letter code; the joiner enters it. Pure peer-to-peer via PeerJS.
+    </div>
+  </div>
+
+  <!-- GAME -->
+  <div id="game" class="screen">
+    <div id="bossBanner"></div>
+    <div id="hud">
+      <span class="stat">ROUND <b id="hRound">1</b>/9</span>
+      <span class="stat">YOU <b id="hMe">0</b> &mdash; <b id="hOpp">0</b> FOE</span>
+      <span class="stat">GOLD <b id="hGold">$4</b></span>
+      <span class="stat" id="hStreak">STREAK <b>0</b></span>
+    </div>
+    <div id="gameWrap">
+      <canvas id="board" width="128" height="128"></canvas>
+      <div id="side">
+        <div id="turnTag">YOUR TURN</div>
+        <div id="actBox"><div class="t">ACTIONS</div><div id="actList">none</div></div>
+        <div id="charmBox"><div class="t">CHARMS</div><div id="charmList">none</div></div>
+        <div id="log"></div>
+        <button id="btnConcede" style="font-size:11px">CONCEDE ROUND</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHOP -->
+  <div id="shop" class="screen">
+    <h1 id="shopHead">THE SHOP</h1>
+    <div id="roundResult"></div>
+    <div id="payout"></div>
+    <div id="shopMoney"></div>
+    <div id="stock"></div>
+    <div id="shopBtns">
+      <button id="btnReroll">REROLL $2</button>
+      <button id="btnNext" class="gold">NEXT ROUND</button>
+    </div>
+    <div id="waitOpp">WAITING FOR OPPONENT...</div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div id="gameover" class="screen">
+    <h1 id="goTitle">VICTORY</h1>
+    <div id="goStats"></div>
+    <div class="stack"><button id="btnMenu" class="gold">BACK TO MENU</button></div>
+  </div>
+
+</div>
+<div class="toastWrap" id="toasts"></div>
+<script>
+"use strict";
+/* ================= palette & helpers ================= */
+const PAL={c0:"#1a1c2c",c1:"#5d275d",c2:"#b13e53",c3:"#ef7d57",c4:"#ffcd75",c5:"#38b764",c6:"#41a6f6",c7:"#f4f4f4"};
+const $=id=>document.getElementById(id);
+const CELL=16, N=8;
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const rand=Math.random;
+function toast(msg){const t=document.createElement("div");t.className="toast";t.textContent=msg;$("toasts").appendChild(t);setTimeout(()=>t.remove(),2600)}
+function log(msg,cls){const d=$("log");const s=document.createElement("div");if(cls)s.className=cls;s.textContent=msg;d.appendChild(s);d.scrollTop=d.scrollHeight;while(d.children.length>60)d.firstChild.remove()}
+function show(id){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));$(id).classList.add("on")}
+
+/* ================= tiny synth ================= */
+let AC=null;
+function beep(f,dur=0.07,type="square",vol=0.06){
+  try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.type=type;o.frequency.value=f;g.gain.value=vol;
+    g.gain.setValueAtTime(vol,AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,AC.currentTime+dur);
+    o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+dur);
+  }catch(e){}
+}
+const sfx={
+  move:()=>beep(220,0.05), capture:()=>{beep(160,0.08);setTimeout(()=>beep(110,0.1),60)},
+  crown:()=>{beep(440,0.07);setTimeout(()=>beep(660,0.09),70);setTimeout(()=>beep(880,0.12),150)},
+  buy:()=>{beep(520,0.06);setTimeout(()=>beep(780,0.08),60)},
+  gold:()=>beep(980,0.06,"triangle",0.08),
+  warp:()=>{beep(700,0.05,"triangle",0.07);setTimeout(()=>beep(1050,0.07,"triangle",0.07),50)},
+  win:()=>{[330,440,550,660].forEach((f,i)=>setTimeout(()=>beep(f,0.12),i*110))},
+  lose:()=>{[330,262,196].forEach((f,i)=>setTimeout(()=>beep(f,0.16,"sawtooth",0.04),i*140))},
+  boss:()=>{[110,104,98].forEach((f,i)=>setTimeout(()=>beep(f,0.25,"sawtooth",0.05),i*180))},
+  deny:()=>beep(90,0.1,"sawtooth",0.05),
+};
+
+/* ================= rules engine =================
+   board: 64-array, cell = 0 empty, or {p:0|1,k:bool}
+   p0 starts on rows 5-7 (bottom, moves up / dr=-1)
+   p1 starts on rows 0-2 (top,  moves down / dr=+1)          */
+const idx=(r,c)=>r*8+c, inB=(r,c)=>r>=0&&r<8&&c>=0&&c<8, dark=(r,c)=>(r+c)%2===1;
+
+function makeState(loads, boss){
+  // loads = [loadoutP0, loadoutP1]
+  const b=new Array(64).fill(0);
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    if(!dark(r,c))continue;
+    if(r<3)b[idx(r,c)]={p:1,k:false};
+    if(r>4)b[idx(r,c)]={p:0,k:false};
+  }
+  const st={b,turn:0,chain:null,ply:0,over:false,winner:null,
+    boss:boss||null,lava:new Set(),fog:false,noKings:false,greed:false,
+    goldTiles:{}, boostTiles:{}, goldClaimed:new Set(),
+    warp:{}, traps:{}, forts:{}, trapSpent:new Set(),
+    shields:[0,0], goldEarned:[0,0], caps:[0,0], lost:[0,0]};
+  // boss mods
+  if(boss==="LAVA"){
+    const rng=mulberry32(bossSeed);
+    let placed=0;
+    while(placed<4){
+      const r=3+Math.floor(rng()*2), c=Math.floor(rng()*8);
+      if(dark(r,c)&&!st.lava.has(idx(r,c))){st.lava.add(idx(r,c));placed++}
+    }
+  }
+  // volcanist upgrades: neutral lava for everyone (capped so the board stays playable)
+  const volcN=(((loads[0]&&loads[0].volc)|0)+((loads[1]&&loads[1].volc)|0))*2;
+  if(volcN){
+    const rng=mulberry32((bossSeed^0x9E37)+101);
+    let placed=0,guard=0;
+    while(placed<volcN&&st.lava.size<5&&guard++<300){
+      const r=2+Math.floor(rng()*4), c=Math.floor(rng()*8), i=idx(r,c);
+      if(!dark(r,c)||st.lava.has(i)||st.b[i])continue;
+      if((r===3||r===4)&&freeMid(st)<=4)continue; // keep crossing lanes open
+      st.lava.add(i);placed++;
+    }
+  }
+  if(boss==="FOG")st.fog=true;
+  if(boss==="NOKINGS")st.noKings=true;
+  if(boss==="GREED")st.greed=true;
+  // apply loadouts
+  for(const p of [0,1]){
+    const L=loads[p]; if(!L)continue;
+    const rng=mulberry32((bossSeed||1)*7919+p*104729+roundNum*31);
+    st.shields[p]=L.shield|0;
+    if(boss==="HORDE"&&p===1)placeExtra(st,1,2,rng);
+    placeExtra(st,p,L.reinforce|0,rng);
+    // veteran kings
+    let vk=L.veteran|0;
+    const mine=[];
+    for(let i=0;i<64;i++)if(st.b[i]&&st.b[i].p===p&&!st.b[i].k)mine.push(i);
+    while(vk>0&&mine.length){const j=Math.floor(rng()*mine.length);st.b[mine[j]].k=true;mine.splice(j,1);vk--}
+    // tiles: own half
+    const half=p===0?[4,7]:[0,3];
+    const spots=[];
+    for(let r=half[0];r<=half[1];r++)for(let c=0;c<8;c++)
+      if(dark(r,c)&&!st.lava.has(idx(r,c)))spots.push(idx(r,c));
+    const take=n=>{const out=[];while(n>0&&spots.length){const j=Math.floor(rng()*spots.length);out.push(spots[j]);spots.splice(j,1);n--}return out};
+    for(const i of take(L.goldTile|0))st.goldTiles[i]=p;
+    for(const i of take(L.boostTile|0))st.boostTiles[i]=p;
+    const ws=take((L.warp|0)*2);
+    for(let w=0;w+1<ws.length;w+=2){
+      st.warp[ws[w]]={o:p,t:ws[w+1]};
+      st.warp[ws[w+1]]={o:p,t:ws[w]};
+    }
+    for(const i of take(L.trap|0))st.traps[i]=p;
+    for(const i of take(L.fort|0))st.forts[i]=p;
+  }
+  return st;
+}
+function freeMid(st){
+  let e=0;
+  for(let r=3;r<=4;r++)for(let c=0;c<8;c++){const i=idx(r,c);if(dark(r,c)&&!st.b[i]&&!st.lava.has(i))e++}
+  return e;
+}
+function placeExtra(st,p,n,rng){
+  // extra men on the empty middle rows of own half (rows 3/4 side) then back rows
+  const rows=p===0?[4,5,6,7]:[3,2,1,0];
+  const emptyDark=()=>{let e=0;for(let r=0;r<8;r++)for(let c=0;c<8;c++){const i=idx(r,c);if(dark(r,c)&&!st.b[i]&&!st.lava.has(i))e++}return e};
+  const spots=[];
+  for(const r of rows)for(let c=0;c<8;c++){
+    const i=idx(r,c);
+    if(dark(r,c)&&!st.b[i]&&!st.lava.has(i))spots.push(i);
+  }
+  while(n>0&&spots.length&&emptyDark()>6){ // never gridlock the board
+    const j=Math.floor(rng()*spots.length), s=spots[j], sr=Math.floor(s/8);
+    spots.splice(j,1);
+    if((sr===3||sr===4)&&freeMid(st)<=3)continue; // keep crossing lanes open
+    st.b[s]={p,k:false};n--;
+  }
+}
+function cloneState(st){
+  return {b:st.b.map(x=>x?{p:x.p,k:x.k}:0),turn:st.turn,chain:st.chain,ply:st.ply,
+    over:st.over,winner:st.winner,boss:st.boss,lava:st.lava,fog:st.fog,noKings:st.noKings,greed:st.greed,
+    goldTiles:st.goldTiles,boostTiles:st.boostTiles,goldClaimed:new Set(st.goldClaimed),
+    warp:st.warp,traps:st.traps,forts:st.forts,trapSpent:new Set(st.trapSpent),
+    shields:st.shields.slice(),goldEarned:st.goldEarned.slice(),caps:st.caps.slice(),lost:st.lost.slice()};
+}
+function pieceDirs(st,i){
+  const pc=st.b[i];
+  const kingly=pc.k||st.boostTiles[i]===pc.p; // boost tile: move as king from it
+  if(kingly)return [[-1,-1],[-1,1],[1,-1],[1,1]];
+  return pc.p===0?[[-1,-1],[-1,1]]:[[1,-1],[1,1]];
+}
+function hopsFrom(st,i,capsOnly){
+  const r=Math.floor(i/8),c=i%8,pc=st.b[i],out=[];
+  // a defender standing on its own fort tile cannot be jumped
+  const canCap=mi=>{const d=st.b[mi];return d&&d.p!==pc.p&&st.forts[mi]!==d.p};
+  for(const [dr,dc] of pieceDirs(st,i)){
+    const mr=r+dr,mc=c+dc,tr=r+2*dr,tc=c+2*dc;
+    if(inB(mr,mc)&&canCap(idx(mr,mc))&&
+       inB(tr,tc)&&!st.b[idx(tr,tc)]&&!st.lava.has(idx(tr,tc)))
+      out.push({from:i,to:idx(tr,tc),cap:idx(mr,mc)});
+    else if(!capsOnly&&inB(mr,mc)&&!st.b[idx(mr,mc)]&&!st.lava.has(idx(mr,mc)))
+      out.push({from:i,to:idx(mr,mc),cap:-1});
+  }
+  return capsOnly?out.filter(m=>m.cap>=0):out;
+}
+let forcedCaps=false; // menu toggle; host's setting wins in P2P
+let aiLevel=1;          // 0 easy, 1 normal, 2 hard
+const AI_LEVELS=["EASY","NORMAL","HARD"];
+function legalMoves(st){
+  if(st.over)return [];
+  if(st.chain!=null)return hopsFrom(st,st.chain,true);
+  const caps=[],quiet=[];
+  for(let i=0;i<64;i++){
+    if(!st.b[i]||st.b[i].p!==st.turn)continue;
+    for(const m of hopsFrom(st,i,false))(m.cap>=0?caps:quiet).push(m);
+  }
+  if(forcedCaps&&caps.length)return caps;
+  return caps.concat(quiet);
+}
+function tryShield(st,p,seed,events){
+  if(st.shields[p]<=0)return;
+  const back=p===0?7:0; const opts=[];
+  for(let c=0;c<8;c++){const i=idx(back,c);if(dark(back,c)&&!st.b[i]&&!st.lava.has(i))opts.push(i)}
+  if(opts.length){const sq=opts[seed%opts.length];st.b[sq]={p,k:false};st.shields[p]--;events.push("shield:"+sq)}
+}
+function applyHop(st,m){
+  const pc=st.b[m.from]; st.b[m.from]=0;
+  const me=pc.p, foe=1-me;
+  let events=[];
+  if(m.cap>=0){
+    const deads=[m.cap]; if(m.cap2!==undefined)deads.push(m.cap2);
+    for(const dead of deads){
+      st.b[dead]=0;
+      st.caps[me]++; st.lost[foe]++;
+      events.push("capture");
+      tryShield(st,foe,st.ply*7+dead,events); // deterministic square for P2P sync
+      if(st.greed)events.push("greedLoss:"+foe);
+    }
+  }
+  let landing=m.to;
+  st.b[landing]=pc;
+  let destroyed=false;
+  // enemy trap tile: first piece to land is destroyed
+  const tOwn=st.traps[landing];
+  if(tOwn!==undefined&&tOwn!==me&&!st.trapSpent.has(landing)){
+    st.trapSpent.add(landing);
+    st.b[landing]=0; destroyed=true;
+    st.lost[me]++; st.caps[tOwn]++;
+    events.push("trapped");
+    tryShield(st,me,st.ply*11+landing,events);
+    if(st.greed)events.push("greedLoss:"+me);
+  }
+  // warp pair: your man landing on one teleports to its twin
+  if(!destroyed&&st.warp[landing]&&st.warp[landing].o===me){
+    const twin=st.warp[landing].t;
+    if(!st.b[twin]&&!st.lava.has(twin)){st.b[twin]=pc;st.b[landing]=0;landing=twin;events.push("warp")}
+  }
+  // gold tile claim (at final square, so warping onto gold pays)
+  if(!destroyed&&st.goldTiles[landing]===me&&!st.goldClaimed.has(landing)){
+    st.goldClaimed.add(landing); st.goldEarned[me]++; events.push("gold");
+  }
+  // crown
+  let crowned=false;
+  if(!destroyed){
+    const tr=Math.floor(landing/8);
+    if(!pc.k&&((me===0&&tr===0)||(me===1&&tr===7))&&!st.noKings){pc.k=true;crowned=true;events.push("crown")}
+  }
+  // chain?
+  if(!destroyed&&m.cap>=0&&!crowned&&hopsFrom(st,landing,true).length){
+    st.chain=landing; // same player continues
+  }else{
+    st.chain=null; st.turn=foe; st.ply++;
+  }
+  // terminal checks
+  const meAlive=st.b.some(x=>x&&x.p===me);
+  const foeAlive=st.b.some(x=>x&&x.p===foe);
+  if(!foeAlive){st.over=true;st.winner=me}
+  else if(!meAlive){st.over=true;st.winner=foe}
+  else if(legalMoves(st).length===0){st.over=true;st.winner=1-st.turn}
+  else if(st.ply>=100){
+    st.over=true;
+    const mat=p=>st.b.reduce((a,x)=>a+(x&&x.p===p?(x.k?2:1):0),0);
+    const m0=mat(0),m1=mat(1);
+    st.winner=m0===m1?null:(m0>m1?0:1);
+  }
+  events.landing=landing;
+  return events;
+}
+/* actions (consume the turn) */
+function applyAction(st,act){ // {kind,a,b}
+  const me=st.turn;
+  if(act.kind==="retreat"){ st.b[act.b]=st.b[act.a]; st.b[act.a]=0; }
+  else if(act.kind==="swap"){ const t=st.b[act.a]; st.b[act.a]=st.b[act.b]; st.b[act.b]=t; }
+  else if(act.kind==="smite"){ st.b[act.a]=0; st.lost[1-me]++; }
+  st.chain=null; st.turn=1-me; st.ply++;
+  const foeAlive=st.b.some(x=>x&&x.p===1-me);
+  if(!foeAlive){st.over=true;st.winner=me}
+  else if(legalMoves(st).length===0){st.over=true;st.winner=1-st.turn}
+}
+
+/* ================= AI (negamax-ish minimax on hops) ================= */
+function evalState(st,ai){
+  let s=0;
+  for(let i=0;i<64;i++){
+    const x=st.b[i]; if(!x)continue;
+    const r=Math.floor(i/8),c=i%8;
+    let v=x.k?170:100;
+    v+=x.k?0:(x.p===0?(7-r):r)*4;              // advancement
+    if(c>=2&&c<=5&&r>=2&&r<=5)v+=6;            // centre
+    s+=x.p===ai?v:-v;
+  }
+  return s;
+}
+function minimax(st,depth,alpha,beta,ai){
+  if(st.over){
+    if(st.winner===null)return 0;
+    return st.winner===ai?100000-st.ply:-100000+st.ply;
+  }
+  if(depth<=0)return evalState(st,ai);
+  const moves=legalMoves(st);
+  const maxing=st.turn===ai;
+  let best=maxing?-Infinity:Infinity;
+  for(const m of moves){
+    const child=cloneState(st); applyHop(child,m);
+    const d=child.turn===st.turn?depth:depth-1; // free chain hops
+    const v=minimax(child,d,alpha,beta,ai);
+    if(maxing){best=Math.max(best,v);alpha=Math.max(alpha,v)}
+    else{best=Math.min(best,v);beta=Math.min(beta,v)}
+    if(beta<=alpha)break;
+  }
+  return best;
+}
+function aiPickMove(st,ai,depth,blunder){
+  const moves=legalMoves(st);
+  if(!moves.length)return null;
+  if(blunder&&rand()<blunder)return moves[Math.floor(rand()*moves.length)];
+  let best=null,bv=-Infinity;
+  for(const m of moves){
+    const child=cloneState(st); applyHop(child,m);
+    const d=child.turn===st.turn?depth:depth-1;
+    const v=minimax(child,d,-Infinity,Infinity,ai)+rand()*8;
+    if(v>bv){bv=v;best=m}
+  }
+  return best;
+}
+/* ================= run state ================= */
+let mode=null;           // 'ai' | 'p2p'
+let myP=0;               // my absolute player index
+let money=4, wins=[0,0], streak=0, roundNum=0, matchSeed=1, bossSeed=1;
+let loadout=null, oppLoadout=null;
+let state=null;
+let sel=-1, targeting=null, targetA=-1;
+let meReady=false, oppReady=false, rerollCost=2;
+let lastResult=null;
+const freshLoadout=()=>({veteran:0,reinforce:0,shield:0,goldTile:0,boostTile:0,warp:0,trap:0,fort:0,volc:0,charms:[],acts:{retreat:0,swap:0,smite:0}});
+const BOSSES={
+  LAVA:["THE MOLTEN ROW","4 lava squares: no piece may land there"],
+  NOKINGS:["THE USURPER","no crowning this round"],
+  FOG:["THE MIST","your foe's back rows are hidden from you"],
+  GREED:["THE TAX MAN","lose $1 for every piece you lose"],
+  HORDE:["THE HORDE","your foe fields 2 extra men"],
+};
+const AI_LOADS=[null,
+  {}, {reinforce:1}, {reinforce:1,veteran:1},
+  {reinforce:2,veteran:1,trap:1}, {reinforce:2,veteran:1,shield:1,goldTile:1},
+  {reinforce:2,veteran:2,shield:1,trap:1,boostTile:1},
+  {reinforce:3,veteran:2,shield:1,warp:1,trap:1,fort:1},
+  {reinforce:3,veteran:2,shield:2,trap:2,fort:1,goldTile:2,boostTile:1},
+  {reinforce:4,veteran:3,shield:2,trap:2,fort:2,warp:1,goldTile:2,boostTile:2,volc:1}
+];
+
+/* ================= shop catalogue ================= */
+const ITEMS=[
+  {id:"piggy",   nm:"PIGGY BANK", kind:"CHARM", pr:5, desc:"+$1 interest per $5 held at round end (max +$3).", charm:true},
+  {id:"bounty",  nm:"BOUNTY",     kind:"CHARM", pr:5, desc:"+$1 per enemy piece you captured this round.", charm:true},
+  {id:"martyr",  nm:"MARTYR",     kind:"CHARM", pr:4, desc:"+$1 per piece you lost this round.", charm:true},
+  {id:"momentum",nm:"MOMENTUM",   kind:"CHARM", pr:4, desc:"+$2 whenever you win two rounds in a row.", charm:true},
+  {id:"haggler", nm:"HAGGLER",    kind:"CHARM", pr:6, desc:"Shop items cost $1 less (min $1).", charm:true},
+  {id:"warchest",nm:"WAR CHEST",  kind:"CHARM", pr:5, desc:"+$2 flat at every round end.", charm:true},
+  {id:"veteran", nm:"VETERAN",    kind:"UPGRADE",pr:6, desc:"One of your men starts every round as a king.", max:3, key:"veteran"},
+  {id:"reinforce",nm:"REINFORCE", kind:"UPGRADE",pr:5, desc:"+1 extra man on your half at every round start.", max:4, key:"reinforce"},
+  {id:"shield",  nm:"SHIELD WALL",kind:"UPGRADE",pr:5, desc:"The first man you lose each round redeploys to your back row.", max:2, key:"shield"},
+  {id:"goldTile",nm:"GOLD TILE",  kind:"TILE",  pr:4, desc:"A tile on your half pays $1 the first time you land on it each round.", max:4, key:"goldTile"},
+  {id:"boostTile",nm:"SPRING TILE",kind:"TILE", pr:6, desc:"A tile on your half — any of your men standing on it may leap like a king.", max:3, key:"boostTile"},
+  {id:"warp",    nm:"WARP PAIR",  kind:"TILE",  pr:7, desc:"Two linked tiles on your half — your man landing on one teleports to the other. Chains continue from the exit.", max:2, key:"warp"},
+  {id:"trap",    nm:"TRAP TILE",  kind:"TILE",  pr:7, desc:"The first enemy piece to land on this tile each round is destroyed.", max:2, key:"trap"},
+  {id:"fort",    nm:"FORT TILE",  kind:"TILE",  pr:6, desc:"Your piece standing on this tile cannot be jumped.", max:2, key:"fort"},
+  {id:"volc",    nm:"VOLCANIST",  kind:"UPGRADE",pr:5, desc:"+2 neutral lava squares erupt at every round start. Chaos for everyone.", max:2, key:"volc"},
+  {id:"retreat", nm:"RETREAT",    kind:"ACTION",pr:3, desc:"One use: move one of your men to any adjacent empty square, even backward. Uses your turn.", max:3, act:"retreat"},
+  {id:"swap",    nm:"SWITCHEROO", kind:"ACTION",pr:4, desc:"One use: swap the positions of two of your pieces. Uses your turn.", max:3, act:"swap"},
+  {id:"smite",   nm:"SMITE",      kind:"ACTION",pr:8, desc:"One use: destroy one enemy man (kings resist). Uses your turn.", max:3, act:"smite"},
+];
+function itemPrice(it){ return loadout.charms.includes("haggler")?Math.max(1,it.pr-1):it.pr }
+function itemOwnedCount(it){
+  if(it.charm)return loadout.charms.includes(it.id)?1:0;
+  if(it.key)return loadout[it.key];
+  if(it.act)return loadout.acts[it.act];
+  return 0;
+}
+function itemAtMax(it){
+  if(it.charm)return loadout.charms.includes(it.id)||loadout.charms.length>=5;
+  return itemOwnedCount(it)>=it.max;
+}
+/* pixel icons */
+function drawIcon(cv,id){
+  const x=cv.getContext("2d"); x.clearRect(0,0,16,16);
+  const R=(a,b,w,h,c)=>{x.fillStyle=c;x.fillRect(a,b,w,h)};
+  switch(id){
+    case "piggy": R(3,5,10,7,PAL.c4);R(5,7,6,3,PAL.c3);R(6,8,4,1,PAL.c0);R(6,3,4,2,PAL.c4);break;
+    case "bounty": R(7,2,2,12,PAL.c2);R(2,7,12,2,PAL.c2);R(6,6,4,4,PAL.c4);R(7,7,2,2,PAL.c0);break;
+    case "martyr": R(4,4,3,3,PAL.c2);R(9,4,3,3,PAL.c2);R(3,6,10,3,PAL.c2);R(5,9,6,2,PAL.c2);R(7,11,2,2,PAL.c2);R(5,5,1,1,PAL.c7);break;
+    case "momentum": R(3,9,3,3,PAL.c5);R(6,7,3,5,PAL.c5);R(9,3,3,9,PAL.c5);R(10,1,1,2,PAL.c7);break;
+    case "haggler": R(4,4,8,8,PAL.c4);R(5,5,2,2,PAL.c0);R(2,2,3,3,PAL.c4);break;
+    case "warchest": R(2,5,12,8,PAL.c3);R(2,5,12,2,PAL.c4);R(7,8,2,3,PAL.c4);R(3,6,1,6,PAL.c0);break;
+    case "veteran": R(3,10,10,3,PAL.c4);R(3,5,2,5,PAL.c4);R(7,4,2,6,PAL.c4);R(11,5,2,5,PAL.c4);R(7,2,2,2,PAL.c7);break;
+    case "reinforce": R(6,3,4,4,PAL.c6);R(4,8,8,5,PAL.c6);R(12,2,3,1,PAL.c5);R(13,1,1,3,PAL.c5);break;
+    case "shield": R(4,2,8,7,PAL.c6);R(5,9,6,3,PAL.c6);R(7,12,2,2,PAL.c6);R(6,4,2,4,PAL.c7);break;
+    case "goldTile": R(2,2,12,12,PAL.c1);R(4,4,8,8,PAL.c4);R(6,6,4,4,PAL.c3);break;
+    case "boostTile": R(2,2,12,12,PAL.c1);R(7,4,2,8,PAL.c5);R(5,6,2,2,PAL.c5);R(9,6,2,2,PAL.c5);break;
+    case "retreat": R(4,7,9,2,PAL.c6);R(6,5,2,2,PAL.c6);R(6,9,2,2,PAL.c6);R(3,3,2,10,PAL.c7);break;
+    case "swap": R(2,4,9,2,PAL.c5);R(9,2,2,2,PAL.c5);R(5,10,9,2,PAL.c3);R(5,12,2,2,PAL.c3);break;
+    case "smite": R(8,1,3,6,PAL.c4);R(6,6,4,3,PAL.c4);R(5,9,3,6,PAL.c3);break;
+    case "warp": R(2,4,5,2,PAL.c6);R(2,6,2,3,PAL.c6);R(5,9,2,2,PAL.c6);R(9,5,2,2,PAL.c3);R(11,7,2,3,PAL.c3);R(9,10,5,2,PAL.c3);break;
+    case "trap": R(2,12,12,2,PAL.c1);R(3,8,2,4,PAL.c2);R(7,6,2,6,PAL.c2);R(11,8,2,4,PAL.c2);R(7,4,2,2,PAL.c7);break;
+    case "fort": R(2,6,12,8,PAL.c7);R(2,3,3,3,PAL.c7);R(7,3,3,3,PAL.c7);R(12,3,2,3,PAL.c7);R(6,9,4,5,PAL.c0);R(4,8,1,1,PAL.c1);R(10,8,1,1,PAL.c1);break;
+    case "volc": R(6,3,4,2,PAL.c2);R(4,5,8,3,PAL.c3);R(3,8,10,3,PAL.c1);R(2,11,12,3,PAL.c1);R(7,1,2,2,PAL.c4);break;
+  }
+}
+
+/* ================= rendering ================= */
+const cv=$("board"), cx=cv.getContext("2d");
+const vFlip=i=>{ if(myP===0)return i; const r=7-Math.floor(i/8),c=7-(i%8); return idx(r,c) };
+function fogHides(i){ // hide enemy pieces in their back 3 rows (viewer-relative)
+  if(!state||!state.fog)return false;
+  const pc=state.b[i]; if(!pc||pc.p===myP)return false;
+  const r=Math.floor(i/8);
+  return myP===0? r<=2 : r>=5;
+}
+/* ================= animation & game-feel layer =================
+   State is always applied instantly (AI + P2P depend on it);
+   everything below is a purely visual layer on top.            */
+const nowMs=()=>(typeof performance!=="undefined"?performance.now():Date.now());
+const REDUCED=(typeof matchMedia==="function")&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+let anims=[],particles=[],floaters=[],splashes=[],shakeMag=0,hoverCell=-1,lastFrame=nowMs();
+const ease=x=>x<0.5?2*x*x:1-Math.pow(-2*x+2,2)/2;
+function vXY(i){const vi=vFlip(i);return [(vi%8)*CELL,Math.floor(vi/8)*CELL]}
+function animMove(from,to,pc,dur=160,delay=0){if(REDUCED)return;anims.push({from,to,pc:{p:pc.p,k:pc.k},t0:nowMs()+delay,dur})}
+function burst(i,col,n=9,delay=0){
+  if(REDUCED)n=2;
+  const [x,y]=vXY(i), t=nowMs()+delay;
+  for(let k=0;k<n;k++)particles.push({x:x+8,y:y+8,vx:(rand()*2-1)*1.7,vy:(rand()*2-1)*1.4-0.7,g:0.1,t0:t,life:t+240+rand()*180,col});
+}
+function sparkle(i,delay=0){
+  const [x,y]=vXY(i), t=nowMs()+delay;
+  for(let k=0;k<10;k++)particles.push({x:x+2+rand()*12,y:y+3+rand()*10,vx:0,vy:-0.3-rand()*0.45,g:0,t0:t,life:t+430,col:PAL.c4});
+}
+function floatText(i,txt,col){const [x,y]=vXY(i);floaters.push({x:x+8,y:y+3,txt,col,t0:nowMs(),dur:900})}
+function splash(big,sub,dur=1000){
+  const last=splashes[splashes.length-1];
+  const t0=last?Math.max(nowMs(),last.t0+last.dur):nowMs();
+  splashes.push({big,sub,t0,dur:REDUCED?Math.min(dur,500):dur});
+}
+function addShake(m){if(!REDUCED)shakeMag=Math.max(shakeMag,m)}
+
+function drawPieceAt(X,Y,pc){
+  X=Math.round(X);Y=Math.round(Y); // stay on the pixel grid
+  const body=pc.p===0?PAL.c2:PAL.c6;
+  for(let py=0;py<16;py++)for(let px=0;px<16;px++){
+    const dx=px-7.5,dy=py-7.5,d2=dx*dx+dy*dy;
+    if(d2<=43){
+      let col=PAL.c0;                    // outline ring
+      if(d2<=31){col=(dx+dy>4.5)?PAL.c1:body} // body + bottom-right shade
+      cx.fillStyle=col;cx.fillRect(X+px,Y+py,1,1);
+    }
+  }
+  cx.fillStyle=PAL.c7;cx.fillRect(X+5,Y+4,2,2);cx.fillRect(X+4,Y+6,1,1); // specular glint
+  if(pc.k){
+    cx.fillStyle=PAL.c4;
+    cx.fillRect(X+5,Y+8,6,3);
+    cx.fillRect(X+5,Y+6,2,2);cx.fillRect(X+8,Y+5,1,3);cx.fillRect(X+10,Y+6,2,2);
+    cx.fillStyle=PAL.c3;cx.fillRect(X+5,Y+10,6,1);
+  }
+}
+function draw(t){
+  t=t===undefined?nowMs():t;
+  const dt=Math.min(48,Math.max(1,t-lastFrame)); lastFrame=t;
+  cx.clearRect(0,0,128,128);
+  if(!state)return;
+  cx.save();
+  if(shakeMag>0.25){cx.translate(Math.round((rand()*2-1)*shakeMag),Math.round((rand()*2-1)*shakeMag));shakeMag*=Math.pow(0.85,dt/16)}
+  else shakeMag=0;
+  const pulse=Math.floor(t/260)%2;
+  const moves=(!state.over&&state.turn===myP&&!targeting)?legalMoves(state):[];
+  const selMoves=moves.filter(m=>m.from===sel);
+  const hideAt=new Set();
+  for(const a of anims)if(t<a.t0+a.dur)hideAt.add(a.to);
+  for(let vi=0;vi<64;vi++){
+    const i=vFlip(vi), r=Math.floor(vi/8), c=vi%8, X=c*CELL, Y=r*CELL;
+    cx.fillStyle=dark(Math.floor(i/8),i%8)?PAL.c1:PAL.c0;
+    cx.fillRect(X,Y,CELL,CELL);
+    if(state.lava.has(i)){
+      cx.fillStyle=PAL.c3;cx.fillRect(X+1,Y+1,14,14);
+      cx.fillStyle=pulse?PAL.c2:PAL.c1;cx.fillRect(X+3,Y+3,4,4);cx.fillRect(X+9,Y+8,4,4);
+      cx.fillStyle=pulse?PAL.c4:PAL.c3;cx.fillRect(X+7,Y+5,2,2);cx.fillRect(X+4,Y+10,2,2);
+    }
+    if(state.goldTiles[i]!==undefined){
+      const mine=state.goldTiles[i]===myP, claimed=state.goldClaimed.has(i);
+      cx.fillStyle=claimed?PAL.c1:(mine?PAL.c4:PAL.c3);
+      cx.fillRect(X+1,Y+1,3,3);cx.fillRect(X+12,Y+1,3,3);cx.fillRect(X+1,Y+12,3,3);cx.fillRect(X+12,Y+12,3,3);
+    }
+    if(state.boostTiles[i]!==undefined){
+      cx.fillStyle=state.boostTiles[i]===myP?PAL.c5:PAL.c2;
+      const bo=pulse?0:-1; // springs quiver
+      cx.fillRect(X+7,Y+3+bo,2,7);cx.fillRect(X+5,Y+5+bo,2,2);cx.fillRect(X+9,Y+5+bo,2,2);
+    }
+    if(state.warp[i]){
+      cx.fillStyle=state.warp[i].o===myP?PAL.c6:PAL.c3;
+      if(pulse){ // rings rotate between two frames
+        cx.fillRect(X+6,Y+1,4,2);cx.fillRect(X+6,Y+13,4,2);
+        cx.fillRect(X+1,Y+6,2,4);cx.fillRect(X+13,Y+6,2,4);
+      }else{
+        cx.fillRect(X+3,Y+3,3,2);cx.fillRect(X+10,Y+3,3,2);
+        cx.fillRect(X+3,Y+11,3,2);cx.fillRect(X+10,Y+11,3,2);
+      }
+    }
+    if(state.traps[i]!==undefined){
+      const spent=state.trapSpent.has(i);
+      cx.fillStyle=spent?PAL.c1:(state.traps[i]===myP?PAL.c5:PAL.c2);
+      cx.fillRect(X+2,Y+12,2,3);cx.fillRect(X+5,Y+10,2,5);cx.fillRect(X+9,Y+10,2,5);cx.fillRect(X+12,Y+12,2,3);
+    }
+    if(state.forts[i]!==undefined){
+      cx.fillStyle=PAL.c7;
+      cx.fillRect(X,Y,5,1);cx.fillRect(X+11,Y,5,1);cx.fillRect(X,Y+15,5,1);cx.fillRect(X+11,Y+15,5,1);
+      cx.fillRect(X,Y,1,5);cx.fillRect(X+15,Y,1,5);cx.fillRect(X,Y+11,1,5);cx.fillRect(X+15,Y+11,1,5);
+      cx.fillStyle=state.forts[i]===myP?PAL.c6:PAL.c2;
+      cx.fillRect(X+1,Y+1,2,2);cx.fillRect(X+13,Y+13,2,2);
+    }
+    if(state.fog){
+      const fr=Math.floor(i/8);
+      const fogZone=myP===0?fr<=2:fr>=5;
+      if(fogZone&&dark(Math.floor(i/8),i%8)){
+        cx.fillStyle=PAL.c0;
+        for(let a=0;a<CELL;a+=4)for(let b=0;b<CELL;b+=4)if((a+b)%8===(pulse?0:4))cx.fillRect(X+a,Y+b,2,2);
+      }
+    }
+    const pc=state.b[i];
+    if(pc&&!fogHides(i)&&!hideAt.has(i))drawPieceAt(X,Y,pc);
+    if(i===sel||i===targetA){
+      cx.strokeStyle=pulse?PAL.c5:PAL.c4;cx.lineWidth=2;cx.strokeRect(X+1,Y+1,14,14);
+    }
+    if(i===hoverCell&&!state.over&&state.turn===myP&&i!==sel){
+      cx.fillStyle=PAL.c7;
+      cx.fillRect(X,Y,3,1);cx.fillRect(X,Y,1,3);cx.fillRect(X+13,Y,3,1);cx.fillRect(X+15,Y,1,3);
+      cx.fillRect(X,Y+15,3,1);cx.fillRect(X,Y+13,1,3);cx.fillRect(X+13,Y+15,3,1);cx.fillRect(X+15,Y+13,1,3);
+    }
+  }
+  // move dots (breathing)
+  for(const m of selMoves){
+    const vi=vFlip(m.to), r=Math.floor(vi/8), c=vi%8;
+    cx.fillStyle=m.cap>=0?PAL.c2:PAL.c5;
+    const s=pulse?5:4, o=(16-s)>>1;
+    cx.fillRect(c*CELL+o,r*CELL+o,s,s);
+  }
+  // chain marker
+  if(state.chain!=null&&state.turn===myP){
+    const vi=vFlip(state.chain);
+    cx.strokeStyle=pulse?PAL.c4:PAL.c3;cx.lineWidth=2;
+    cx.strokeRect((vi%8)*CELL+1,Math.floor(vi/8)*CELL+1,14,14);
+  }
+  // animated hopping pieces
+  for(let k=anims.length-1;k>=0;k--){
+    const a=anims[k];
+    if(t>=a.t0+a.dur){anims.splice(k,1);continue}
+    const [x1,y1]=vXY(a.from),[x2,y2]=vXY(a.to);
+    const p=t<a.t0?0:ease((t-a.t0)/a.dur);
+    const lift=Math.sin(p*Math.PI)*3;
+    drawPieceAt(x1+(x2-x1)*p, y1+(y2-y1)*p-lift, a.pc);
+  }
+  // particles
+  for(let k=particles.length-1;k>=0;k--){
+    const p=particles[k];
+    if(t>=p.life){particles.splice(k,1);continue}
+    if(t<p.t0)continue;
+    const f=dt/16;
+    p.x+=p.vx*f; p.y+=p.vy*f; p.vy+=p.g*f;
+    const s=(p.life-t>120)?2:1;
+    cx.fillStyle=p.col;cx.fillRect(Math.round(p.x),Math.round(p.y),s,s);
+  }
+  // floating text
+  cx.textAlign="center";cx.font="bold 6px monospace";
+  for(let k=floaters.length-1;k>=0;k--){
+    const f=floaters[k], pr=(t-f.t0)/f.dur;
+    if(pr>=1){floaters.splice(k,1);continue}
+    if(pr>0.75&&pulse)continue; // blink out
+    cx.fillStyle=f.col;
+    cx.fillText(f.txt,Math.round(f.x),Math.round(f.y-pr*9));
+  }
+  // splash cards
+  const sp=splashes[0];
+  if(sp){
+    if(t>=sp.t0+sp.dur)splashes.shift();
+    else if(t>=sp.t0){
+      const pr=(t-sp.t0)/sp.dur;
+      const slide=Math.round((1-ease(Math.min(1,pr*3)))*46);
+      const out=pr>0.85?Math.round(ease((pr-0.85)/0.15)*46):0;
+      cx.fillStyle=PAL.c0;cx.fillRect(0,46,128,34);
+      cx.fillStyle=PAL.c1;cx.fillRect(0,46,128,2);cx.fillRect(0,78,128,2);
+      cx.fillStyle=PAL.c4;cx.textAlign="center";cx.font="bold 10px monospace";
+      cx.fillText(sp.big,64+slide-out,62);
+      if(sp.sub){cx.fillStyle=PAL.c6;cx.font="bold 6px monospace";cx.fillText(sp.sub,64-slide+out,73)}
+    }
+  }
+  cx.restore();
+}
+if(typeof requestAnimationFrame==="function"){
+  requestAnimationFrame(function loop(t){draw(t);requestAnimationFrame(loop)});
+}
+cv.addEventListener("mousemove",e=>{
+  const rect=cv.getBoundingClientRect();
+  const c=Math.floor((e.clientX-rect.left)/rect.width*8), r=Math.floor((e.clientY-rect.top)/rect.height*8);
+  hoverCell=inB(r,c)?vFlip(idx(r,c)):-1;
+});
+cv.addEventListener("mouseleave",()=>hoverCell=-1);
+function refreshHUD(){
+  $("hRound").textContent=roundNum;
+  if(refreshHUD._g!==undefined&&refreshHUD._g!==money){
+    const g=$("hGold");g.classList.remove("bump");void g.offsetWidth;g.classList.add("bump");
+  }
+  refreshHUD._g=money;
+  $("board").classList.toggle("myturn",!!state&&!state.over&&state.turn===myP);
+  $("hMe").textContent=wins[myP]; $("hOpp").textContent=wins[1-myP];
+  $("hGold").textContent="$"+money;
+  $("hStreak").innerHTML="STREAK <b>"+streak+"</b>";
+  if(!state)return;
+  const mine=state.turn===myP;
+  $("turnTag").textContent=state.over?"ROUND OVER":(mine?(state.chain!=null?"KEEP JUMPING!":"YOUR TURN"):"FOE'S TURN");
+  $("turnTag").style.borderColor=mine?PAL.c4:PAL.c1;
+  $("turnTag").style.color=mine?PAL.c4:PAL.c7;
+  // actions
+  const A=loadout.acts, canAct=mine&&!state.over&&state.chain==null;
+  let html="";
+  for(const k of ["retreat","swap","smite"]){
+    if(A[k]>0)html+=`<button class="actBtn" data-act="${k}" ${canAct?"":"disabled"}>${k==="retreat"?"RETREAT":k==="swap"?"SWITCHEROO":"SMITE"} ×${A[k]}</button>`;
+  }
+  $("actList").innerHTML=html||"none";
+  document.querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>startTargeting(b.dataset.act));
+  // charms
+  $("charmList").innerHTML=loadout.charms.length?loadout.charms.map(c=>`<span class="chip">${ITEMS.find(i=>i.id===c).nm}</span>`).join(""):"none";
+}
+/* ================= playing a round ================= */
+let roundEnded=false, aiTimer=null;
+function handleEvents(events,mover){
+  for(const ev of events){
+    if(ev==="capture")sfx.capture();
+    if(ev==="crown"){sfx.crown();log((mover===myP?"You":"Foe")+" crowned a king!","g")}
+    if(ev.startsWith("shield"))log("A shield redeployed a fallen man!","b");
+    if(ev==="trapped"){sfx.capture();log((mover===myP?"Your piece":"Foe's piece")+" fell into a trap!",mover===myP?"r":"g")}
+    if(ev==="warp"){sfx.warp();log((mover===myP?"Your man":"Foe's man")+" warped across the board!","b")}
+    if(ev==="gold"&&mover===myP){money++;sfx.gold();log("Gold tile! +$1","g");refreshHUD()}
+    if(ev.startsWith("greedLoss:")){
+      const p=+ev.split(":")[1];
+      if(p===myP&&money>0){money--;log("The Tax Man takes $1","r");refreshHUD()}
+    }
+  }
+}
+function doHop(m,fromNet){
+  if(!state||state.over)return;
+  const mover=state.turn;
+  const pcSnap={p:state.b[m.from].p,k:state.b[m.from].k};
+  const deadSnaps=[];
+  if(m.cap>=0){
+    if(state.b[m.cap])deadSnaps.push([m.cap,state.b[m.cap].p]);
+    if(m.cap2!==undefined&&state.b[m.cap2])deadSnaps.push([m.cap2,state.b[m.cap2].p]);
+  }
+  const events=applyHop(state,m);
+  const landing=events.landing!==undefined?events.landing:m.to;
+  animMove(m.from,m.to,pcSnap);
+  if(events.includes("warp")){burst(m.to,PAL.c6,7,160);burst(landing,PAL.c6,9,240)}
+  for(const [d,dp] of deadSnaps){burst(d,dp===0?PAL.c2:PAL.c6,10,110);addShake(2.4)}
+  if(events.includes("crown"))sparkle(landing,170);
+  if(events.includes("trapped")){burst(landing,mover===0?PAL.c2:PAL.c6,14,170);addShake(3.4);floatText(landing,"TRAP!",PAL.c3)}
+  for(const ev of events)if(ev.startsWith("shield:"))sparkle(+ev.split(":")[1],260);
+  if(events.includes("gold")&&mover===myP)floatText(landing,"+$1",PAL.c4);
+  if(!events.includes("capture")&&!events.includes("trapped"))sfx.move();
+  handleEvents(events,mover);
+  sel=state.chain!=null&&state.turn===myP?state.chain:-1;
+  if(mode==="p2p"&&!fromNet)send({t:"hop",m});
+  draw();refreshHUD();
+  afterStateChange();
+}
+function doAction(act,fromNet){
+  if(!state||state.over)return;
+  const mover=state.turn;
+  if(act.kind==="retreat"&&state.b[act.a])animMove(act.a,act.b,state.b[act.a]);
+  if(act.kind==="swap"&&state.b[act.a]&&state.b[act.b]){
+    animMove(act.a,act.b,state.b[act.a]);
+    animMove(act.b,act.a,state.b[act.b],160,70);
+  }
+  if(act.kind==="smite"&&state.b[act.a]){
+    burst(act.a,state.b[act.a].p===0?PAL.c2:PAL.c6,14);addShake(3);
+    floatText(act.a,"SMITE!",PAL.c4);
+  }
+  applyAction(state,act);
+  sfx.capture();
+  log((mover===myP?"You":"Foe")+" used "+act.kind.toUpperCase()+"!","m");
+  if(mode==="p2p"&&!fromNet)send({t:"act",act});
+  sel=-1;targeting=null;targetA=-1;
+  draw();refreshHUD();
+  afterStateChange();
+}
+function afterStateChange(){
+  if(state.over){setTimeout(()=>finishRound(state.winner),700);return}
+  if(mode==="ai"&&state.turn===1)scheduleAI();
+}
+function scheduleAI(){
+  clearTimeout(aiTimer);
+  aiTimer=setTimeout(()=>{
+    if(!state||state.over||state.turn!==1)return;
+    if(splashes.length){scheduleAI();return} // wait for splash cards
+    const pcs=state.b.reduce((a,x)=>a+(x?1:0),0);
+    let depth,blunder;
+    if(aiLevel===0){depth=2;blunder=0.35}
+    else if(aiLevel===1){depth=3;blunder=0.12;if(roundNum%3===0)depth=4}
+    else{depth=pcs>18?4:5;blunder=0;if(roundNum%3===0)depth++}
+    const m=aiPickMove(state,1,depth,blunder);
+    if(!m){finishRound(0);return}
+    doHop(m,false);
+  },560);
+}
+function startTargeting(kind){
+  if(!state||state.over||state.turn!==myP||state.chain!=null)return;
+  targeting=kind;targetA=-1;sel=-1;
+  toast(kind==="retreat"?"Pick a man, then an empty square":kind==="swap"?"Pick two of your pieces":"Pick an enemy man to destroy");
+  draw();
+}
+function cancelTargeting(){targeting=null;targetA=-1;sfx.deny();draw()}
+cv.addEventListener("click",e=>{
+  if(!state||state.over)return;
+  if(state.turn!==myP)return;
+  const rect=cv.getBoundingClientRect();
+  const c=Math.floor((e.clientX-rect.left)/rect.width*8);
+  const r=Math.floor((e.clientY-rect.top)/rect.height*8);
+  if(!inB(r,c))return;
+  const i=vFlip(idx(r,c));
+  const pc=state.b[i];
+  if(targeting){
+    if(targeting==="smite"){
+      if(pc&&pc.p!==myP&&!pc.k){loadout.acts.smite--;doAction({kind:"smite",a:i})}
+      else cancelTargeting();
+      return;
+    }
+    if(targetA<0){
+      if(pc&&pc.p===myP){targetA=i;draw()}else cancelTargeting();
+      return;
+    }
+    if(targeting==="retreat"){
+      const ar=Math.floor(targetA/8),ac=targetA%8;
+      if(!pc&&Math.abs(r0(i)-ar)===1&&Math.abs(c0(i)-ac)===1&&!state.lava.has(i)){
+        loadout.acts.retreat--;doAction({kind:"retreat",a:targetA,b:i});
+      }else cancelTargeting();
+    }else if(targeting==="swap"){
+      if(pc&&pc.p===myP&&i!==targetA){loadout.acts.swap--;doAction({kind:"swap",a:targetA,b:i})}
+      else cancelTargeting();
+    }
+    return;
+  }
+  // normal move selection
+  const moves=legalMoves(state);
+  if(sel>=0){
+    const m=moves.find(x=>x.from===sel&&x.to===i);
+    if(m){doHop(m,false);return}
+  }
+  if(pc&&pc.p===myP&&moves.some(x=>x.from===i)){sel=i;draw()}
+  else if(state.chain==null){sel=-1;draw()}
+});
+const r0=i=>Math.floor(i/8), c0=i=>i%8;
+window.addEventListener("keydown",e=>{if(e.key==="Escape"&&targeting)cancelTargeting()});
+$("btnConcede").onclick=()=>{
+  if(!state||state.over||roundEnded)return;
+  if(mode==="p2p")send({t:"concede"});
+  finishRound(1-myP);
+};
+
+/* ================= round lifecycle ================= */
+function pickBoss(){
+  if(roundNum%3!==0)return null;
+  const pool=mode==="ai"?["LAVA","NOKINGS","FOG","GREED","HORDE"]:["LAVA","NOKINGS","FOG","GREED"];
+  const rng=mulberry32(bossSeed);
+  return pool[Math.floor(rng()*pool.length)];
+}
+function myLoadNet(){return {veteran:loadout.veteran,reinforce:loadout.reinforce,shield:loadout.shield,goldTile:loadout.goldTile,boostTile:loadout.boostTile,warp:loadout.warp,trap:loadout.trap,fort:loadout.fort,volc:loadout.volc}}
+function startRoundNow(){
+  roundNum++;
+  bossSeed=(matchSeed*31+roundNum*7919)|0;
+  const boss=pickBoss();
+  const loads=[null,null];
+  loads[myP]=myLoadNet();
+  let aiRound=roundNum;
+  if(aiLevel===0)aiRound=Math.ceil(roundNum/2);       // easy: half-speed escalation
+  else if(aiLevel===1)aiRound=Math.max(1,roundNum-2); // normal: two rounds behind
+  loads[1-myP]=mode==="ai"?(AI_LOADS[Math.min(aiRound,9)]):(oppLoadout||{});
+  state=makeState(loads,boss);
+  state.turn=(roundNum%2===1)?0:1;
+  roundEnded=false;sel=-1;targeting=null;targetA=-1;
+  meReady=false;oppReady=false;
+  show("game");
+  $("bossBanner").style.display=boss?"block":"none";
+  if(boss){
+    $("bossBanner").textContent="⚠ BOSS: "+BOSSES[boss][0]+" — "+BOSSES[boss][1]+" ⚠";
+    sfx.boss();log("BOSS ROUND: "+BOSSES[boss][0],"r");
+    splash("⚠ "+BOSSES[boss][0]+" ⚠",BOSSES[boss][1],1500);
+  }else splash("ROUND "+roundNum,(roundNum%2===1?myP===0:myP===1)?"you move first":"foe moves first",950);
+  log("— Round "+roundNum+" begins —","b");
+  draw();refreshHUD();
+  if(legalMoves(state).length===0){finishRound(null);return} // paranoid gridlock guard
+  if(mode==="ai"&&state.turn===1)scheduleAI();
+}
+function finishRound(winnerAbs){
+  if(roundEnded)return; roundEnded=true;
+  clearTimeout(aiTimer);
+  state.over=true;
+  const iWon=winnerAbs===myP, isDraw=winnerAbs===null, boss=roundNum%3===0;
+  if(winnerAbs!==null)wins[winnerAbs]++;
+  // payout
+  const lines=[];
+  let pay= iWon?6:isDraw?4:3;
+  lines.push((iWon?"Round won":isDraw?"Stalemate":"Round lost")+" ... $"+pay);
+  if(iWon&&boss){pay+=4;lines.push("Boss slain ... $4")}
+  const C=loadout.charms;
+  if(C.includes("bounty")&&state.caps[myP]>0){pay+=state.caps[myP];lines.push("Bounty ×"+state.caps[myP]+" ... $"+state.caps[myP])}
+  if(C.includes("martyr")&&state.lost[myP]>0){pay+=state.lost[myP];lines.push("Martyr ×"+state.lost[myP]+" ... $"+state.lost[myP])}
+  if(C.includes("warchest")){pay+=2;lines.push("War chest ... $2")}
+  if(C.includes("momentum")&&iWon&&streak>=1){pay+=2;lines.push("Momentum ... $2")}
+  if(C.includes("piggy")){const intr=Math.min(3,Math.floor(money/5));if(intr>0){pay+=intr;lines.push("Interest ... $"+intr)}}
+  money+=pay;
+  streak=iWon?streak+1:0;
+  lastResult={iWon,isDraw,lines,pay};
+  if(iWon)sfx.win();else if(!isDraw)sfx.lose();
+  splash(iWon?"ROUND WON!":isDraw?"STALEMATE":"ROUND LOST","+$"+pay,1300);
+  // match over?
+  const done= wins[0]>=5||wins[1]>=5||(roundNum>=9&&wins[0]!==wins[1])||roundNum>=15;
+  setTimeout(()=>{ done?showGameOver():enterShop() },1600);
+}
+function showGameOver(){
+  const iWon=wins[myP]>wins[1-myP], drawn=wins[myP]===wins[1-myP];
+  $("goTitle").textContent=drawn?"STALEMATE":iWon?"★ VICTORY ★":"DEFEAT";
+  $("goTitle").style.color=drawn?PAL.c6:iWon?PAL.c4:PAL.c2;
+  $("goStats").innerHTML="ROUNDS: YOU "+wins[myP]+" — "+wins[1-myP]+" FOE<br>GOLD BANKED: $"+money+"<br>ROUNDS PLAYED: "+roundNum;
+  if(mode==="p2p")try{send({t:"bye"})}catch(e){}
+  show("gameover");
+  (iWon?sfx.win:sfx.lose)();
+}
+/* ================= shop ================= */
+let stock=[];
+function enterShop(){
+  rerollCost=2;
+  $("roundResult").textContent=lastResult.iWon?"ROUND WON!":lastResult.isDraw?"STALEMATE.":"ROUND LOST — BUT THE RUN GOES ON.";
+  $("roundResult").style.color=lastResult.iWon?PAL.c4:lastResult.isDraw?PAL.c6:PAL.c2;
+  $("payout").innerHTML=lastResult.lines.join("<br>")+"<br><b style='color:var(--c4)'>TOTAL +$"+lastResult.pay+"</b>";
+  rollStock();
+  $("waitOpp").style.display="none";
+  $("btnNext").disabled=false;
+  show("shop");
+  renderShop();
+}
+function rollStock(){
+  const pool=ITEMS.filter(it=>!itemAtMax(it));
+  stock=[];
+  const bag=pool.slice();
+  while(stock.length<4&&bag.length){
+    const j=Math.floor(rand()*bag.length);
+    stock.push({it:bag[j],sold:false});bag.splice(j,1);
+  }
+}
+function renderShop(){
+  $("shopMoney").textContent="GOLD: $"+money;
+  $("btnReroll").textContent="REROLL $"+rerollCost;
+  const box=$("stock");box.innerHTML="";
+  for(const slot of stock){
+    const it=slot.it, price=itemPrice(it), maxed=itemAtMax(it);
+    const card=document.createElement("div");
+    card.className="card"+(slot.sold||maxed?" sold":"");
+    const owned=itemOwnedCount(it);
+    card.innerHTML=`<div class="nm">${it.nm}</div><div class="kind">${it.kind}${owned?" · owned ×"+owned:""}</div>`;
+    const ic=document.createElement("canvas");ic.width=16;ic.height=16;drawIcon(ic,it.id);
+    card.appendChild(ic);
+    const d=document.createElement("div");d.className="desc";d.textContent=it.desc;card.appendChild(d);
+    const b=document.createElement("button");
+    b.className="gold";b.textContent=slot.sold?"SOLD":maxed?"MAX":"BUY $"+price;
+    b.disabled=slot.sold||maxed||money<price;
+    b.onclick=()=>{
+      if(money<price)return;
+      money-=price;slot.sold=true;
+      if(it.charm)loadout.charms.push(it.id);
+      else if(it.key)loadout[it.key]++;
+      else if(it.act)loadout.acts[it.act]++;
+      sfx.buy();toast(it.nm+" acquired!");
+      renderShop();
+    };
+    const pw=document.createElement("div");pw.appendChild(b);card.appendChild(pw);
+    card.style.animationDelay=(box.children.length*70)+"ms";
+    box.appendChild(card);
+  }
+}
+$("btnReroll").onclick=()=>{
+  if(money<rerollCost){sfx.deny();return}
+  money-=rerollCost;rerollCost++;
+  rollStock();renderShop();sfx.move();
+};
+$("btnNext").onclick=()=>{
+  $("btnNext").disabled=true;
+  if(mode==="ai"){startRoundNow();return}
+  meReady=true;
+  send({t:"ready",load:myLoadNet()});
+  $("waitOpp").style.display="block";
+  maybeStartSynced();
+};
+function maybeStartSynced(){
+  if(meReady&&oppReady)startRoundNow();
+}
+/* ================= p2p ================= */
+let peer=null, conn=null;
+function send(o){if(conn&&conn.open)conn.send(o)}
+function code4(){let s="";for(let i=0;i<4;i++)s+="ABCDEFGHJKMNPQRSTUVWXYZ"[Math.floor(rand()*23)];return s}
+function setupConn(c,isHost){
+  conn=c;
+  conn.on("data",onMsg);
+  conn.on("close",()=>{toast("Peer disconnected");if(mode==="p2p"&&$("gameover").classList.contains("on")===false){showGameOverDisconnect()}});
+  conn.on("open",()=>{
+    if(isHost){matchSeed=(rand()*1e9)|0;send({t:"init",seed:matchSeed,fc:forcedCaps})}
+  });
+  if(isHost&&conn.open){matchSeed=(rand()*1e9)|0;send({t:"init",seed:matchSeed,fc:forcedCaps})}
+}
+function showGameOverDisconnect(){
+  if(!mode)return;
+  $("goTitle").textContent="CONNECTION LOST";$("goTitle").style.color=PAL.c3;
+  $("goStats").innerHTML="ROUNDS: YOU "+wins[myP]+" — "+wins[1-myP]+" FOE";
+  show("gameover");mode=null;
+}
+function onMsg(msg){
+  switch(msg.t){
+    case "init":
+      matchSeed=msg.seed;
+      forcedCaps=!!msg.fc;
+      $("btnRules").textContent="CAPTURES: "+(forcedCaps?"FORCED":"FREE");
+      toast("Host rule — captures "+(forcedCaps?"FORCED":"FREE"));
+      send({t:"initok"});
+      beginP2PMatch(1); break;
+    case "initok":
+      beginP2PMatch(0); break;
+    case "ready":
+      oppReady=true; oppLoadout=msg.load; maybeStartSynced(); break;
+    case "hop": doHop(msg.m,true); break;
+    case "act": doAction(msg.act,true); break;
+    case "concede": if(!roundEnded)finishRound(myP); break;
+    case "bye": break;
+  }
+}
+function beginP2PMatch(p){
+  mode="p2p"; myP=p;
+  resetRun();
+  toast("Connected! You are "+(p===0?"RED (bottom)":"BLUE (bottom)"));
+  // round 1: auto-ready both sides
+  meReady=true; send({t:"ready",load:myLoadNet()});
+  show("game"); $("turnTag").textContent="SYNCING...";
+  maybeStartSynced();
+}
+function resetRun(){
+  money=4;wins=[0,0];streak=0;roundNum=0;
+  loadout=freshLoadout();oppLoadout=null;
+  meReady=false;oppReady=false;lastResult=null;state=null;
+  $("log").innerHTML="";
+}
+/* ================= menu wiring ================= */
+$("btnAI").onclick=()=>{
+  mode="ai";myP=0;matchSeed=(rand()*1e9)|0;
+  resetRun();startRoundNow();
+};
+$("btnHost").onclick=()=>{
+  const code=code4();
+  $("lobbyInfo").innerHTML="STARTING HOST...";
+  if(peer)peer.destroy();
+  peer=new Peer("rld-"+code.toLowerCase());
+  peer.on("open",()=>{$("lobbyInfo").innerHTML="SHARE CODE: <span class='code'>"+code+"</span><br>waiting for challenger..."});
+  peer.on("connection",c=>setupConn(c,true));
+  peer.on("error",e=>{$("lobbyInfo").textContent="PEER ERROR: "+e.type;sfx.deny()});
+};
+$("btnJoin").onclick=()=>{
+  const code=$("joinCode").value.trim().toLowerCase();
+  if(code.length!==4){toast("Enter the 4-letter code");return}
+  $("lobbyInfo").textContent="CONNECTING...";
+  if(peer)peer.destroy();
+  peer=new Peer();
+  peer.on("open",()=>{
+    const c=peer.connect("rld-"+code,{reliable:true});
+    c.on("error",()=>{$("lobbyInfo").textContent="COULD NOT REACH HOST"});
+    setupConn(c,false);
+  });
+  peer.on("error",e=>{$("lobbyInfo").textContent="PEER ERROR: "+e.type;sfx.deny()});
+};
+$("btnDiff").onclick=()=>{
+  aiLevel=(aiLevel+1)%3;
+  $("btnDiff").textContent="AI: "+AI_LEVELS[aiLevel];
+  sfx.move();
+};
+$("btnRules").onclick=()=>{
+  forcedCaps=!forcedCaps;
+  $("btnRules").textContent="CAPTURES: "+(forcedCaps?"FORCED":"FREE");
+  sfx.move();
+};
+$("btnHow").onclick=()=>{const h=$("howto");h.style.display=h.style.display==="block"?"none":"block"};
+$("btnMenu").onclick=()=>{
+  clearTimeout(aiTimer);
+  if(peer){try{peer.destroy()}catch(e){}peer=null;conn=null}
+  mode=null;state=null;
+  $("lobbyInfo").textContent="";
+  show("menu");
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ALPHA-BET: Roulette Balatro</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background: radial-gradient(circle at 20% 30%, #0a1f1a, #030c08);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'Courier New', 'Monaco', monospace;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* main game card */
+        .game-container {
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(2px);
+            border-radius: 3rem;
+            padding: 1.5rem;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.1);
+            border: 1px solid rgba(218, 165, 32, 0.5);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        /* header & score */
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            background: #1e2a24c9;
+            padding: 0.7rem 1.5rem;
+            border-radius: 60px;
+            margin-bottom: 1.8rem;
+            border: 1px solid #d4af37;
+            color: #f9e7c2;
+            text-shadow: 0 2px 2px black;
+            font-weight: bold;
+        }
+
+        .score-box, .mult-box {
+            background: #000000aa;
+            padding: 0.2rem 1rem;
+            border-radius: 2rem;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+        }
+
+        .mult-box span {
+            color: #ffd966;
+            font-size: 1.8rem;
+        }
+
+        /* letters rack (alpha-bet pool) */
+        .rack {
+            background: #2c2b1f;
+            border-radius: 3rem;
+            padding: 1rem;
+            margin-bottom: 1.8rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            border: 2px solid #c2a144;
+            box-shadow: inset 0 0 6px #00000055, 0 6px 10px black;
+        }
+
+        .letter-tile {
+            background: radial-gradient(ellipse at 30% 35%, #fcf3cf, #efd68e);
+            width: 65px;
+            height: 75px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            font-weight: bold;
+            font-size: 2.6rem;
+            font-family: 'Courier New', monospace;
+            color: #2b2a1a;
+            box-shadow: 3px 4px 0px #6b4c1b;
+            cursor: pointer;
+            transition: all 0.07s linear;
+            text-transform: uppercase;
+            border: 1px solid #ffefb9;
+        }
+
+        .letter-tile:active {
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0px #6b4c1b;
+        }
+
+        .letter-tile.disabled {
+            opacity: 0.4;
+            filter: grayscale(0.2);
+            transform: none;
+            pointer-events: none;
+        }
+
+        .letter-small {
+            font-size: 0.7rem;
+            background: #2c2b1faa;
+            color: gold;
+            border-radius: 20px;
+            padding: 0px 6px;
+            margin-top: 4px;
+            font-weight: bold;
+        }
+
+        /* word construction area */
+        .word-area {
+            background: #0f1913;
+            border-radius: 2rem;
+            padding: 1rem;
+            margin-bottom: 1.8rem;
+            border: 1px solid #b8860b;
+        }
+
+        .current-word {
+            background: #010b07;
+            min-height: 80px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 0.8rem;
+            border-radius: 2rem;
+            font-family: monospace;
+            letter-spacing: 2px;
+        }
+
+        .word-slot {
+            background: #2c2b1f;
+            width: 60px;
+            height: 70px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.3rem;
+            font-weight: bold;
+            color: #ffe5a3;
+            text-transform: uppercase;
+            border-bottom: 4px solid #ffbe3c;
+            box-shadow: inset 0 0 5px #00000044;
+        }
+
+        .empty-slot {
+            background: #1f2a1e;
+            border-bottom: 2px dashed #8b7a46;
+            color: #5f6e4e;
+        }
+
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 18px;
+            margin: 1rem 0 0.8rem;
+        }
+
+        button {
+            background: #212e26;
+            border: none;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 1.2rem;
+            padding: 10px 20px;
+            border-radius: 60px;
+            color: #f7eac5;
+            cursor: pointer;
+            box-shadow: 0 3px 0 #6a4b1a;
+            transition: 0.05s linear;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        button:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 #6a4b1a;
+        }
+
+        .roulette-area {
+            background: #1f241dc9;
+            border-radius: 2rem;
+            padding: 0.8rem;
+            margin: 1rem 0;
+            border: 1px ridge #c7a53b;
+        }
+
+        .wheel-display {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+
+        .roulette-chip {
+            background: #382812;
+            padding: 8px 12px;
+            border-radius: 40px;
+            font-weight: bold;
+            color: #ffd966;
+            font-size: 1.2rem;
+            font-family: monospace;
+            border: 1px solid #e4b138;
+        }
+
+        .spin-btn {
+            background: #ab7e2c;
+            color: #1f2c14;
+            font-size: 1.4rem;
+            padding: 6px 24px;
+            margin-top: 5px;
+        }
+
+        .message {
+            background: #000000aa;
+            border-radius: 40px;
+            padding: 8px 15px;
+            text-align: center;
+            color: #ffecb3;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-top: 15px;
+        }
+
+        @keyframes pulse {
+            0% { text-shadow: 0 0 0 gold; }
+            100% { text-shadow: 0 0 6px #ffbe3c; }
+        }
+        .highlight {
+            animation: pulse 0.2s ease-in-out 3;
+        }
+        footer {
+            font-size: 0.7rem;
+            text-align: center;
+            color: #abaa7a;
+            margin-top: 1rem;
+        }
+        @media (max-width: 550px) {
+            .letter-tile { width: 55px; height: 65px; font-size: 2rem; }
+            .word-slot { width: 48px; height: 58px; font-size: 1.8rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <div class="stats">
+        <div class="score-box">💰 SCORE: <span id="scoreValue">0</span></div>
+        <div class="mult-box">✨ MULTI: <span id="multiplierValue">1</span>x</div>
+    </div>
+
+    <!-- ALPHA-BET rack (letter pool) -->
+    <div class="rack" id="letterRack"></div>
+
+    <!-- Word building zone -->
+    <div class="word-area">
+        <div class="current-word" id="wordSlotsContainer"></div>
+        <div class="action-buttons">
+            <button id="submitWordBtn">📖 SUBMIT WORD</button>
+            <button id="clearWordBtn">🗑️ CLEAR</button>
+        </div>
+    </div>
+
+    <!-- ROULETTE + Balatro twist: spin after word to earn or lose -->
+    <div class="roulette-area">
+        <div style="text-align:center; font-weight:bold; color:#e9c468;">🎡 ROULETTE BALATRO 🃟</div>
+        <div class="wheel-display" id="rouletteResultDisplay">
+            <span class="roulette-chip">🎲 SPIN TO EARN</span>
+        </div>
+        <div style="display:flex; justify-content:center;">
+            <button id="spinRouletteBtn" class="spin-btn">🎰 SPIN ROULETTE 🎰</button>
+        </div>
+    </div>
+    <div id="messageBox" class="message">⚡ Click letters to build a word. Submit → gain points based on word length & multiplier. Then spin the roulette for BALATRO effects! ⚡</div>
+    <footer>ALPHA-BET + ROULETTE + BALATRO (risk & reward)</footer>
+</div>
+
+<script>
+    // ---------- GAME STATE ----------
+    let currentScore = 0;
+    let currentMultiplier = 1;      // multiplier increases via roulette "BALATRO" bonuses
+    let currentWordLetters = [];     // array of chars (strings)
+    
+    // available letters pool (ALPHA-BET)
+    let availableLetters = [];
+    // initial letter set (classic distribution, includes some rare)
+    const INITIAL_LETTER_POOL = [
+        'A','A','A','A','B','B','C','C','D','D','D','E','E','E','E','E','F','F','G','G',
+        'H','H','I','I','I','I','J','K','L','L','L','M','M','N','N','N','N','O','O','O',
+        'O','P','P','Q','R','R','R','R','S','S','S','S','T','T','T','T','U','U','U','V',
+        'W','W','X','Y','Y','Z'
+    ];
+    
+    // roulette outcomes (Balatro inspired: multipliers, score boosts, penalties)
+    const ROULETTE_OUTCOMES = [
+        { name: "✨ BALATRO LUCKY!", effect: "mult_up", value: 1, text: "+1 Multiplier! 🔥" },
+        { name: "♠️ HIGH ROLLER", effect: "score_bonus", value: 50, text: "Earn +50 points!" },
+        { name: "♦️ ANTE UP", effect: "mult_up", value: 1, text: "Multiplier +1! (Balatro surge)" },
+        { name: "💀 BUST", effect: "score_penalty", value: -30, text: "Lose 30 points! Ouch" },
+        { name: "🎭 JOKER'S GIFT", effect: "score_bonus", value: 20, text: "+20 points from Joker" },
+        { name: "🃏 BALATRO MULT", effect: "mult_up", value: 2, text: "MEGA MULTI +2! 🃟" },
+        { name: "🍀 LUCKY WHEEL", effect: "score_bonus", value: 15, text: "+15 points (lucky)" },
+        { name: "💔 PENALTY BOX", effect: "mult_down", value: -1, text: "Multiplier -1! Risk..." },
+        { name: "💎 JACKPOT", effect: "score_bonus", value: 100, text: "JACKPOT! +100 points 💎" },
+        { name: "🌀 RESHUFFLE", effect: "reshuffle", value: 0, text: "Letters reshuffled! New alpha-bet" },
+        { name: "⚡ OVERDRIVE", effect: "mult_up", value: 1, text: "+1 Multiplier (Overdrive)" },
+        { name: "❄️ FREEZE", effect: "nothing", value: 0, text: "No effect... safe turn" }
+    ];
+    
+    // Helper: update UI
+    function updateScoreUI() {
+        document.getElementById('scoreValue').innerText = currentScore;
+        document.getElementById('multiplierValue').innerText = currentMultiplier;
+    }
+    
+    // render the letter rack
+    function renderRack() {
+        const rackDiv = document.getElementById('letterRack');
+        rackDiv.innerHTML = '';
+        if (availableLetters.length === 0) {
+            rackDiv.innerHTML = '<div style="color:gold; padding:10px;">⚠️ No letters left! Refill via roulette or reshuffle?</div>';
+            return;
+        }
+        for (let i = 0; i < availableLetters.length; i++) {
+            const letter = availableLetters[i];
+            const tile = document.createElement('div');
+            tile.className = 'letter-tile';
+            tile.innerHTML = `<span>${letter}</span><span class="letter-small">${getLetterPoints(letter)}</span>`;
+            tile.addEventListener('click', (e) => {
+                e.stopPropagation();
+                addLetterToWord(letter, i);
+            });
+            rackDiv.appendChild(tile);
+        }
+    }
+    
+    // base points per letter (Scrabble-like)
+    function getLetterPoints(ch) {
+        const points = {
+            'A':1,'B':3,'C':3,'D':2,'E':1,'F':4,'G':2,'H':4,'I':1,'J':8,'K':5,'L':1,'M':3,
+            'N':1,'O':1,'P':3,'Q':10,'R':1,'S':1,'T':1,'U':1,'V':4,'W':4,'X':8,'Y':4,'Z':10
+        };
+        return points[ch] || 1;
+    }
+    
+    // compute word score based on letters sum * length bonus (multiplier applied after)
+    function computeWordBaseScore(wordArr) {
+        if (wordArr.length === 0) return 0;
+        let sumPoints = 0;
+        for (let ch of wordArr) {
+            sumPoints += getLetterPoints(ch);
+        }
+        // length bonus: extra multiplier per letter (Balatro style)
+        let lengthBonus = 1 + (wordArr.length * 0.2);
+        return Math.floor(sumPoints * lengthBonus);
+    }
+    
+    // add letter to current word building zone
+    function addLetterToWord(letter, rackIndex) {
+        if (rackIndex < 0 || rackIndex >= availableLetters.length) return;
+        // remove letter from availableLetters
+        const removed = availableLetters.splice(rackIndex, 1);
+        currentWordLetters.push(removed[0]);
+        updateWordDisplay();
+        renderRack();
+    }
+    
+    // update the visual slots for the word under construction
+    function updateWordDisplay() {
+        const container = document.getElementById('wordSlotsContainer');
+        container.innerHTML = '';
+        if (currentWordLetters.length === 0) {
+            const emptyHint = document.createElement('div');
+            emptyHint.innerText = '✏️ click letters to build...';
+            emptyHint.style.color = '#bdaa72';
+            emptyHint.style.fontStyle = 'italic';
+            container.appendChild(emptyHint);
+        } else {
+            for (let i = 0; i < currentWordLetters.length; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'word-slot';
+                slot.innerText = currentWordLetters[i];
+                container.appendChild(slot);
+            }
+        }
+    }
+    
+    // clear current word (return letters to rack)
+    function clearWord(returnLetters = true) {
+        if (returnLetters && currentWordLetters.length > 0) {
+            // push letters back to availableLetters (append)
+            for (let ch of currentWordLetters) {
+                availableLetters.push(ch);
+            }
+            // optional reshuffle rack to keep clean
+            shuffleArray(availableLetters);
+        }
+        currentWordLetters = [];
+        updateWordDisplay();
+        renderRack();
+        showMessage("Word cleared, letters returned.", "#c2a144");
+    }
+    
+    // submit word: gain points based on word score & current multiplier, then consume word.
+    function submitWord() {
+        if (currentWordLetters.length === 0) {
+            showMessage("No word to submit! Add letters first.", "#e09842");
+            return;
+        }
+        const wordStr = currentWordLetters.join('');
+        // optional simple validation: at least 2 letters or any word allowed
+        if (currentWordLetters.length < 2) {
+            showMessage("Word must be at least 2 letters long! (Balatro challenge)", "#e09842");
+            return;
+        }
+        const baseWordScore = computeWordBaseScore(currentWordLetters);
+        const finalEarn = Math.floor(baseWordScore * currentMultiplier);
+        currentScore += finalEarn;
+        
+        // success message with style
+        showMessage(`✅ "${wordStr.toUpperCase()}" earned ${baseWordScore} base * ${currentMultiplier}x = ${finalEarn} points!`, "#b3ffcf");
+        
+        // remove letters (they are already removed from rack when added, so just clear word array)
+        currentWordLetters = [];
+        updateWordDisplay();
+        updateScoreUI();
+        
+        // after submitting, check if rack is empty -> maybe give emergency refill
+        if (availableLetters.length === 0) {
+            showMessage("Rack is empty! Refreshing letters via roulette or click spin to get more.", "#ffb347");
+            // give a small emergency refill? but better to force spin? no, let player spin manually. but provide helper: we do reshuffle on spin.
+        }
+        renderRack();
+        // add little highlight
+        document.getElementById('multiplierValue').parentElement.classList.add('highlight');
+        setTimeout(() => document.getElementById('multiplierValue').parentElement.classList.remove('highlight'), 300);
+    }
+    
+    // roulette logic + Balatro integration
+    function spinRoulette() {
+        // random outcome
+        const outcome = ROULETTE_OUTCOMES[Math.floor(Math.random() * ROULETTE_OUTCOMES.length)];
+        let effectMsg = outcome.text;
+        let needRerender = false;
+        
+        // apply effect
+        switch (outcome.effect) {
+            case "mult_up":
+                currentMultiplier += outcome.value;
+                effectMsg = `🎲 ${outcome.name} +${outcome.value} Multiplier! New multi: ${currentMultiplier}x`;
+                break;
+            case "mult_down":
+                currentMultiplier = Math.max(1, currentMultiplier + outcome.value);
+                effectMsg = `⚠️ ${outcome.name} Multiplier ${outcome.value} → now ${currentMultiplier}x`;
+                break;
+            case "score_bonus":
+                currentScore += outcome.value;
+                effectMsg = `🎉 ${outcome.name} +${outcome.value} points! New score: ${currentScore}`;
+                break;
+            case "score_penalty":
+                currentScore = Math.max(0, currentScore + outcome.value);
+                effectMsg = `💔 ${outcome.name} ${outcome.value} points. Score: ${currentScore}`;
+                break;
+            case "reshuffle":
+                // reshuffle letters: replace entire availableLetters pool with fresh set (retain length similar)
+                const totalNeeded = Math.max(8, availableLetters.length + currentWordLetters.length);
+                // gather all letters in play (rack + pending word) to preserve fairness
+                let allCurrentLetters = [...availableLetters];
+                // also return current building word letters to the pool before reshuffle (avoid losing)
+                if (currentWordLetters.length > 0) {
+                    allCurrentLetters.push(...currentWordLetters);
+                    currentWordLetters = [];
+                    updateWordDisplay();
+                }
+                // create new randomized letter set with same count
+                let freshPool = generateRandomLetterPool(allCurrentLetters.length || 12);
+                availableLetters = freshPool;
+                needRerender = true;
+                effectMsg = `🃟 ${outcome.name}: Letters reshuffled! New ALPHA-BET ready.`;
+                break;
+            case "nothing":
+                effectMsg = `🍃 ${outcome.name} — Nothing happens, but the wheel turns.`;
+                break;
+            default:
+                effectMsg = `🎡 Spin: no major event.`;
+        }
+        
+        // update ui score & multiplier
+        updateScoreUI();
+        if (needRerender) {
+            renderRack();
+            updateWordDisplay();
+        } else {
+            renderRack(); // just in case
+        }
+        
+        // display roulette outcome with style
+        const rouletteDiv = document.getElementById('rouletteResultDisplay');
+        rouletteDiv.innerHTML = `<span class="roulette-chip" style="background:#5e3a1a; font-size:1.3rem;">🎲 ${outcome.name} 🎲</span>`;
+        showMessage(`🎰 ROULETTE: ${effectMsg}`, "#ffd966");
+        
+        // Balatro special: if multiplier reaches >=5, add extra flair
+        if (currentMultiplier >= 5) {
+            showMessage("🔥 BALATRO OVERDRIVE! High multiplier active! 🔥", "#ffaa44");
+        }
+        // edge check: negative score can't happen
+        if (currentScore < 0) currentScore = 0;
+        updateScoreUI();
+    }
+    
+    // generate fresh letter pool of given size (or default)
+    function generateRandomLetterPool(size = 12) {
+        const baseSource = [...INITIAL_LETTER_POOL];
+        const result = [];
+        for (let i = 0; i < size; i++) {
+            const randIdx = Math.floor(Math.random() * baseSource.length);
+            result.push(baseSource[randIdx]);
+        }
+        return result;
+    }
+    
+    // shuffle array utility
+    function shuffleArray(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+    }
+    
+    // show message with color
+    function showMessage(msg, colorHint = "#ffe5b4") {
+        const msgDiv = document.getElementById('messageBox');
+        msgDiv.innerHTML = `🔮 ${msg}`;
+        msgDiv.style.transition = "0.2s";
+        msgDiv.style.color = colorHint;
+        setTimeout(() => {
+            if (msgDiv.innerHTML.includes(msg)) {
+                // keep but not mandatory
+            }
+        }, 2000);
+    }
+    
+    // reset/initialize game (fresh start)
+    function initGame() {
+        currentScore = 0;
+        currentMultiplier = 1;
+        currentWordLetters = [];
+        // create starting letters: 14 tiles
+        availableLetters = generateRandomLetterPool(14);
+        shuffleArray(availableLetters);
+        updateScoreUI();
+        renderRack();
+        updateWordDisplay();
+        document.getElementById('rouletteResultDisplay').innerHTML = `<span class="roulette-chip">🎡 spin to test fate</span>`;
+        showMessage("New game! Build words, submit to earn, then spin roulette for Balatro effects! 🃟", "#f5cb5c");
+    }
+    
+    // event binding
+    document.getElementById('submitWordBtn').addEventListener('click', () => submitWord());
+    document.getElementById('clearWordBtn').addEventListener('click', () => clearWord(true));
+    document.getElementById('spinRouletteBtn').addEventListener('click', () => spinRoulette());
+    
+    // start game
+    initGame();
+    
+    // additional: if rack becomes empty after word submit, hint refill via spin (reshuffle chance)
+    // small observer not needed but just to make sure
+    function checkRackEmptyMessage() {
+        if (availableLetters.length === 0 && currentWordLetters.length === 0) {
+            showMessage("⚠️ No letters left! Use SPIN ROULETTE — there's a reshuffle outcome or play strategically.", "#ffa559");
+        }
+    }
+    
+    // patch render to also check
+    const origRender = renderRack;
+    renderRack = function() {
+        origRender();
+        if (availableLetters.length === 0 && currentWordLetters.length === 0) {
+            showMessage("No letters left! Spin the roulette for 'RESHUFFLE' or any bonus.", "#ff9966");
+        }
+    }.bind(this);
+    renderRack();
+    // reapply render after patch
+    renderRack();
+</script>
+</body>
+</html>

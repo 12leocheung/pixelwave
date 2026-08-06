@@ -1,0 +1,3087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dice Wars</title>
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+
+  :root {
+    --parchment: #f2e8d0;
+    --parchment-dark: #e0cea8;
+    --parchment-mid: #ead9b8;
+    --ink: #2c1a0e;
+    --ink-light: #5c3d1e;
+    --red-fire: #c0392b;
+    --blue-water: #1a6b9a;
+    --green-earth: #2d6a2d;
+    --white-air: #7a7a9a;
+    --gold: #b8860b;
+    --gold-bright: #d4a017;
+    --border-heavy: #3d2005;
+    --no-mans: #d4c4a0;
+    --resource-wood: #8B4513;
+    --resource-metal: #708090;
+    --resource-chem: #9932CC;
+    --resource-herb: #228B22;
+    --resource-energy: #FFD700;
+    --shadow: rgba(44,26,14,0.35);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #1a0f05;
+    font-family: 'Crimson Text', serif;
+    color: var(--ink);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ===== SCREENS ===== */
+  .screen { display: none; width: 100%; min-height: 100vh; }
+  .screen.active { display: flex; }
+
+  /* ===== LOBBY ===== */
+  #screen-lobby {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at 50% 30%, #3d1a00 0%, #1a0f05 70%);
+    padding: 20px;
+  }
+
+  .lobby-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    color: var(--gold-bright);
+    text-shadow: 0 0 30px rgba(212,160,23,0.5), 2px 2px 0 #3d1a00;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.2em;
+  }
+
+  .lobby-subtitle {
+    font-family: 'Crimson Text', serif;
+    font-style: italic;
+    color: var(--parchment-dark);
+    font-size: 1.2rem;
+    margin-bottom: 2.5rem;
+    opacity: 0.8;
+  }
+
+  .lobby-card {
+    background: var(--parchment);
+    border: 3px solid var(--border-heavy);
+    border-radius: 4px;
+    padding: 28px 36px;
+    width: min(480px, 95vw);
+    box-shadow: 0 8px 32px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.3);
+    position: relative;
+  }
+
+  .lobby-card::before {
+    content: '';
+    position: absolute; inset: 6px;
+    border: 1px solid var(--parchment-dark);
+    pointer-events: none;
+  }
+
+  .lobby-section { margin-bottom: 20px; }
+  .lobby-section h3 {
+    font-family: 'Cinzel', serif;
+    font-size: 0.9rem;
+    letter-spacing: 0.12em;
+    color: var(--ink-light);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+
+  .faction-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .faction-btn {
+    padding: 10px 8px;
+    border: 2px solid transparent;
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: 'Cinzel', serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    transition: all 0.15s;
+    background: var(--parchment-mid);
+  }
+  .faction-btn:hover { filter: brightness(1.05); transform: translateY(-1px); }
+  .faction-btn.selected { border-width: 2px; box-shadow: 0 0 0 2px var(--gold); }
+  .faction-btn[data-faction="red"] { color: var(--red-fire); border-color: var(--red-fire); }
+  .faction-btn[data-faction="blue"] { color: var(--blue-water); border-color: var(--blue-water); }
+  .faction-btn[data-faction="green"] { color: var(--green-earth); border-color: var(--green-earth); }
+  .faction-btn[data-faction="white"] { color: var(--white-air); border-color: var(--white-air); }
+  .faction-btn.selected[data-faction="red"] { background: rgba(192,57,43,0.12); }
+  .faction-btn.selected[data-faction="blue"] { background: rgba(26,107,154,0.12); }
+  .faction-btn.selected[data-faction="green"] { background: rgba(45,106,45,0.12); }
+  .faction-btn.selected[data-faction="white"] { background: rgba(122,122,154,0.12); }
+
+  .name-input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 2px solid var(--parchment-dark);
+    border-radius: 3px;
+    background: rgba(255,255,255,0.5);
+    font-family: 'Crimson Text', serif;
+    font-size: 1rem;
+    color: var(--ink);
+    outline: none;
+  }
+  .name-input:focus { border-color: var(--gold); }
+
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 11px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: all 0.15s;
+    margin-bottom: 8px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #c8960c, #a07008);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(160,112,8,0.4);
+  }
+  .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn-secondary {
+    background: var(--parchment-mid);
+    color: var(--ink-light);
+    border: 2px solid var(--parchment-dark);
+  }
+  .btn-secondary:hover { background: var(--parchment-dark); }
+  .btn-danger {
+    background: linear-gradient(135deg, #c0392b, #922b21);
+    color: #fff;
+  }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .code-display {
+    background: var(--ink);
+    color: var(--gold-bright);
+    font-family: 'Cinzel', serif;
+    font-size: 1.6rem;
+    letter-spacing: 0.3em;
+    text-align: center;
+    padding: 12px;
+    border-radius: 3px;
+    margin: 10px 0;
+  }
+
+  .code-input {
+    width: 100%;
+    padding: 10px;
+    text-align: center;
+    font-family: 'Cinzel', serif;
+    font-size: 1.4rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    border: 2px solid var(--parchment-dark);
+    border-radius: 3px;
+    background: rgba(255,255,255,0.5);
+    color: var(--ink);
+    outline: none;
+  }
+  .code-input:focus { border-color: var(--gold); }
+
+  .player-count-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .count-btn {
+    flex: 1;
+    padding: 8px;
+    border: 2px solid var(--parchment-dark);
+    border-radius: 3px;
+    background: var(--parchment-mid);
+    cursor: pointer;
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    transition: all 0.15s;
+  }
+  .count-btn.selected {
+    border-color: var(--gold);
+    background: rgba(212,160,23,0.15);
+    color: var(--ink);
+    font-weight: 700;
+  }
+
+  .lobby-players {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .lobby-player-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    background: var(--parchment-mid);
+    border-radius: 3px;
+    font-size: 0.95rem;
+  }
+  .lobby-player-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+  }
+
+  .status-msg {
+    text-align: center;
+    font-style: italic;
+    color: var(--ink-light);
+    font-size: 0.9rem;
+    margin-top: 8px;
+  }
+
+  /* ===== GAME SCREEN ===== */
+  #screen-game {
+    flex-direction: row;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .game-left {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    background: #1e1208;
+    border-right: 3px solid var(--border-heavy);
+    width: 220px;
+    overflow-y: auto;
+    padding: 10px;
+  }
+
+  .game-board-wrap {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    overflow: auto;
+    background: #2a1505;
+    padding: 10px;
+  }
+
+  .game-right {
+    flex: 0 0 auto;
+    width: 240px;
+    background: #1e1208;
+    border-left: 3px solid var(--border-heavy);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 10px;
+  }
+
+  /* BOARD */
+  #game-board {
+    display: grid;
+    grid-template-columns: repeat(16, 36px);
+    grid-template-rows: repeat(16, 36px);
+    border: 3px solid var(--border-heavy);
+    background: var(--no-mans);
+    position: relative;
+    box-shadow: 0 0 40px rgba(0,0,0,0.7);
+    flex-shrink: 0;
+  }
+
+  .board-cell {
+    width: 36px; height: 36px;
+    border: 1px solid rgba(44,26,14,0.18);
+    position: relative;
+    cursor: default;
+    transition: background 0.1s;
+  }
+
+  .board-cell.castle-red { background: rgba(192,57,43,0.13); }
+  .board-cell.castle-blue { background: rgba(26,107,154,0.13); }
+  .board-cell.castle-green { background: rgba(45,106,45,0.13); }
+  .board-cell.castle-white { background: rgba(122,122,154,0.13); }
+  .board-cell.no-mans { background: var(--no-mans); }
+
+  .board-cell.room-hospital { background: rgba(26,107,154,0.22); }
+  .board-cell.room-armoury { background: rgba(160,112,8,0.2); }
+  .board-cell.room-lab { background: rgba(153,50,204,0.15); }
+  .board-cell.room-prison { background: rgba(44,26,14,0.22); }
+
+  .board-cell.highlight-move { background: rgba(80,200,80,0.35) !important; cursor: pointer; }
+  .board-cell.highlight-attack { background: rgba(220,50,50,0.4) !important; cursor: pointer; }
+  .board-cell.highlight-flashbang { background: rgba(255,200,0,0.18) !important; cursor: crosshair; }
+
+  /* New Game Elements Rendering */
+  .mist-layer {
+    position: absolute; inset: 0;
+    background: rgba(50, 255, 100, 0.25);
+    z-index: 1; pointer-events: none;
+    border-radius: 4px;
+  }
+  .mine-token {
+    position: absolute; width: 10px; height: 10px;
+    border-radius: 50%; background: #c0392b;
+    border: 2px solid #2c1a0e; bottom: 4px; left: 4px;
+    z-index: 1; box-shadow: 0 0 5px #c0392b;
+    animation: mine-pulse 2s infinite;
+  }
+  @keyframes mine-pulse {
+    0% { transform: scale(0.9); opacity: 0.8; }
+    50% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(0.9); opacity: 0.8; }
+  }
+
+  /* DICE (units) */
+  .dice-unit {
+    position: absolute;
+    inset: 2px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+    border: 2px solid rgba(0,0,0,0.3);
+    user-select: none;
+    z-index: 2;
+  }
+  .dice-unit:hover { transform: scale(1.08); }
+  .dice-unit.selected { box-shadow: 0 0 0 3px var(--gold), 0 0 12px rgba(212,160,23,0.7); transform: scale(1.05); }
+  .dice-unit.exhausted { opacity: 0.5; }
+  .dice-unit.prisoner { z-index: 3; }
+
+  .dice-unit.status-smoke { outline: 2px dashed #e0e0e0; outline-offset: 1px; opacity: 0.85; }
+  .status-icon {
+    position: absolute; top: -5px; right: -5px;
+    font-size: 11px; background: rgba(0,0,0,0.7);
+    border-radius: 50%; width: 16px; height: 16px;
+    display: flex; align-items: center; justify-content: center;
+    color: yellow; z-index: 5;
+  }
+
+  .dice-red { background: linear-gradient(135deg, #e74c3c, #922b21); color: #fff; }
+  .dice-blue { background: linear-gradient(135deg, #2980b9, #1a5276); color: #fff; }
+  .dice-green { background: linear-gradient(135deg, #27ae60, #1e8449); color: #fff; }
+  .dice-white { background: linear-gradient(135deg, #95a5a6, #717d7e); color: #fff; }
+
+  /* RESOURCES on board */
+  .resource-token {
+    position: absolute;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(0,0,0,0.4);
+    bottom: 2px; right: 2px;
+    z-index: 2;
+    font-size: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+  }
+  .res-wood { background: var(--resource-wood); }
+  .res-metal { background: var(--resource-metal); }
+  .res-chemicals { background: var(--resource-chem); }
+  .res-herbs { background: var(--resource-herb); }
+  .res-energy { background: var(--resource-energy); color: var(--ink); }
+
+  /* Board labels */
+  .board-label {
+    position: absolute;
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    pointer-events: none;
+    z-index: 3;
+    text-transform: uppercase;
+  }
+
+  /* ===== PANELS ===== */
+  .panel-title {
+    font-family: 'Cinzel', serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold-bright);
+    margin-bottom: 8px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid rgba(212,160,23,0.3);
+  }
+
+  .panel-section {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(212,160,23,0.2);
+    border-radius: 3px;
+    padding: 8px;
+    margin-bottom: 10px;
+  }
+
+  /* Turn indicator */
+  .turn-banner {
+    background: linear-gradient(135deg, #c8960c, #a07008);
+    color: #fff;
+    font-family: 'Cinzel', serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-align: center;
+    padding: 6px;
+    border-radius: 3px;
+    margin-bottom: 10px;
+  }
+  .turn-banner.enemy-turn { background: linear-gradient(135deg, #5a3a1a, #3d2005); }
+
+  /* AP display */
+  .ap-display {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .ap-pip {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--gold-bright);
+    border: 1.5px solid var(--gold);
+    box-shadow: 0 0 4px rgba(212,160,23,0.5);
+  }
+  .ap-pip.used { background: transparent; border-color: rgba(212,160,23,0.3); box-shadow: none; }
+  .ap-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.7rem;
+    color: var(--gold-bright);
+    margin-right: 4px;
+  }
+
+  /* Players list */
+  .player-entry {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 6px;
+    border-radius: 3px;
+    margin-bottom: 4px;
+    font-size: 0.85rem;
+  }
+  .player-entry.active-player { background: rgba(212,160,23,0.15); border: 1px solid rgba(212,160,23,0.4); }
+  .player-entry .p-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .player-entry .p-name { flex: 1; color: var(--parchment); font-size: 0.8rem; }
+  .player-entry .p-soldiers { color: var(--parchment-dark); font-size: 0.75rem; }
+
+  /* Selected unit info */
+  .unit-info {
+    font-size: 0.85rem;
+    color: var(--parchment);
+    line-height: 1.5;
+  }
+  .unit-info .stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    font-size: 0.8rem;
+  }
+  .unit-info .stat-label { color: var(--parchment-dark); }
+  .unit-info .stat-val { color: var(--gold-bright); font-weight: 600; }
+
+  /* Action buttons */
+  .action-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 7px 10px;
+    margin-bottom: 5px;
+    border: 1px solid rgba(212,160,23,0.3);
+    border-radius: 3px;
+    background: rgba(255,255,255,0.05);
+    color: var(--parchment);
+    font-family: 'Crimson Text', serif;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.12s;
+    text-align: left;
+  }
+  .action-btn:hover:not(:disabled) { background: rgba(212,160,23,0.15); border-color: var(--gold-bright); }
+  .action-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+  .action-btn .ap-cost {
+    margin-left: auto;
+    background: rgba(212,160,23,0.2);
+    border: 1px solid rgba(212,160,23,0.4);
+    border-radius: 2px;
+    padding: 1px 5px;
+    font-size: 0.72rem;
+    color: var(--gold-bright);
+    font-family: 'Cinzel', serif;
+  }
+
+  /* Inventory / cards */
+  .card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .card-item {
+    background: var(--parchment);
+    border: 1px solid var(--parchment-dark);
+    border-radius: 3px;
+    padding: 6px 8px;
+    font-size: 0.8rem;
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.1s;
+    position: relative;
+  }
+  .card-item:hover { border-color: var(--gold); background: var(--parchment-mid); }
+  .card-item.selected-card { border-color: var(--gold); background: rgba(212,160,23,0.15); box-shadow: 0 0 0 1px var(--gold); }
+  .card-item .card-name { font-family: 'Cinzel', serif; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; }
+  .card-item .card-stats { color: var(--ink-light); font-size: 0.72rem; margin-top: 2px; }
+  .card-count {
+    position: absolute; top: 4px; right: 6px;
+    background: var(--ink);
+    color: var(--gold-bright);
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    padding: 1px 5px;
+    border-radius: 10px;
+  }
+
+  /* Resources display */
+  .res-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+  }
+  .res-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.82rem;
+    color: var(--parchment);
+  }
+  .res-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Log */
+  #game-log {
+    flex: 1;
+    overflow-y: auto;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(212,160,23,0.2);
+    border-radius: 3px;
+    padding: 6px;
+    font-size: 0.75rem;
+    color: var(--parchment-dark);
+    line-height: 1.5;
+  }
+  .log-entry { margin-bottom: 3px; padding-bottom: 3px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .log-entry.log-combat { color: #e07070; }
+  .log-entry.log-craft { color: #90d090; }
+  .log-entry.log-move { color: #7090d0; }
+  .log-entry.log-system { color: var(--gold-bright); font-style: italic; }
+
+  /* End turn button */
+  #btn-end-turn {
+    background: linear-gradient(135deg, #c0392b, #922b21);
+    color: #fff;
+    font-family: 'Cinzel', serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    border: none;
+    padding: 9px;
+    border-radius: 3px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 8px;
+    transition: all 0.12s;
+  }
+  #btn-end-turn:hover { filter: brightness(1.1); }
+  #btn-end-turn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--parchment);
+    border: 3px solid var(--border-heavy);
+    border-radius: 4px;
+    padding: 24px 28px;
+    width: min(440px, 95vw);
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+  }
+  .modal-box::before {
+    content: '';
+    position: absolute; inset: 6px;
+    border: 1px solid var(--parchment-dark);
+    pointer-events: none;
+  }
+  .modal-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.1rem;
+    color: var(--ink);
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--parchment-dark);
+  }
+  .modal-close {
+    position: absolute; top: 10px; right: 12px;
+    background: none; border: none;
+    font-size: 1.4rem; cursor: pointer; color: var(--ink-light);
+  }
+
+  /* Craft modal */
+  .recipe-list { display: flex; flex-direction: column; gap: 8px; }
+  .recipe-item {
+    background: var(--parchment-mid);
+    border: 1px solid var(--parchment-dark);
+    border-radius: 3px;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+  .recipe-item:hover:not(.cant-afford) { border-color: var(--gold); }
+  .recipe-item.cant-afford { opacity: 0.45; cursor: not-allowed; }
+  .recipe-name { font-family: 'Cinzel', serif; font-size: 0.85rem; font-weight: 700; }
+  .recipe-stats { font-size: 0.78rem; color: var(--ink-light); margin: 3px 0; }
+  .recipe-cost { font-size: 0.75rem; color: var(--ink-light); }
+  .recipe-ability { font-size: 0.73rem; color: #5a3a8a; font-style: italic; margin-top: 2px; }
+
+  /* Victory screen */
+  #screen-victory {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at 50% 30%, #3d1a00 0%, #1a0f05 70%);
+    padding: 20px;
+    text-align: center;
+  }
+  .victory-title {
+    font-family: 'Cinzel', serif;
+    font-size: 3rem;
+    color: var(--gold-bright);
+    text-shadow: 0 0 30px rgba(212,160,23,0.6);
+    margin-bottom: 1rem;
+  }
+  .victory-sub {
+    font-family: 'Crimson Text', serif;
+    font-size: 1.3rem;
+    color: var(--parchment);
+    margin-bottom: 2rem;
+  }
+
+  /* Tooltip */
+  .tooltip {
+    position: fixed;
+    background: var(--ink);
+    color: var(--parchment);
+    padding: 6px 10px;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    pointer-events: none;
+    z-index: 200;
+    max-width: 200px;
+    line-height: 1.4;
+    display: none;
+    border: 1px solid rgba(212,160,23,0.4);
+  }
+
+  /* Surrender banner */
+  .surrender-banner {
+    background: rgba(120,80,20,0.9);
+    color: var(--parchment);
+    font-family: 'Cinzel', serif;
+    font-size: 0.72rem;
+    text-align: center;
+    padding: 5px;
+    border-radius: 3px;
+    margin-bottom: 6px;
+    letter-spacing: 0.05em;
+  }
+
+  /* Connection status */
+  .conn-status {
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    color: var(--parchment-dark);
+    text-align: center;
+    padding: 3px;
+    opacity: 0.6;
+  }
+
+  .room-tag {
+    font-size: 0.65rem;
+    padding: 1px 5px;
+    border-radius: 2px;
+    color: #fff;
+    font-family: 'Cinzel', serif;
+  }
+  .room-hospital { background: rgba(26,107,154,0.6); }
+  .room-armoury { background: rgba(160,112,8,0.6); }
+  .room-lab { background: rgba(153,50,204,0.6); }
+  .room-prison { background: rgba(44,26,14,0.6); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+  ::-webkit-scrollbar-thumb { background: rgba(212,160,23,0.3); border-radius: 2px; }
+
+  /* Trade zone indicator */
+  .board-cell.trade-zone { border: 2px dashed rgba(212,160,23,0.5) !important; }
+
+  /* Extraction zones */
+  .board-cell.extraction-zone { border: 1px solid rgba(255,255,255,0.15) !important; }
+  .board-cell.ez-wood      { background: rgba(139,69,19,0.18) !important; }
+  .board-cell.ez-metal     { background: rgba(112,128,144,0.18) !important; }
+  .board-cell.ez-herbs     { background: rgba(34,139,34,0.18) !important; }
+  .board-cell.ez-energy    { background: rgba(255,215,0,0.13) !important; }
+
+  /* Extractor token */
+  .extractor-token {
+    position: absolute;
+    width: 12px; height: 12px;
+    border-radius: 3px;
+    top: 3px; left: 3px;
+    z-index: 1;
+    border: 2px solid rgba(0,0,0,0.5);
+    box-shadow: 0 0 4px rgba(255,255,255,0.3);
+  }
+  .extractor-red   { background: var(--red-fire); }
+  .extractor-blue  { background: var(--blue-water); }
+  .extractor-green { background: var(--green-earth); }
+  .extractor-white { background: var(--white-air); }
+
+  /* Highlight current player's castle */
+  .my-castle { outline: 2px solid rgba(212,160,23,0.3); }
+</style>
+</head>
+<body>
+
+<!-- LOBBY -->
+<div id="screen-lobby" class="screen active">
+  <div class="lobby-title">⚔ DICE WARS ⚔</div>
+  <div class="lobby-subtitle">A battle of elements, strategy, and steel</div>
+
+  <div class="lobby-card" id="lobby-main">
+    <div class="lobby-section">
+      <h3>Choose Your Faction</h3>
+      <div class="faction-grid">
+        <button class="faction-btn" data-faction="red">🔥 Fire (Red)<br><small>+1 attack dmg</small></button>
+        <button class="faction-btn" data-faction="blue">💧 Water (Blue)<br><small>+1 hospital heal</small></button>
+        <button class="faction-btn" data-faction="green">🌿 Earth (Green)<br><small>Free castle crafts</small></button>
+        <button class="faction-btn" data-faction="white">💨 Air (White)<br><small>Move 4 sq/AP</small></button>
+      </div>
+    </div>
+    <div class="lobby-section">
+      <h3>Your Name</h3>
+      <input class="name-input" id="player-name-input" placeholder="Enter your name..." maxlength="16">
+    </div>
+    <button class="btn btn-primary" onclick="showHostOptions()">Host a Game</button>
+    <button class="btn btn-secondary" onclick="showJoinOptions()">Join a Game</button>
+    <button class="btn btn-secondary" onclick="startAIGame()">Play vs AI</button>
+  </div>
+
+  <!-- Host panel -->
+  <div class="lobby-card" id="lobby-host" style="display:none">
+    <div class="lobby-section">
+      <h3>Game Room</h3>
+      <div class="code-display" id="host-code">----</div>
+      <div class="status-msg">Share this code with other players</div>
+    </div>
+    <div class="lobby-section">
+      <h3>Players (<span id="player-count-label">1</span> / <span id="max-players-label">4</span>)</h3>
+      <div class="player-count-row">
+        <button class="count-btn" data-n="2" onclick="setMaxPlayers(2)">2P</button>
+        <button class="count-btn selected" data-n="3" onclick="setMaxPlayers(3)">3P</button>
+        <button class="count-btn" data-n="4" onclick="setMaxPlayers(4)">4P</button>
+      </div>
+      <div class="lobby-players" id="lobby-player-list"></div>
+    </div>
+    <button class="btn btn-primary" id="btn-start-game" onclick="hostStartGame()" disabled>Start Game</button>
+    <button class="btn btn-secondary" onclick="backToMain()">Back</button>
+    <div class="conn-status" id="host-conn-status">Connecting...</div>
+  </div>
+
+  <!-- Join panel -->
+  <div class="lobby-card" id="lobby-join" style="display:none">
+    <div class="lobby-section">
+      <h3>Enter Room Code</h3>
+      <input class="code-input" id="join-code-input" placeholder="XXXX" maxlength="6">
+    </div>
+    <button class="btn btn-primary" onclick="joinGame()">Join</button>
+    <button class="btn btn-secondary" onclick="backToMain()">Back</button>
+    <div class="status-msg" id="join-status"></div>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="screen-game" class="screen">
+  <div class="game-left">
+    <div class="turn-banner" id="turn-banner">YOUR TURN</div>
+
+    <div class="panel-section">
+      <div class="panel-title">Action Points</div>
+      <div class="ap-display" id="ap-display"></div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">Players</div>
+      <div id="players-list"></div>
+    </div>
+
+    <div class="panel-section" id="selected-unit-panel" style="display:none">
+      <div class="panel-title">Selected Unit</div>
+      <div class="unit-info" id="unit-info-content"></div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;">Actions <button onclick="openRecipeBook()" title="Recipe Book" style="background:linear-gradient(135deg,#4a2a8a,#2d1a5a);color:#fff;font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.08em;border:none;padding:3px 7px;border-radius:3px;cursor:pointer;white-space:nowrap;">📖 Recipes</button></div>
+      <button class="action-btn" id="btn-move" onclick="activateMoveMode()">🚶 Move <span class="ap-cost">1 AP</span></button>
+      <button class="action-btn" id="btn-attack" onclick="activateAttackMode()">⚔ Attack <span class="ap-cost">1 AP</span></button>
+      <button class="action-btn" id="btn-collect" onclick="doCollect()">📦 Collect Resource <span class="ap-cost">1 AP</span></button>
+      <button class="action-btn" id="btn-heal" onclick="doHeal()">💊 Heal in Hospital <span class="ap-cost">1 AP</span></button>
+      <button class="action-btn" id="btn-craft" onclick="openCraftModal()">🔨 Craft <span class="ap-cost">1 AP</span></button>
+      <button class="action-btn" id="btn-new-soldier" onclick="doNewSoldier()">➕ New Soldier <span class="ap-cost">2 AP</span></button>
+      <button class="action-btn" id="btn-inventory" onclick="openItemUseModal()">🎒 Use Item <span class="ap-cost">1 AP</span></button>
+      <button class="action-btn" id="btn-surrender" onclick="doSurrender()">🏳 Surrender (0 AP)</button>
+      <button class="action-btn" id="btn-hostage" onclick="activateHostageMode()">⛓ Take Hostage <span class="ap-cost">1 AP</span></button>
+    </div>
+
+    <button id="btn-end-turn" onclick="endTurn()">END TURN ▶</button>
+  </div>
+
+  <!-- BOARD -->
+  <div class="game-board-wrap">
+    <div id="game-board"></div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="game-right">
+    <div class="panel-section">
+      <div class="panel-title">Resources</div>
+      <div class="res-grid" id="resource-display"></div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">Inventory</div>
+      <div class="card-list" id="inventory-display"></div>
+    </div>
+
+    <div class="panel-section" style="flex:1; display:flex; flex-direction:column; min-height:0;">
+      <div class="panel-title">Battle Log</div>
+      <div id="game-log"></div>
+    </div>
+
+    <div class="conn-status" id="game-conn-status"></div>
+  </div>
+</div>
+
+<!-- VICTORY -->
+<div id="screen-victory" class="screen">
+  <div class="victory-title">⚔ VICTORY ⚔</div>
+  <div class="victory-sub" id="victory-text"></div>
+  <button class="btn btn-primary" style="max-width:200px" onclick="location.reload()">Play Again</button>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-craft">
+  <div class="modal-box">
+    <div class="modal-title">⚒ Crafting</div>
+    <button class="modal-close" onclick="closeModal('modal-craft')">×</button>
+    <div class="recipe-list" id="craft-recipe-list"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-weapon-select">
+  <div class="modal-box">
+    <div class="modal-title">⚔ Select Weapon to Attack With</div>
+    <button class="modal-close" onclick="closeModal('modal-weapon-select')">×</button>
+    <div id="weapon-select-list" class="recipe-list"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-item-use">
+  <div class="modal-box">
+    <div class="modal-title">🎒 Use Item</div>
+    <button class="modal-close" onclick="closeModal('modal-item-use')">×</button>
+    <div id="item-use-list" class="recipe-list"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-hostage-action">
+  <div class="modal-box">
+    <div class="modal-title">⛓ Surrendered Enemy</div>
+    <button class="modal-close" onclick="closeModal('modal-hostage-action')">×</button>
+    <p style="font-size:0.9rem;color:var(--ink);margin-bottom:14px;">This soldier has surrendered. You must take them hostage — you cannot kill them.</p>
+    <button class="btn btn-secondary" onclick="confirmTakeHostage()">Take Hostage (1 AP)</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-recipe-book">
+  <div class="modal-box" style="width:min(600px,97vw);max-height:90vh;">
+    <div class="modal-title">📖 Recipe Book</div>
+    <button class="modal-close" onclick="closeModal('modal-recipe-book')">×</button>
+
+    <!-- Tab bar -->
+    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;">
+      <button class="rb-tab selected" data-tab="all"    onclick="rbSetTab('all')">All</button>
+      <button class="rb-tab"          data-tab="armoury" onclick="rbSetTab('armoury')">⚔ Armoury</button>
+      <button class="rb-tab"          data-tab="lab"     onclick="rbSetTab('lab')">🧪 Lab</button>
+    </div>
+
+    <div id="rb-list"></div>
+  </div>
+</div>
+
+<style>
+.rb-tab {
+  padding:5px 12px;
+  border:1px solid var(--parchment-dark);
+  border-radius:3px;
+  background:var(--parchment-mid);
+  cursor:pointer;
+  font-family:'Cinzel',serif;
+  font-size:0.72rem;
+  letter-spacing:0.06em;
+  color:var(--ink);
+  transition:all 0.12s;
+}
+.rb-tab.selected {
+  background:linear-gradient(135deg,#4a2a8a,#2d1a5a);
+  color:#fff;
+  border-color:#4a2a8a;
+}
+.rb-card {
+  background:var(--parchment-mid);
+  border:1px solid var(--parchment-dark);
+  border-radius:4px;
+  padding:12px 14px;
+  margin-bottom:10px;
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:6px 14px;
+  align-items:start;
+}
+.rb-card-name {
+  font-family:'Cinzel',serif;
+  font-size:0.95rem;
+  font-weight:700;
+  color:var(--ink);
+  grid-column:1/2;
+}
+.rb-card-room {
+  grid-column:2/3;
+  grid-row:1/3;
+  align-self:start;
+  padding:3px 8px;
+  border-radius:3px;
+  font-family:'Cinzel',serif;
+  font-size:0.65rem;
+  font-weight:700;
+  letter-spacing:0.06em;
+  color:#fff;
+  white-space:nowrap;
+}
+.rb-room-armoury { background:rgba(160,112,8,0.75); }
+.rb-room-lab     { background:rgba(153,50,204,0.75); }
+.rb-stats {
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  font-size:0.8rem;
+  color:var(--ink-light);
+  grid-column:1/2;
+}
+.rb-stat { display:flex; align-items:center; gap:3px; }
+.rb-stat strong { color:var(--ink); }
+.rb-ability {
+  font-size:0.78rem;
+  color:#4a2080;
+  font-style:italic;
+  grid-column:1/-1;
+  margin-top:2px;
+}
+.rb-cost {
+  grid-column:1/-1;
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  margin-top:4px;
+  padding-top:6px;
+  border-top:1px solid var(--parchment-dark);
+  font-size:0.78rem;
+  color:var(--ink-light);
+  align-items:center;
+}
+.rb-cost-item {
+  display:inline-flex;
+  align-items:center;
+  gap:3px;
+  background:rgba(0,0,0,0.06);
+  border:1px solid var(--parchment-dark);
+  border-radius:3px;
+  padding:2px 7px;
+  font-size:0.76rem;
+  font-family:'Cinzel',serif;
+  color:var(--ink);
+}
+</style>
+
+<script>
+function openRecipeBook() {
+  rbSetTab('all');
+  openModal('modal-recipe-book');
+}
+
+function rbSetTab(tab) {
+  document.querySelectorAll('.rb-tab').forEach(b => b.classList.toggle('selected', b.dataset.tab===tab));
+  const list = document.getElementById('rb-list');
+  const filtered = tab==='all' ? RECIPES : RECIPES.filter(r=>r.room===tab);
+  list.innerHTML = filtered.map(recipe => {
+    const dmgStr = recipe.isItem ? '—' : (recipe.dmg >= 0 ? recipe.dmg : '—');
+    const rngStr = recipe.isItem ? '—' : (recipe.range > 0 ? recipe.range : '—');
+    const costHtml = Object.entries(recipe.cost).map(([res,n]) =>
+      `<span class="rb-cost-item">${RES_EMOJI[res]} ${n} ${res}</span>`
+    ).join('');
+    return `
+      <div class="rb-card">
+        <div class="rb-card-name">${recipe.name} ${recipe.isItem ? '<span style="font-size:0.7rem;opacity:0.7">(Item)</span>' : ''}</div>
+        <div class="rb-card-room rb-room-${recipe.room}">${recipe.room === 'armoury' ? '⚔ Armoury' : '🧪 Lab'}</div>
+        <div class="rb-stats">
+          ${recipe.isItem ? `<div class="rb-stat">⚡ AP Cost: <strong>${recipe.apCost}</strong></div>` : `
+          <div class="rb-stat">⚔ DMG <strong>${dmgStr}</strong></div>
+          <div class="rb-stat">🎯 RNG <strong>${rngStr}</strong></div>`}
+        </div>
+        <div class="rb-ability">✦ ${recipe.ability}</div>
+        <div class="rb-cost"><span style="opacity:0.6;margin-right:2px">Cost:</span>${costHtml}</div>
+      </div>`;
+  }).join('');
+}
+</script>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// =====================================================================
+// GAME DATA
+// =====================================================================
+
+const FACTIONS = {
+  red:   { name:'Fire',  color:'#c0392b', bg:'rgba(192,57,43,0.13)',  bonus:'attack+1' },
+  blue:  { name:'Water', color:'#1a6b9a', bg:'rgba(26,107,154,0.13)', bonus:'heal+1' },
+  green: { name:'Earth', color:'#2d6a2d', bg:'rgba(45,106,45,0.13)',  bonus:'free_castle_craft' },
+  white: { name:'Air',   color:'#7a7a9a', bg:'rgba(122,122,154,0.13)',bonus:'move4' },
+};
+
+const RESOURCES = ['wood','metal','chemicals','herbs','energy'];
+const RES_COLORS = { wood:'#8B4513', metal:'#708090', chemicals:'#9932CC', herbs:'#228B22', energy:'#FFD700' };
+const RES_EMOJI  = { wood:'🪵', metal:'⚙', chemicals:'🧪', herbs:'🌿', energy:'⚡' };
+
+const RECIPES = [
+  // Weapons (Armoury)
+  { id:'sword',      name:'Sword',      isItem:false, dmg:2, range:1, cost:{wood:1,metal:2},                    room:'armoury', ability:'If this attack defeats an enemy, immediately deal 1 damage to an additional adjacent enemy.' },
+  { id:'bow',        name:'Bow',        isItem:false, dmg:1, range:5, cost:{wood:3,herbs:1},                    room:'armoury', ability:'If attacking an enemy at exactly maximum range (5), this attack deals +1 damage.' },
+  { id:'gun',        name:'Gun',        isItem:false, dmg:2, range:6, minRange:5, cost:{metal:3,chemicals:2,wood:1}, room:'armoury', ability:'Range 5–6 only. Cannot be dodged, blocked, or mitigated by any character abilities.' },
+  { id:'spear',      name:'Spear',      isItem:false, dmg:2, range:2, cost:{wood:3,metal:2},                    room:'armoury', ability:'Can attack two enemies at once if they are standing in a straight line within your range.' },
+  // Weapons (Lab)
+  { id:'grenade',    name:'Grenade',    isItem:false, dmg:2, range:4, cost:{metal:3,chemicals:2},               room:'lab',     ability:'Deals 2 damage to the target square, and 1 damage to all immediately adjacent squares (including teammates!).' },
+  { id:'equalizer',  name:'Equalizer',  isItem:false, dmg:0, range:3, cost:{metal:3,chemicals:2,energy:2,herbs:1}, room:'lab',  ability:'Compare face values. If the enemy has more health than you, reduce their health to match yours.' },
+  { id:'pusher',     name:'Pusher',     isItem:false, dmg:1, range:5, cost:{metal:3,chemicals:2,energy:2},      room:'lab',     ability:'Target is pushed 2 squares directly away from attacker. Cannot push through walls.' },
+  // Items (Lab)
+  { id:'bandage',    name:'Bandage',    isItem:true, apCost:1, cost:{herbs:3},                           room:'lab', ability:'Heal 2 HP at any time.' },
+  { id:'smoke_grenade',name:'Smoke Grenade',isItem:true, apCost:0, cost:{chemicals:2,herbs:1,energy:1},  room:'lab', ability:'Play when targeted by an attack to dodge all damage. Instantly move to any free adjacent square.' },
+  { id:'stim_shot',  name:'Stim Shot',  isItem:true, apCost:0, cost:{chemicals:3,herbs:2,energy:1},      room:'lab', ability:'Gain an extra 2 AP this turn.' },
+  { id:'prox_mine',  name:'Prox. Mine', isItem:true, apCost:1, cost:{metal:3,chemicals:3},               room:'lab', ability:'Place on your square. If anyone enters within a 2-square radius, everyone in that radius takes 3 damage.' },
+  { id:'healing_mist',name:'Heal Mist', isItem:true, apCost:1, cost:{chemicals:3,herbs:2},               room:'lab', ability:'Place on your square. Heals anyone (friend or foe) 2 HP per turn. Lasts 3 turns.' },
+  { id:'flashbang',  name:'Flashbang',  isItem:true, apCost:1, cost:{chemicals:2,metal:1,energy:1},      room:'lab', ability:'Target a 3×3 area. Enemies caught cannot make ranged attacks (range > 2) on their next turn.' },
+  { id:'extractor',  name:'Extractor',  isItem:true, apCost:1, cost:{metal:2,energy:1},                  room:'lab', ability:'Place in an extraction zone to automatically collect that zone\'s resource once per turn. Has 1 HP — can be destroyed.' },
+];
+
+const BOARD_SIZE = 16;
+
+// Extraction zones: 4x4 corners of the full board (outside No Man's Land)
+// Each zone provides a specific resource type
+const EXTRACTION_ZONES = [
+  { id:'ez_nw', r1:0,  r2:3,  c1:0,  c2:3,  resource:'wood',      label:'🪵' },
+  { id:'ez_ne', r1:0,  r2:3,  c1:12, c2:15, resource:'metal',     label:'⚙' },
+  { id:'ez_sw', r1:12, r2:15, c1:0,  c2:3,  resource:'herbs',     label:'🌿' },
+  { id:'ez_se', r1:12, r2:15, c1:12, c2:15, resource:'energy',    label:'⚡' },
+];
+
+function getExtractionZoneAt(r, c) {
+  return EXTRACTION_ZONES.find(z => r>=z.r1 && r<=z.r2 && c>=z.c1 && c<=z.c2) || null;
+}
+
+const CASTLES = {
+  red:   { rows:[0,5],  cols:[5,15],  faction:'red',   name:'Red Castle'   },
+  blue:  { rows:[0,5],  cols:[10,15], faction:'blue',  name:'Blue Castle'  },
+  green: { rows:[10,15],cols:[5,10],  faction:'green', name:'Green Castle' },
+  white: { rows:[5,15], cols:[0,5],   faction:'white', name:'White Castle' },
+};
+
+const CASTLE_ZONES = {
+  red: { r1: 0, r2: 3, c1: 4, c2: 11 },
+  blue: { r1: 4, r2: 11, c1: 12, c2: 15 },
+  green: { r1: 12, r2: 15, c1: 4, c2: 11 },
+  white: { r1: 4, r2: 11, c1: 0, c2: 3 }
+};
+
+function getCastleRooms(faction) {
+  // Rooms are placed to maintain rotational symmetry from the center.
+  // Viewing from the player's perspective looking inward toward the center:
+  // Back-Left: Hospital, Back-Right: Prison, Front-Left: Armoury, Front-Right: Lab
+  switch (faction) {
+    case "red":
+      return {
+        hospital: { r1:0, r2:1, c1:4, c2:7 },
+        prison:   { r1:0, r2:1, c1:8, c2:11 },
+        armoury:  { r1:2, r2:3, c1:4, c2:7 },
+        lab:      { r1:2, r2:3, c1:8, c2:11 }
+      };
+    case "blue":
+      return {
+        hospital: { r1:4, r2:7,  c1:14, c2:15 },
+        prison:   { r1:8, r2:11, c1:14, c2:15 },
+        armoury:  { r1:4, r2:7,  c1:12, c2:13 },
+        lab:      { r1:8, r2:11, c1:12, c2:13 }
+      };
+    case "green":
+      return {
+        hospital: { r1:14, r2:15, c1:8, c2:11 },
+        prison:   { r1:14, r2:15, c1:4, c2:7 },
+        armoury:  { r1:12, r2:13, c1:8, c2:11 },
+        lab:      { r1:12, r2:13, c1:4, c2:7 }
+      };
+    case "white":
+      return {
+        hospital: { r1:8, r2:11, c1:0, c2:1 },
+        prison:   { r1:4, r2:7,  c1:0, c2:1 },
+        armoury:  { r1:8, r2:11, c1:2, c2:3 },
+        lab:      { r1:4, r2:7,  c1:2, c2:3 }
+      };
+  }
+}
+
+// =====================================================================
+// STATE
+// =====================================================================
+
+let G = {
+  phase: 'lobby', // lobby | game | ended
+  players: [],    // array of player objects
+  myId: null,
+  turnIndex: 0,
+  round: 1,
+  board: [],      // 16x16 array of cell data
+  resources: [],  // [{r,c,type}]
+  mines: [],      // [{r,c,ownerId}]
+  mists: [],      // [{r,c,turnsLeft}]
+  extractors: [], // [{r,c,faction,zoneId,hp}]
+  selectedUnit: null, // {playerId, unitId}
+  mode: null,     // null | 'move' | 'attack' | 'hostage'
+  pendingHostageTarget: null,
+  selectedWeapon: null,
+  pendingAttackTarget: null,
+  isAIGame: false,
+  aiPlayerId: null,
+  maxPlayers: 3,
+  surrenderedUnits: new Set(), // unitIds that have surrendered
+};
+
+// =====================================================================
+// PEER CONNECTION
+// =====================================================================
+
+let peer = null;
+let connections = {}; // peerId -> conn (host only)
+let hostConn = null;  // client -> host connection
+let isHost = false;
+let myPeerId = null;
+let lobbyPlayers = []; // [{id,name,faction}]
+
+function initPeer(cb) {
+  peer = new Peer(undefined, { debug: 0 });
+  peer.on('open', id => { myPeerId = id; if(cb) cb(id); });
+  peer.on('error', e => console.error('Peer error:', e));
+}
+
+function showHostOptionsNew() {
+  if(!validateLobbyInput()) return;
+  document.getElementById('lobby-main').style.display='none';
+  document.getElementById('lobby-host').style.display='block';
+  
+  const shortCode = Math.random().toString(36).substr(2,4).toUpperCase();
+  const fullId = 'DICEWARS_' + shortCode.toLowerCase();
+  
+  peer = new Peer(fullId, {debug:0});
+  peer.on('open', id => {
+    myPeerId = id;
+    G.myId = id;
+    document.getElementById('host-code').textContent = shortCode;
+    document.getElementById('host-conn-status').textContent = 'Ready — share code with players';
+    isHost = true;
+    
+    const p = { id: myPeerId, name: getPlayerName(), faction: getSelectedFaction() };
+    lobbyPlayers = [p];
+    updateLobbyPlayerList();
+
+    peer.on('connection', conn => {
+      conn.on('open', () => {
+        connections[conn.peer] = conn;
+        conn.on('data', d => handlePeerData(d, conn.peer));
+        conn.on('close', () => {
+          delete connections[conn.peer];
+          lobbyPlayers = lobbyPlayers.filter(x=>x.id!==conn.peer);
+          updateLobbyPlayerList();
+          broadcastToAll({ type:'lobby_update', players: lobbyPlayers });
+        });
+      });
+    });
+    peer.on('error', e => {
+      if(e.type === 'unavailable-id') {
+        peer.destroy();
+        showHostOptionsNew();
+      }
+    });
+  });
+}
+window.showHostOptions = showHostOptionsNew;
+
+function joinGameNew() {
+  if(!validateLobbyInput()) return;
+  const code = document.getElementById('join-code-input').value.trim().toUpperCase();
+  if(code.length < 2) { document.getElementById('join-status').textContent='Enter a valid code'; return; }
+  document.getElementById('join-status').textContent = 'Connecting...';
+  
+  if(!peer) {
+    peer = new Peer(undefined, {debug:0});
+    peer.on('open', id => { myPeerId=id; G.myId=id; attemptJoin(code); });
+    peer.on('error', e => { document.getElementById('join-status').textContent='Error: '+e.type; });
+  } else {
+    attemptJoin(code);
+  }
+}
+window.joinGame = joinGameNew;
+
+function attemptJoin(code) {
+  const hostId = 'DICEWARS_' + code.toLowerCase();
+  const conn = peer.connect(hostId, {reliable:true});
+  hostConn = conn;
+  conn.on('open', () => {
+    document.getElementById('join-status').textContent='Connected!';
+    conn.on('data', d => handlePeerData(d, hostId));
+    conn.send({ type:'join_request', id:myPeerId, name:getPlayerName(), faction:getSelectedFaction() });
+    isHost=false;
+    document.getElementById('lobby-join').style.display='none';
+    document.getElementById('lobby-host').style.display='block';
+    document.getElementById('host-code').textContent=code;
+    document.getElementById('btn-start-game').style.display='none';
+    document.querySelector('.player-count-row').style.display='none';
+    document.getElementById('host-conn-status').textContent='Waiting for host to start...';
+  });
+  conn.on('error', () => document.getElementById('join-status').textContent='Could not connect. Check code.');
+}
+
+function showJoinOptions() {
+  if(!validateLobbyInput()) return;
+  document.getElementById('lobby-main').style.display='none';
+  document.getElementById('lobby-join').style.display='block';
+  initPeer();
+}
+
+function backToMain() {
+  document.getElementById('lobby-main').style.display='block';
+  document.getElementById('lobby-host').style.display='none';
+  document.getElementById('lobby-join').style.display='none';
+  if(peer) { peer.destroy(); peer=null; }
+}
+
+let maxPlayers = 3;
+function setMaxPlayers(n) {
+  maxPlayers = n;
+  G.maxPlayers = n;
+  document.getElementById('max-players-label').textContent = n;
+  document.querySelectorAll('.count-btn').forEach(b => b.classList.toggle('selected', parseInt(b.dataset.n)===n));
+  updateLobbyPlayerList();
+}
+
+function updateLobbyPlayerList() {
+  const el = document.getElementById('lobby-player-list');
+  document.getElementById('player-count-label').textContent = lobbyPlayers.length;
+  el.innerHTML = lobbyPlayers.map(p => `
+    <div class="lobby-player-row">
+      <div class="lobby-player-dot" style="background:${FACTIONS[p.faction]?.color||'#aaa'}"></div>
+      <span>${p.name}</span>
+      <span style="margin-left:auto;font-size:0.8rem;opacity:0.6">${FACTIONS[p.faction]?.name||''}</span>
+    </div>`).join('');
+  document.getElementById('btn-start-game').disabled = lobbyPlayers.length < 2;
+}
+
+function handlePeerData(data, fromId) {
+  if(!data || !data.type) return;
+  switch(data.type) {
+    case 'join_request':
+      if(isHost) {
+        const usedFactions = lobbyPlayers.map(p => p.faction);
+        if (usedFactions.includes(data.faction)) {
+          if (connections[fromId]) connections[fromId].send({ type: "faction_taken" });
+          return;
+        }
+        const newP = { id: data.id, name: data.name, faction: data.faction };
+        lobbyPlayers.push(newP);
+        updateLobbyPlayerList();
+        broadcastToAll({ type: 'lobby_update', players: lobbyPlayers });
+        if (connections[fromId]) {
+          connections[fromId].send({ type: 'lobby_update', players: lobbyPlayers });
+        }
+      }
+      break;
+    case 'lobby_update':
+      lobbyPlayers = data.players;
+      G.myId = myPeerId;
+      updateLobbyPlayerList();
+      break;
+    case 'game_start':
+      receiveGameStart(data.state);
+      break;
+    case 'game_state':
+      applyGameState(data.state);
+      if(isHost) {
+        Object.values(connections).forEach(c => {
+          if(c.peer !== fromId) { try { c.send(data); } catch(e){} }
+        });
+      }
+      break;
+    case 'faction_taken':
+      alert('That element has already been chosen. Please select another one.');
+      break;
+  }
+}
+
+function broadcastToAll(data) {
+  Object.values(connections).forEach(c => { try { c.send(data); } catch(e){} });
+}
+
+function sendToHost(data) {
+  if(hostConn) { try { hostConn.send(data); } catch(e){} }
+}
+
+// =====================================================================
+// AI GAME
+// =====================================================================
+
+function startAIGame() {
+  if(!validateLobbyInput()) return;
+  G.isAIGame = true;
+  isHost = true;
+  myPeerId = 'human_' + Math.random().toString(36).substr(2,5);
+  G.myId = myPeerId;
+  
+  const aiId = 'ai_bot';
+  G.aiPlayerId = aiId;
+  
+  const humanFaction = getSelectedFaction();
+  const aiFactions = ['red','blue','green','white'].filter(f=>f!==humanFaction);
+  const aiFaction = aiFactions[Math.floor(Math.random()*aiFactions.length)];
+  
+  lobbyPlayers = [
+    { id: myPeerId, name: getPlayerName(), faction: humanFaction },
+    { id: aiId, name: 'AI Commander', faction: aiFaction },
+  ];
+  
+  initGame(lobbyPlayers);
+}
+
+// =====================================================================
+// GAME INIT
+// =====================================================================
+
+function hostStartGame() {
+  initGame(lobbyPlayers);
+  broadcastToAll({ type:'game_start', state: serializeState() });
+}
+
+function receiveGameStart(state) {
+  applyGameState(state);
+  showScreen('screen-game');
+  renderBoard();
+  updateUI();
+}
+
+function initGame(players) {
+  const factionList = ['red','blue','green','white'];
+  
+  G.players = players.slice(0, G.isAIGame ? players.length : Math.min(players.length, maxPlayers))
+    .map((p,i) => ({
+      id: p.id,
+      name: p.name,
+      faction: p.faction || factionList[i],
+      units: [],
+      resources: { wood:0, metal:0, chemicals:0, herbs:0, energy:0 },
+      inventory: [],
+      ap: 4,
+      isMe: p.id === G.myId,
+      isAI: p.id === G.aiPlayerId,
+      alive: true,
+      attackedThisTurn: [],
+    }));
+
+  G.players.forEach(player => {
+    const zone = CASTLE_ZONES[player.faction];
+    const positions = getSpawnPositions(player.faction, 4);
+    player.units = positions.map((pos,i) => ({
+      id: player.faction + '_' + i,
+      r: pos.r, c: pos.c,
+      hp: 6, maxHp: 6,
+      prisoner: false,
+      prisonerId: null,
+      surrendered: false,
+      smoke: false,
+      flashbanged: 0
+    }));
+  });
+
+  G.turnIndex = 0;
+  G.round = 1;
+  G.resources = [];
+  G.mines = [];
+  G.mists = [];
+  G.extractors = [];
+  G.surrenderedUnits = new Set();
+  
+  spawnResources();
+  
+  showScreen('screen-game');
+  renderBoard();
+  updateUI();
+  addLog('⚔ Battle begins! ' + G.players.map(p=>p.name).join(' vs '), 'log-system');
+  
+  if(G.isAIGame && isMyTurn() === false) {
+    setTimeout(doAITurn, 1000);
+  }
+}
+
+function getSpawnPositions(faction, count) {
+  const positionsByFaction = {
+    red: [ {r:3,c:6}, {r:3,c:7}, {r:3,c:8}, {r:3,c:9} ],
+    blue: [ {r:6,c:12}, {r:7,c:12}, {r:8,c:12}, {r:9,c:12} ],
+    green: [ {r:12,c:6}, {r:12,c:7}, {r:12,c:8}, {r:12,c:9} ],
+    white: [ {r:6,c:3}, {r:7,c:3}, {r:8,c:3}, {r:9,c:3} ]
+  };
+  return positionsByFaction[faction].slice(0, count);
+}
+
+// =====================================================================
+// STATE SERIALIZATION
+// =====================================================================
+
+function serializeState() {
+  return {
+    players: G.players.map(p => ({
+      ...p,
+      attackedThisTurn: [...p.attackedThisTurn],
+    })),
+    turnIndex: G.turnIndex,
+    round: G.round,
+    resources: G.resources,
+    mines: G.mines,
+    mists: G.mists,
+    extractors: G.extractors,
+    surrenderedUnits: [...G.surrenderedUnits],
+  };
+}
+
+function applyGameState(state) {
+  G.players = state.players.map(p => ({
+    ...p,
+    isMe: p.id === G.myId,
+    attackedThisTurn: p.attackedThisTurn || [],
+  }));
+  G.turnIndex = state.turnIndex;
+  G.round = state.round;
+  G.resources = state.resources;
+  G.mines = state.mines || [];
+  G.mists = state.mists || [];
+  G.extractors = state.extractors || [];
+  G.surrenderedUnits = new Set(state.surrenderedUnits || []);
+  G.selectedUnit = null;
+  G.mode = null;
+  renderBoard();
+  updateUI();
+}
+
+// =====================================================================
+// BOARD HELPERS
+// =====================================================================
+
+function getCellType(r, c) {
+  for(const [f, z] of Object.entries(CASTLE_ZONES)) {
+    if(r>=z.r1 && r<=z.r2 && c>=z.c1 && c<=z.c2) return 'castle_'+f;
+  }
+  return 'no_mans';
+}
+
+function getRoomAt(r, c) {
+  for(const [f, z] of Object.entries(CASTLE_ZONES)) {
+    if(r>=z.r1 && r<=z.r2 && c>=z.c1 && c<=z.c2) {
+      const rooms = getCastleRooms(f);
+      for(const [rname, zone] of Object.entries(rooms)) {
+        if(r>=zone.r1 && r<=zone.r2 && c>=zone.c1 && c<=zone.c2) return { faction:f, room:rname };
+      }
+    }
+  }
+  return null;
+}
+
+function isTradeZone(r, c) {
+  const B = BOARD_SIZE - 1;
+  return (r <= 3 && c <= 3) ||           // top-left
+         (r <= 3 && c >= B-3) ||          // top-right
+         (r >= B-3 && c <= 3) ||          // bottom-left
+         (r >= B-3 && c >= B-3);          // bottom-right
+}
+
+function isOccupied(r, c, excludeUnitId=null) {
+  for(const p of G.players) {
+    for(const u of p.units) {
+      if(u.r===r && u.c===c && u.id !== excludeUnitId) return true;
+    }
+  }
+  return false;
+}
+
+function getUnitAt(r, c) {
+  for(const p of G.players) {
+    for(const u of p.units) {
+      if(u.r===r && u.c===c) return {player:p, unit:u};
+    }
+  }
+  return null;
+}
+
+function getResourceAt(r, c) {
+  return G.resources.find(res=>res.r===r && res.c===c) || null;
+}
+
+function chebyshevDist(r1,c1,r2,c2) {
+  return Math.max(Math.abs(r2-r1), Math.abs(c2-c1));
+}
+
+function isInCastle(r, c, faction) {
+  const z = CASTLE_ZONES[faction];
+  return r>=z.r1 && r<=z.r2 && c>=z.c1 && c<=z.c2;
+}
+
+function isInNoMansLand(r, c) {
+  return getCellType(r,c) === 'no_mans';
+}
+
+// =====================================================================
+// TURN MANAGEMENT
+// =====================================================================
+
+function currentPlayer() { return G.players[G.turnIndex]; }
+function isMyTurn() { return currentPlayer() && currentPlayer().id === G.myId; }
+
+function endTurn(fromAI) {
+  if(!fromAI && !isMyTurn()) return;
+  const cp = currentPlayer();
+  cp.attackedThisTurn = [];
+  
+  // Decrease flashbanged status for the player whose turn ends
+  cp.units.forEach(u => {
+    if(u.flashbanged > 0) u.flashbanged--;
+  });
+
+  checkPrisonEscapes();
+  
+  let next = (G.turnIndex + 1) % G.players.length;
+  let looped = 0;
+  while(!G.players[next].alive && looped < G.players.length) {
+    next = (next+1) % G.players.length;
+    looped++;
+  }
+  G.turnIndex = next;
+  
+  // Start of new round
+  if(G.turnIndex === 0 || G.turnIndex < G.players.indexOf(cp)) {
+    G.round++;
+    spawnResources();
+    processHealingMists();
+    processExtractors();
+    addLog(`--- Round ${G.round} begins ---`, 'log-system');
+  }
+  
+  G.players[G.turnIndex].ap = 4;
+  G.selectedUnit = null;
+  G.mode = null;
+  G.selectedWeapon = null;
+  
+  checkVictory();
+  
+  if(!G.isAIGame) {
+    const msg = { type:'game_state', state: serializeState() };
+    if(isHost) {
+      broadcastToAll(msg);
+    } else {
+      sendToHost(msg);
+    }
+  }
+  
+  renderBoard();
+  updateUI();
+  
+  if(G.isAIGame && currentPlayer().isAI) {
+    setTimeout(doAITurn, 800);
+  }
+}
+
+function processHealingMists() {
+  G.mists.forEach(mist => {
+    let healedSomeone = false;
+    G.players.forEach(p => {
+      p.units.forEach(u => {
+        if(chebyshevDist(u.r, u.c, mist.r, mist.c) <= 1) {
+          u.hp = Math.min(u.maxHp, u.hp + 2);
+          healedSomeone = true;
+        }
+      });
+    });
+    mist.turnsLeft--;
+    if(healedSomeone) addLog(`🌿 Healing Mist healed units at (${mist.r},${mist.c})`, 'log-craft');
+  });
+  G.mists = G.mists.filter(m => m.turnsLeft > 0);
+}
+
+function processExtractors() {
+  G.extractors.forEach(ext => {
+    const zone = EXTRACTION_ZONES.find(z => z.id === ext.zoneId);
+    if(!zone) return;
+    const owner = G.players.find(p => p.faction === ext.faction);
+    if(!owner || !owner.alive) return;
+    owner.resources[zone.resource] = (owner.resources[zone.resource]||0) + 1;
+    addLog(`⚙ ${owner.name}'s extractor collected 1 ${RES_EMOJI[zone.resource]} ${zone.resource}`, 'log-craft');
+  });
+}
+
+function checkMines() {
+  let triggeredMines = [];
+  for(let i = G.mines.length - 1; i >= 0; i--) {
+    const m = G.mines[i];
+    let triggered = false;
+    for(let p of G.players) {
+      for(let u of p.units) {
+        if(chebyshevDist(u.r, u.c, m.r, m.c) <= 2) {
+          triggered = true; break;
+        }
+      }
+      if(triggered) break;
+    }
+    if(triggered) {
+      triggeredMines.push(m);
+      G.mines.splice(i, 1);
+    }
+  }
+
+  if(triggeredMines.length > 0) {
+    triggeredMines.forEach(m => {
+      addLog(`💣 Proximity Mine exploded at (${m.r},${m.c})!`, 'log-combat');
+      G.players.forEach(p => {
+        p.units.forEach(u => {
+          if(chebyshevDist(u.r, u.c, m.r, m.c) <= 2) {
+            u.hp = Math.max(0, u.hp - 3);
+            addLog(`💥 ${u.id} took 3 damage from mine!`, 'log-combat');
+          }
+        });
+      });
+    });
+    checkDeaths();
+  }
+}
+
+function checkPrisonEscapes() {
+  G.players.forEach(owner => {
+    const myRooms = getCastleRooms(owner.faction);
+    const prisonZone = myRooms.prison;
+    const hasGuard = owner.units.some(u =>
+      u.r >= prisonZone.r1 && u.r <= prisonZone.r2 &&
+      u.c >= prisonZone.c1 && u.c <= prisonZone.c2 &&
+      !u.prisoner
+    );
+    if(!hasGuard) {
+      G.players.forEach(captor => {
+        captor.units.forEach(u => {
+          if(u.prisoner && u.r >= prisonZone.r1 && u.r <= prisonZone.r2 &&
+             u.c >= prisonZone.c1 && u.c <= prisonZone.c2) {
+            if(Math.random() < 0.5) {
+              u.prisoner = false;
+              u.surrendered = false;
+              addLog(`⛓ A prisoner escaped from ${captor.name}'s prison!`, 'log-system');
+              const spawn = getSpawnPositions(owner.faction, 1);
+              if(spawn.length) { u.r = spawn[0].r; u.c = spawn[0].c; }
+            }
+          }
+        });
+      });
+    }
+  });
+}
+
+function checkDeaths() {
+  G.players.forEach(p => {
+    p.units = p.units.filter(u => {
+      if(u.hp <= 0) {
+        addLog(`💀 ${u.id} is defeated!`, 'log-combat');
+        return false;
+      }
+      return true;
+    });
+    // Only mark eliminated here if truly no units left (prisoners still count as units)
+    // The prison-elimination case is handled in checkVictory
+    if(p.units.length === 0 && p.alive) {
+      p.alive = false;
+      addLog(`🏴 ${p.name} has been eliminated!`, 'log-system');
+    }
+  });
+}
+
+function checkVictory() {
+  // A player is eliminated if all units are dead OR all remaining units are prisoners
+  G.players.forEach(p => {
+    if(!p.alive) return;
+    if(p.units.length === 0) {
+      p.alive = false;
+      return;
+    }
+    const allPrisoners = p.units.every(u => u.prisoner);
+    if(allPrisoners) {
+      p.alive = false;
+      addLog(`⛓ ${p.name} has no free soldiers — eliminated!`, 'log-system');
+    }
+  });
+
+  const alive = G.players.filter(p => p.alive);
+  if(alive.length <= 1) {
+    G.phase = 'ended';
+    const winner = alive[0];
+    document.getElementById('victory-text').textContent = winner
+      ? `${winner.name} of the ${FACTIONS[winner.faction].name} faction reigns supreme!`
+      : 'The battlefield falls silent...';
+    showScreen('screen-victory');
+  }
+}
+
+// =====================================================================
+// RESOURCE SPAWNING
+// =====================================================================
+
+function spawnResources() {
+  const nmlR1=4, nmlR2=11, nmlC1=4, nmlC2=11;
+  const weightedPool = ['wood','wood','wood','metal','metal','metal','chemicals','chemicals','herbs','herbs','energy'];
+  let attempts = 0;
+
+  while (G.resources.length < 8 && attempts < 200) {
+    attempts++;
+
+    const r = nmlR1 + Math.floor(Math.random() * (nmlR2 - nmlR1 + 1));
+    const c = nmlC1 + Math.floor(Math.random() * (nmlC2 - nmlC1 + 1));
+
+    if (G.resources.find(res => res.r === r && res.c === c)) continue;
+    if (isOccupied(r, c)) continue;
+    if (isTradeZone(r, c)) continue;
+
+    const type = weightedPool[Math.floor(Math.random() * weightedPool.length)];
+    G.resources.push({ r, c, type });
+  }
+}
+
+// =====================================================================
+// ACTIONS
+// =====================================================================
+
+function getSelectedPlayer() {
+  if(!G.selectedUnit) return null;
+  return G.players.find(p=>p.id===G.selectedUnit.playerId);
+}
+
+function getSelectedUnitObj() {
+  if(!G.selectedUnit) return null;
+  const p = getSelectedPlayer();
+  if(!p) return null;
+  return p.units.find(u=>u.id===G.selectedUnit.unitId);
+}
+
+function selectUnit(playerId, unitId) {
+  if(!isMyTurn()) return;
+  const p = G.players.find(x=>x.id===playerId);
+  if(!p || p.id !== G.myId) return;
+  const u = p.units.find(x=>x.id===unitId);
+  if(!u || u.prisoner) return;
+  
+  G.selectedUnit = {playerId, unitId};
+  G.mode = null;
+  renderBoard();
+  updateUI();
+}
+
+function activateMoveMode() {
+  if(!isMyTurn() || !G.selectedUnit) return;
+  const cp = currentPlayer();
+  if(cp.ap < 1) { addLog('Not enough AP!'); return; }
+  G.mode = 'move';
+  renderBoard();
+}
+
+function activateAttackMode() {
+  if(!isMyTurn() || !G.selectedUnit) return;
+  const cp = currentPlayer();
+  const unit = getSelectedUnitObj();
+  if(cp.ap < 1) { addLog('Not enough AP!'); return; }
+  
+  let weapons = getWeaponsForAttack(cp);
+  
+  if (unit.flashbanged > 0) {
+    weapons = weapons.filter(w => w.range <= 2);
+    if (!weapons.length) {
+      addLog('Unit is flashbanged and has no short-range weapons!'); return;
+    }
+  }
+
+  if(!weapons.length) { addLog('No weapons! Craft one first.'); return; }
+  if(weapons.length === 1) {
+    G.selectedWeapon = weapons[0].id;
+    G.mode = 'attack';
+    renderBoard();
+  } else {
+    openWeaponSelectModal(weapons);
+  }
+}
+
+function getWeaponsForAttack(player) {
+  const ids = (player.inventory||[]).map(x=>x.id);
+  return RECIPES.filter(r => ids.includes(r.id) && !r.isItem && r.dmg !== undefined);
+}
+
+function activateHostageMode() {
+  if(!isMyTurn() || !G.selectedUnit) return;
+  const cp = currentPlayer();
+  if(cp.ap < 1) return;
+  G.mode = 'hostage';
+  renderBoard();
+}
+
+function doCollect() {
+  if(!isMyTurn() || !G.selectedUnit) return;
+  const cp = currentPlayer();
+  if(cp.ap < 1) { addLog('Not enough AP!'); return; }
+  
+  const selUnit = getSelectedUnitObj();
+  if(!selUnit) return;
+  
+  const res = getResourceAt(selUnit.r, selUnit.c);
+  if(!res) {
+    addLog('No resource under this unit!');
+    return;
+  }
+  
+  cp.resources[res.type] = (cp.resources[res.type]||0) + 1;
+  G.resources = G.resources.filter(x => !(x.r === selUnit.r && x.c === selUnit.c));
+  cp.ap--;
+  
+  addLog(`📦 Collected: ${RES_EMOJI[res.type]} ${res.type}`, 'log-craft');
+  G.mode = null;
+  finishAction();
+}
+
+function doHeal() {
+  if(!isMyTurn() || !G.selectedUnit) return;
+  const cp = currentPlayer();
+  const unit = getSelectedUnitObj();
+  if(!unit) return;
+  if(cp.ap < 1) { addLog('Not enough AP!'); return; }
+  
+  const roomInfo = getRoomAt(unit.r, unit.c);
+  if(!roomInfo || roomInfo.room !== 'hospital') {
+    addLog('Unit must be in your hospital to heal!'); return;
+  }
+  if(roomInfo.faction !== cp.faction) {
+    addLog('Must be in your own hospital!'); return;
+  }
+  
+  const healAmt = cp.faction === 'blue' ? 2 : 1;
+  unit.hp = Math.min(unit.maxHp, unit.hp + healAmt);
+  cp.ap--;
+  addLog(`💊 ${unit.id} healed +${healAmt} HP (${unit.hp}/${unit.maxHp})`, 'log-craft');
+  finishAction();
+}
+
+function openItemUseModal() {
+  if(!isMyTurn() || !G.selectedUnit) return;
+  const cp = currentPlayer();
+
+  const list = document.getElementById('item-use-list');
+  list.innerHTML = '';
+
+  const items = cp.inventory.map(inv => {
+    return { count: inv.count, recipe: RECIPES.find(r => r.id === inv.id && r.isItem) };
+  }).filter(x => x.recipe);
+
+  if(items.length === 0) {
+    list.innerHTML = '<p style="color:var(--ink-light);font-size:0.85rem">No usable items in inventory.</p>';
+  } else {
+    items.forEach(it => {
+      const r = it.recipe;
+      const canAfford = cp.ap >= r.apCost;
+      const el = document.createElement('div');
+      el.className = 'recipe-item' + (canAfford ? '' : ' cant-afford');
+      el.innerHTML = `
+        <div class="recipe-name">${r.name} <span style="float:right;color:var(--gold-bright)">x${it.count}</span></div>
+        <div class="recipe-stats">Cost: ${r.apCost} AP</div>
+        <div class="recipe-ability">${r.ability}</div>
+      `;
+      if(canAfford) {
+        el.onclick = () => { doUseItem(r.id); if(r.id !== 'flashbang') closeModal('modal-item-use'); };
+      }
+      list.appendChild(el);
+    });
+  }
+  openModal('modal-item-use');
+}
+
+function doUseItem(itemId) {
+  if(!isMyTurn() || !G.selectedUnit) return;
+  const cp = currentPlayer();
+  const unit = getSelectedUnitObj();
+  const recipe = RECIPES.find(r => r.id === itemId);
+  if(cp.ap < recipe.apCost) return;
+
+  const invItem = cp.inventory.find(x => x.id === itemId);
+  if(!invItem || invItem.count <= 0) return;
+
+  cp.ap -= recipe.apCost;
+  invItem.count--;
+  if(invItem.count <= 0) {
+    cp.inventory = cp.inventory.filter(x => x.id !== itemId);
+  }
+
+  if(itemId === 'bandage') {
+    unit.hp = Math.min(unit.maxHp, unit.hp + 2);
+    addLog(`🩹 ${unit.id} used Bandage (+2 HP)`, 'log-craft');
+  } else if(itemId === 'stim_shot') {
+    cp.ap += 2;
+    addLog(`💉 ${unit.id} used Stim Shot (+2 AP)`, 'log-craft');
+  } else if(itemId === 'smoke_grenade') {
+    unit.smoke = true;
+    addLog(`💨 ${unit.id} popped a Smoke Grenade (Buff applied)`, 'log-craft');
+  } else if(itemId === 'prox_mine') {
+    G.mines.push({ r: unit.r, c: unit.c, ownerId: cp.id });
+    addLog(`💣 ${unit.id} planted a Proximity Mine`, 'log-craft');
+  } else if(itemId === 'flashbang') {
+    // Enter flashbang targeting mode
+    G.mode = 'flashbang_target';
+    closeModal('modal-item-use');
+    addLog(`🔦 Click a cell to center the Flashbang 3×3 area`, 'log-system');
+    renderBoard();
+    return; // Don't call finishAction yet
+  } else if(itemId === 'extractor') {
+    const zone = getExtractionZoneAt(unit.r, unit.c);
+    if(!zone) {
+      // Refund item and AP
+      cp.ap += recipe.apCost;
+      invItem.count++;
+      if(!cp.inventory.find(x=>x.id===itemId)) cp.inventory.push({id:itemId,count:1});
+      addLog(`⚠ Must be standing in an extraction zone to place an extractor!`);
+      finishAction();
+      return;
+    }
+    // Check only one colour per zone
+    const existing = G.extractors.find(e => e.zoneId === zone.id);
+    if(existing && existing.faction !== cp.faction) {
+      cp.ap += recipe.apCost;
+      invItem.count++;
+      if(!cp.inventory.find(x=>x.id===itemId)) cp.inventory.push({id:itemId,count:1});
+      addLog(`⚠ This extraction zone already has a different team's extractor!`);
+      finishAction();
+      return;
+    }
+    G.extractors.push({ r: unit.r, c: unit.c, faction: cp.faction, zoneId: zone.id, hp: 1 });
+    addLog(`⚙ ${cp.name} placed an Extractor in the ${zone.resource} zone!`, 'log-craft');
+  } else if(itemId === 'healing_mist') {
+    G.mists.push({ r: unit.r, c: unit.c, turnsLeft: 3 });
+    addLog(`🌿 ${unit.id} deployed Healing Mist`, 'log-craft');
+  }
+
+  finishAction();
+}
+
+function doNewSoldier() {
+  if(!isMyTurn()) return;
+  const cp = currentPlayer();
+  if(cp.ap < 2) { addLog('Need 2 AP for new soldier!'); return; }
+  
+  const rooms = getCastleRooms(cp.faction);
+  const labZone = rooms.lab;
+  const inLab = cp.units.some(u =>
+    u.r>=labZone.r1 && u.r<=labZone.r2 && u.c>=labZone.c1 && u.c<=labZone.c2
+  );
+  if(!inLab) { addLog('A unit must be in your Lab to spawn soldiers!'); return; }
+  
+  if(cp.resources.wood<1 || cp.resources.metal<1 || cp.resources.chemicals<1 || cp.resources.herbs<1 || cp.resources.energy<1) {
+    addLog('Need 1 of each resource to create a soldier!'); return;
+  }
+  
+  // Find a free spawn position not occupied by any unit
+  const allSpawns = getSpawnPositions(cp.faction, 4);
+  const pos = allSpawns.filter(p => !isOccupied(p.r, p.c));
+  if(!pos.length) { addLog('No space to spawn — move your units first!'); return; }
+  
+  RESOURCES.forEach(r => cp.resources[r]--);
+  
+  const newId = cp.faction + '_' + Date.now();
+  cp.units.push({ id:newId, r:pos[0].r, c:pos[0].c, hp:6, maxHp:6, prisoner:false, prisonerId:null, surrendered:false, smoke:false, flashbanged:0 });
+  cp.ap -= 2;
+  addLog(`➕ New soldier created!`, 'log-craft');
+  finishAction();
+}
+
+function doSurrender() {
+  if(!isMyTurn() || !G.selectedUnit) return;
+  const unit = getSelectedUnitObj();
+  if(!unit) return;
+  unit.surrendered = true;
+  G.surrenderedUnits.add(unit.id);
+  addLog(`🏳 ${currentPlayer().name}'s unit surrenders!`, 'log-system');
+  finishAction();
+}
+
+// =====================================================================
+// CRAFTING
+// =====================================================================
+
+function openCraftModal() {
+  if(!isMyTurn() || !G.selectedUnit) return;
+  const cp = currentPlayer();
+  if(cp.ap < 1) return;
+  
+  const unit = getSelectedUnitObj();
+  const roomInfo = getRoomAt(unit.r, unit.c);
+  
+  const list = document.getElementById('craft-recipe-list');
+  list.innerHTML = '';
+  
+  RECIPES.forEach(recipe => {
+    const reqRoom = recipe.room;
+    const isInRightRoom = roomInfo && roomInfo.room === reqRoom && roomInfo.faction === cp.faction;
+    if(!isInRightRoom) return;
+    
+    const canAfford = canCraft(cp, recipe);
+    const costStr = Object.entries(recipe.cost).map(([r,n])=>`${n} ${RES_EMOJI[r]}${r}`).join(', ');
+    const statsStr = recipe.isItem ? `AP Cost: ${recipe.apCost}` : `DMG: ${recipe.dmg||'0'} · RNG: ${recipe.range||'—'}`;
+    
+    const el = document.createElement('div');
+    el.className = 'recipe-item' + (canAfford ? '' : ' cant-afford');
+    el.innerHTML = `
+      <div class="recipe-name">${recipe.name} ${recipe.isItem ? '<span style="font-size:0.7rem">(Item)</span>' : ''}</div>
+      <div class="recipe-stats">${statsStr}</div>
+      <div class="recipe-ability">${recipe.ability}</div>
+      <div class="recipe-cost">Cost: ${costStr}</div>
+    `;
+    if(canAfford) {
+      el.onclick = () => { doCraft(recipe); closeModal('modal-craft'); };
+    }
+    list.appendChild(el);
+  });
+  
+  if(!list.children.length) {
+    list.innerHTML = '<p style="color:var(--ink-light);font-size:0.85rem">No recipes available in this room.</p>';
+  }
+  
+  openModal('modal-craft');
+}
+
+function canCraft(player, recipe) {
+  return Object.entries(recipe.cost).every(([res,n]) => (player.resources[res]||0) >= n);
+}
+
+function doCraft(recipe) {
+  if(!isMyTurn()) return;
+  const cp = currentPlayer();
+  const unit = getSelectedUnitObj();
+  
+  const isFree = cp.faction === 'green' && isInCastle(unit.r, unit.c, cp.faction);
+  
+  if(!isFree) {
+    Object.entries(recipe.cost).forEach(([res,n]) => { cp.resources[res] -= n; });
+  }
+  cp.ap--;
+  
+  const existing = cp.inventory.find(x=>x.id===recipe.id);
+  if(existing) existing.count++;
+  else cp.inventory.push({ id:recipe.id, count:1 });
+  
+  addLog(`🔨 Crafted: ${recipe.name}${isFree?' (free!)':''}`, 'log-craft');
+  finishAction();
+}
+
+// =====================================================================
+// CELL CLICK HANDLER
+// =====================================================================
+
+function onCellClick(r, c) {
+  if(!isMyTurn()) return;
+  
+  const cp = currentPlayer();
+  const clickedUnit = getUnitAt(r, c);
+  
+  if(G.mode === 'flashbang_target') {
+    // Apply flashbang effect to 3x3 area centered on clicked cell
+    const cp = currentPlayer();
+    for(let dr=-1; dr<=1; dr++) for(let dc=-1; dc<=1; dc++) {
+      const ar=r+dr, ac=c+dc;
+      if(ar<0||ar>=BOARD_SIZE||ac<0||ac>=BOARD_SIZE) continue;
+      const adj = getUnitAt(ar,ac);
+      if(adj && adj.player.id !== cp.id) {
+        adj.unit.flashbanged = 2;
+        addLog(`⚡ ${adj.unit.id} is flashbanged!`, 'log-combat');
+      }
+    }
+    addLog(`💥 ${cp.name} threw a Flashbang at (${r},${c})!`, 'log-combat');
+    G.mode = null;
+    finishAction();
+    return;
+  }
+
+  if(G.mode === 'move') {
+    const selUnit = getSelectedUnitObj();
+    if(!selUnit) { G.mode=null; renderBoard(); return; }
+    
+    const maxMove = cp.faction === 'white' ? 4 : 3;
+    const dist = chebyshevDist(selUnit.r, selUnit.c, r, c);
+    
+    if(dist > maxMove || dist === 0) { G.mode=null; renderBoard(); return; }
+    if(isOccupied(r,c,selUnit.id)) { addLog('Cell occupied!'); return; }
+    
+    selUnit.r = r;
+    selUnit.c = c;
+    cp.ap--;
+    addLog(`🚶 Moved to (${r},${c})`, 'log-move');
+    
+    checkMines();
+    
+    G.mode = null;
+    finishAction();
+    return;
+  }
+  
+  if(G.mode === 'attack') {
+    // Check if clicking on an extractor cell (enemy extractor)
+    const extractorHere = G.extractors.find(e => e.r === r && e.c === c);
+    if(extractorHere && extractorHere.faction !== cp.faction) {
+      const selUnit = getSelectedUnitObj();
+      if(!selUnit) { G.mode=null; return; }
+      const weapon = RECIPES.find(r=>r.id===G.selectedWeapon);
+      if(!weapon) { G.mode=null; return; }
+      const extOwner = G.players.find(p => p.faction === extractorHere.faction);
+      if(extOwner && extOwner.id !== cp.id) {
+        const dist = chebyshevDist(selUnit.r, selUnit.c, r, c);
+        if(dist > weapon.range) { addLog(`Out of range!`); return; }
+        if(weapon.minRange && dist < weapon.minRange) { addLog(`Too close!`); return; }
+        extractorHere.hp -= weapon.dmg || 1;
+        cp.attackedThisTurn.push('extractor_' + r + '_' + c);
+        cp.ap--;
+        addLog(`⚙ ${cp.name} attacks extractor! (${extractorHere.hp} HP left)`, 'log-combat');
+        if(extractorHere.hp <= 0) {
+          G.extractors = G.extractors.filter(e => !(e.r===r && e.c===c));
+          addLog(`💥 Extractor destroyed!`, 'log-combat');
+        }
+        G.mode = null; G.selectedWeapon = null;
+        finishAction();
+        return;
+      }
+    }
+
+    if(!clickedUnit) { G.mode=null; renderBoard(); return; }
+    const {player:target, unit:targetUnit} = clickedUnit;
+    
+    if(target.id === cp.id) { addLog("Can't attack own units!"); G.mode=null; renderBoard(); return; }
+    if(cp.attackedThisTurn.includes(targetUnit.id)) { addLog("Already attacked this unit!"); return; }
+    
+    const selUnit = getSelectedUnitObj();
+    if(!selUnit) { G.mode=null; return; }
+    
+    const weapon = RECIPES.find(r=>r.id===G.selectedWeapon);
+    if(!weapon) { G.mode=null; return; }
+    
+    const dist = chebyshevDist(selUnit.r, selUnit.c, r, c);
+    if(dist > weapon.range) { addLog(`Out of range! (need ≤${weapon.range})`); return; }
+    if(weapon.minRange && dist < weapon.minRange) { addLog(`Too close! ${weapon.name} requires range ≥${weapon.minRange}.`); return; }
+    
+    if(isTradeZone(selUnit.r, selUnit.c) || isTradeZone(r,c)) {
+      addLog('No attacking in trade zones!'); return;
+    }
+    
+    if(!isInNoMansLand(selUnit.r, selUnit.c) && !isInNoMansLand(r,c)) {
+      const attackerCastle = getCellType(selUnit.r,selUnit.c);
+      const defenderCastle = getCellType(r,c);
+      if(attackerCastle.startsWith('castle_') && defenderCastle.startsWith('castle_') &&
+         attackerCastle !== defenderCastle) {
+        addLog('Must fight in no man\'s land or enemy castle!'); return;
+      }
+    }
+    
+    if(targetUnit.surrendered) {
+      G.pendingHostageTarget = {playerId:target.id, unitId:targetUnit.id};
+      closeModal('modal-weapon-select');
+      openModal('modal-hostage-action');
+      G.mode = null;
+      return;
+    }
+    
+    performAttack(selUnit, targetUnit, target, cp, weapon, r, c);
+    return;
+  }
+  
+  if(G.mode === 'hostage') {
+    if(!clickedUnit) { G.mode=null; renderBoard(); return; }
+    const {player:target, unit:targetUnit} = clickedUnit;
+    if(target.id === cp.id) { G.mode=null; return; }
+    if(!targetUnit.surrendered) { addLog('Can only take surrendered enemies hostage!'); return; }
+    
+    const selUnit = getSelectedUnitObj();
+    if(!selUnit) { G.mode=null; return; }
+    const dist = chebyshevDist(selUnit.r, selUnit.c, r, c);
+    if(dist > 1) { addLog('Must be adjacent to take hostage!'); return; }
+    
+    G.pendingHostageTarget = {playerId:target.id, unitId:targetUnit.id};
+    openModal('modal-hostage-action');
+    G.mode = null;
+    return;
+  }
+  
+  if(clickedUnit && clickedUnit.player.id === G.myId) {
+    selectUnit(clickedUnit.player.id, clickedUnit.unit.id);
+  } else {
+    G.selectedUnit = null;
+    G.mode = null;
+    renderBoard();
+    updateUI();
+  }
+}
+
+function performAttack(attacker, defender, defPlayer, atkPlayer, weapon, tr, tc, skipFinish) {
+  let dmg = weapon.dmg;
+  
+  // SMOKE GRENADE NEGATION (Gun bypasses it)
+  if (defender.smoke && weapon.id !== 'gun') {
+    defender.smoke = false;
+    addLog(`💨 ${defender.id} dodged the attack with a Smoke Grenade!`, 'log-combat');
+    
+    // Teleport
+    const openCells = [];
+    for(let dr=-1; dr<=1; dr++) for(let dc=-1; dc<=1; dc++) {
+      let r2 = defender.r+dr, c2 = defender.c+dc;
+      if(r2>=0 && r2<16 && c2>=0 && c2<16 && !isOccupied(r2, c2)) {
+         openCells.push({r:r2, c:c2});
+      }
+    }
+    if(openCells.length > 0) {
+      let chosen = openCells[Math.floor(Math.random()*openCells.length)];
+      defender.r = chosen.r;
+      defender.c = chosen.c;
+    }
+    
+    atkPlayer.attackedThisTurn.push(defender.id);
+    atkPlayer.ap--;
+    checkMines();
+    G.mode = null; G.selectedWeapon = null;
+    if(!skipFinish) finishAction();
+    return;
+  }
+
+  // Faction bonus
+  if(atkPlayer.faction === 'red') dmg++;
+  
+  // Specific Weapon logic
+  if(weapon.id === 'bow') {
+    const dist = chebyshevDist(attacker.r, attacker.c, tr, tc);
+    if(dist === weapon.range) dmg++;
+  }
+  
+  if(weapon.id === 'equalizer') {
+    if(defender.hp > attacker.hp) {
+      defender.hp = attacker.hp;
+      addLog(`⚖ Equalizer! ${defender.id} health matched to ${attacker.hp}.`, 'log-combat');
+    }
+    dmg = 0;
+  }
+  
+  if(weapon.id === 'grenade') {
+    for(let dr=-1; dr<=1; dr++) for(let dc=-1; dc<=1; dc++) {
+      if(dr===0 && dc===0) continue;
+      const ar=tr+dr, ac=tc+dc;
+      if(ar<0||ar>=16||ac<0||ac>=16) continue;
+      const adj = getUnitAt(ar,ac);
+      if(adj) {
+        adj.unit.hp = Math.max(0, adj.unit.hp-1);
+        addLog(`💥 Splash: ${adj.unit.id} -1 HP`, 'log-combat');
+      }
+    }
+  }
+
+  if(weapon.id === 'pusher') {
+    const dr = Math.sign(tr - attacker.r);
+    const dc = Math.sign(tc - attacker.c);
+    let nr=tr+dr, nc=tc+dc;
+    for(let i=0;i<2;i++) {
+      if(nr<0||nr>=16||nc<0||nc>=16||isOccupied(nr,nc,defender.id)) break;
+      defender.r=nr; defender.c=nc;
+      nr+=dr; nc+=dc;
+    }
+  }
+  
+  if(weapon.id === 'spear') {
+    const dr = Math.sign(tr - attacker.r);
+    const dc = Math.sign(tc - attacker.c);
+    const r2=tr+dr, c2=tc+dc;
+    if(r2>=0&&r2<16&&c2>=0&&c2<16) {
+      const second = getUnitAt(r2,c2);
+      if(second && second.player.id !== atkPlayer.id) {
+        second.unit.hp = Math.max(0, second.unit.hp - dmg);
+        addLog(`🗡 Spear pierce! ${second.unit.id} -${dmg} HP`, 'log-combat');
+      }
+    }
+  }
+  
+  if(dmg > 0) {
+    defender.hp = Math.max(0, defender.hp - dmg);
+  }
+  
+  atkPlayer.attackedThisTurn.push(defender.id);
+  atkPlayer.ap--;
+  
+  addLog(`⚔ ${atkPlayer.name} attacks with ${weapon.name}! ${defender.id} takes ${dmg} dmg (${defender.hp} HP left)`, 'log-combat');
+  
+  if(weapon.id === 'sword' && defender.hp <= 0) {
+    for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++) {
+      if(dr===0&&dc===0) continue;
+      const adj = getUnitAt(tr+dr, tc+dc);
+      if(adj && adj.player.id !== atkPlayer.id && adj.unit.hp > 0) {
+        adj.unit.hp = Math.max(0, adj.unit.hp-1);
+        addLog(`🗡 Sword cleave: ${adj.unit.id} -1 HP`, 'log-combat');
+        break; // Only one additional adjacent enemy
+      }
+    }
+  }
+  
+  checkDeaths();
+
+  if(weapon.id === 'pusher') {
+    checkMines();
+  }
+  
+  G.mode = null;
+  G.selectedWeapon = null;
+  if(!skipFinish) finishAction();
+}
+
+function confirmTakeHostage() {
+  if(!G.pendingHostageTarget) { closeModal('modal-hostage-action'); return; }
+  const cp = currentPlayer();
+  const {playerId, unitId} = G.pendingHostageTarget;
+  const targetPlayer = G.players.find(p=>p.id===playerId);
+  const targetUnit = targetPlayer?.units.find(u=>u.id===unitId);
+  if(!targetUnit) { closeModal('modal-hostage-action'); return; }
+  
+  const rooms = getCastleRooms(cp.faction);
+  const prison = rooms.prison;
+  const pr = Math.floor((prison.r1+prison.r2)/2);
+  const pc = Math.floor((prison.c1+prison.c2)/2);
+  targetUnit.r = pr;
+  targetUnit.c = pc;
+  targetUnit.prisoner = true;
+  cp.ap--;
+  addLog(`⛓ ${targetUnit.id} taken hostage to ${cp.name}'s prison!`, 'log-system');
+  G.pendingHostageTarget = null;
+  closeModal('modal-hostage-action');
+  finishAction();
+}
+
+function openWeaponSelectModal(weapons) {
+  const list = document.getElementById('weapon-select-list');
+  list.innerHTML = '';
+  weapons.forEach(w => {
+    const el = document.createElement('div');
+    el.className = 'recipe-item';
+    el.innerHTML = `<div class="recipe-name">${w.name}</div><div class="recipe-stats">DMG ${w.dmg} · RNG ${w.range}</div><div class="recipe-ability">${w.ability}</div>`;
+    el.onclick = () => {
+      G.selectedWeapon = w.id;
+      G.mode = 'attack';
+      closeModal('modal-weapon-select');
+      renderBoard();
+    };
+    list.appendChild(el);
+  });
+  openModal('modal-weapon-select');
+}
+
+function finishAction() {
+  if(!G.isAIGame) {
+    const msg = { type:'game_state', state: serializeState() };
+    if(isHost) {
+      broadcastToAll(msg);
+    } else {
+      sendToHost(msg);
+    }
+  }
+  checkVictory();
+  renderBoard();
+  updateUI();
+}
+
+// =====================================================================
+// RENDERING
+// =====================================================================
+
+function renderBoard() {
+  const board = document.getElementById('game-board');
+  board.innerHTML = '';
+  
+  const cp = currentPlayer();
+  const selUnit = getSelectedUnitObj();
+  
+  let moveHighlights = new Set();
+  let attackHighlights = new Set();
+  let flashbangHighlights = new Set();
+  const mistCells = new Set();
+  
+  G.mists.forEach(m => {
+    for(let dr=-1; dr<=1; dr++) for(let dc=-1; dc<=1; dc++) {
+       mistCells.add(`${m.r+dr},${m.c+dc}`);
+    }
+  });
+
+  if(isMyTurn() && selUnit && G.mode === 'move') {
+    const maxMove = cp.faction === 'white' ? 4 : 3;
+    for(let r=0;r<BOARD_SIZE;r++) for(let c=0;c<BOARD_SIZE;c++) {
+      const d = chebyshevDist(selUnit.r, selUnit.c, r, c);
+      if(d>0 && d<=maxMove && !isOccupied(r,c,selUnit.id)) moveHighlights.add(`${r},${c}`);
+    }
+  }
+  
+  if(isMyTurn() && G.mode === 'flashbang_target') {
+    // All cells are valid flashbang targets — highlight the whole board dimly
+    for(let r=0;r<BOARD_SIZE;r++) for(let c=0;c<BOARD_SIZE;c++) flashbangHighlights.add(`${r},${c}`);
+  }
+
+  if(isMyTurn() && selUnit && G.mode === 'attack' && G.selectedWeapon) {
+    const weapon = RECIPES.find(r=>r.id===G.selectedWeapon);
+    if(weapon) {
+      G.players.forEach(p => {
+        if(p.id === cp.id) return;
+        p.units.forEach(u => {
+          const d = chebyshevDist(selUnit.r, selUnit.c, u.r, u.c);
+          const inRange = d <= weapon.range && (!weapon.minRange || d >= weapon.minRange);
+          if(inRange && !cp.attackedThisTurn.includes(u.id)) {
+            attackHighlights.add(`${u.r},${u.c}`);
+          }
+        });
+      });
+      // Highlight enemy extractors as attack targets too
+      G.extractors.forEach(ext => {
+        if(ext.faction === cp.faction) return;
+        const d = chebyshevDist(selUnit.r, selUnit.c, ext.r, ext.c);
+        const inRange = d <= weapon.range && (!weapon.minRange || d >= weapon.minRange);
+        if(inRange) attackHighlights.add(`${ext.r},${ext.c}`);
+      });
+    }
+  }
+  
+  for(let r=0; r<BOARD_SIZE; r++) {
+    for(let c=0; c<BOARD_SIZE; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'board-cell';
+      cell.dataset.r = r;
+      cell.dataset.c = c;
+      
+      const cellType = getCellType(r,c);
+      if(cellType === 'no_mans') {
+        cell.classList.add('no-mans');
+      } else {
+        const faction = cellType.replace('castle_','');
+        const roomInfo = getRoomAt(r,c);
+        if(roomInfo) {
+          cell.classList.add('room-'+roomInfo.room);
+        } else {
+          cell.classList.add('castle-'+faction);
+        }
+      }
+      
+      const key = `${r},${c}`;
+      if(moveHighlights.has(key)) cell.classList.add('highlight-move');
+      if(attackHighlights.has(key)) cell.classList.add('highlight-attack');
+      if(flashbangHighlights.has(key)) cell.classList.add('highlight-flashbang');
+      if(isTradeZone(r,c)) cell.classList.add('trade-zone');
+
+      // Extraction zone highlighting
+      const ez = getExtractionZoneAt(r, c);
+      if(ez) cell.classList.add('extraction-zone', 'ez-' + ez.resource);
+      
+      if(mistCells.has(key)) {
+        let mistLayer = document.createElement('div');
+        mistLayer.className = 'mist-layer';
+        cell.appendChild(mistLayer);
+      }
+
+      cell.onclick = () => onCellClick(r,c);
+      
+      const res = getResourceAt(r,c);
+      if(res) {
+        const tok = document.createElement('div');
+        tok.className = 'resource-token res-'+res.type;
+        tok.textContent = RES_EMOJI[res.type];
+        tok.style.fontSize='10px';
+        tok.style.width='16px'; tok.style.height='16px';
+        cell.appendChild(tok);
+      }
+
+      const mineHere = G.mines.find(m => m.r === r && m.c === c);
+      if(mineHere) {
+        let mineToken = document.createElement('div');
+        mineToken.className = 'mine-token';
+        cell.appendChild(mineToken);
+      }
+
+      // Extractor token
+      const extractorHere = G.extractors.find(e => e.r === r && e.c === c);
+      if(extractorHere) {
+        const ext = document.createElement('div');
+        ext.className = 'extractor-token extractor-' + extractorHere.faction;
+        ext.title = `Extractor (${FACTIONS[extractorHere.faction].name}) – ${extractorHere.hp} HP`;
+        cell.appendChild(ext);
+      }
+      
+      const unitHere = getUnitAt(r,c);
+      if(unitHere) {
+        const {player,unit} = unitHere;
+        const die = document.createElement('div');
+        die.className = `dice-unit dice-${player.faction}`;
+        if(G.selectedUnit && G.selectedUnit.unitId === unit.id) die.classList.add('selected');
+        if(unit.prisoner) die.classList.add('prisoner');
+        if(unit.smoke) die.classList.add('status-smoke');
+        die.textContent = unit.hp;
+        die.title = `${player.name}: ${unit.id} (${unit.hp}HP)`;
+
+        if(unit.flashbanged > 0) {
+          const fbIcon = document.createElement('div');
+          fbIcon.className = 'status-icon';
+          fbIcon.textContent = '⚡';
+          die.appendChild(fbIcon);
+        }
+
+        if(unit.surrendered && !unit.prisoner) {
+          die.style.opacity='0.6';
+          die.style.outline='2px dashed white';
+        }
+        cell.appendChild(die);
+        
+        cell.onclick = (e) => {
+          e.stopPropagation();
+
+          if (
+              G.mode === 'attack' ||
+              G.mode === 'hostage' ||
+              G.mode === 'move'
+          ) {
+              onCellClick(r,c);
+              return;
+          }
+
+          if(player.id === G.myId && isMyTurn()) {
+              selectUnit(player.id, unit.id);
+          } else {
+              onCellClick(r,c);
+          }
+        };
+      }
+      
+      board.appendChild(cell);
+    }
+  }
+  
+  addBoardLabels();
+}
+
+function addBoardLabels() {
+  const board = document.getElementById('game-board');
+  const labelData = [];
+  
+  for (const faction in CASTLE_ZONES) {
+    const z = CASTLE_ZONES[faction];
+    const p = G.players.find(player => player.faction === faction);
+    const castleName = p ? p.name : FACTIONS[faction].name + ' Castle';
+    
+    const cr = Math.floor((z.r1 + z.r2) / 2);
+    const cc = Math.floor((z.c1 + z.c2) / 2);
+    labelData.push({ 
+      r: cr, c: cc, text: castleName, color: FACTIONS[faction].color, 
+      opacity: 0.6, fontSize: '0.45rem', top: '1px', left: '1px' 
+    });
+    
+    const rooms = getCastleRooms(faction);
+    for (const [room, rZone] of Object.entries(rooms)) {
+      labelData.push({ 
+        r: rZone.r1, c: rZone.c1, text: room, color: '#ffffff', 
+        opacity: 0.35, fontSize: '0.38rem', top: '2px', left: '2px' 
+      });
+    }
+  }
+  
+  // Extraction zone labels
+  EXTRACTION_ZONES.forEach(ez => {
+    labelData.push({
+      r: ez.r1, c: ez.c1, text: ez.label + ' ' + ez.resource, color: '#ffffff',
+      opacity: 0.3, fontSize: '0.38rem', top: '2px', left: '2px'
+    });
+  });
+
+  labelData.forEach(l => {
+    const idx = l.r * BOARD_SIZE + l.c;
+    const cells = board.querySelectorAll('.board-cell');
+    if (cells[idx]) {
+      const lbl = document.createElement('div');
+      lbl.className = 'board-label';
+      lbl.style.color = l.color;
+      lbl.style.fontSize = l.fontSize;
+      lbl.style.opacity = l.opacity;
+      lbl.style.top = l.top;
+      lbl.style.left = l.left;
+      lbl.style.whiteSpace = 'nowrap';
+      lbl.textContent = l.text;
+      cells[idx].appendChild(lbl);
+    }
+  });
+}
+
+function updateUI() {
+  if(!G.players.length) return;
+  const cp = currentPlayer();
+  const myP = G.players.find(p=>p.id===G.myId);
+  if(!myP) return;
+  
+  const banner = document.getElementById('turn-banner');
+  if(isMyTurn()) {
+    banner.textContent = 'YOUR TURN';
+    banner.className = 'turn-banner';
+  } else {
+    banner.textContent = cp ? cp.name.toUpperCase() + "'S TURN" : 'WAITING...';
+    banner.className = 'turn-banner enemy-turn';
+  }
+  const apDisp = document.getElementById('ap-display');
+  apDisp.innerHTML = '<span class="ap-label">AP</span>';
+  const maxPips = Math.max(4, cp.ap);
+  for(let i=0;i<maxPips;i++) {
+    const pip = document.createElement('div');
+    pip.className = 'ap-pip' + (i < cp.ap ? '' : ' used');
+    apDisp.appendChild(pip);
+  }
+  
+  const plist = document.getElementById('players-list');
+  plist.innerHTML = G.players.map(p => {
+    const freeCount = p.units.filter(u => !u.prisoner).length;
+    const prisonerCount = p.units.filter(u => u.prisoner).length;
+    const soldierStr = prisonerCount > 0
+      ? `${freeCount}🎲 <span style="opacity:0.5;font-size:0.7rem">${prisonerCount}⛓</span>`
+      : `${freeCount}🎲`;
+    return `
+    <div class="player-entry ${p.id===cp.id?'active-player':''}">
+      <div class="p-dot" style="background:${FACTIONS[p.faction].color}"></div>
+      <span class="p-name">${p.name}${p.isAI?' 🤖':''}${!p.alive?' 💀':''}</span>
+      <span class="p-soldiers">${soldierStr}</span>
+    </div>`;
+  }).join('');
+  
+  const selUnit = G.selectedUnit ? getSelectedUnitObj() : null;
+  const selPanel = document.getElementById('selected-unit-panel');
+  if(selUnit && G.selectedUnit.playerId === G.myId) {
+    selPanel.style.display='block';
+    const roomInfo = getRoomAt(selUnit.r, selUnit.c);
+    const roomTag = roomInfo ? `<span class="room-tag room-${roomInfo.room}">${roomInfo.room}</span>` : '<span style="opacity:0.5;font-size:0.75rem">open ground</span>';
+    document.getElementById('unit-info-content').innerHTML = `
+      <div class="stat-row"><span class="stat-label">HP</span><span class="stat-val">${selUnit.hp}/${selUnit.maxHp}</span></div>
+      <div class="stat-row"><span class="stat-label">Position</span><span class="stat-val">${selUnit.r},${selUnit.c}</span></div>
+      <div class="stat-row"><span class="stat-label">Room</span><span class="stat-val">${roomTag}</span></div>
+      ${selUnit.surrendered?'<div class="surrender-banner">🏳 SURRENDERED</div>':''}
+      ${selUnit.prisoner?'<div class="surrender-banner">⛓ PRISONER</div>':''}
+      ${selUnit.smoke?'<div class="surrender-banner" style="background:#555">💨 SMOKE ACTIVE</div>':''}
+      ${selUnit.flashbanged > 0?'<div class="surrender-banner" style="background:#b8860b">⚡ FLASHBANGED</div>':''}
+    `;
+  } else {
+    selPanel.style.display='none';
+  }
+  
+  const hasUnit = !!selUnit && G.selectedUnit?.playerId === G.myId;
+  const myTurn = isMyTurn();
+  const hasItems = myP.inventory.some(inv => RECIPES.find(r => r.id === inv.id && r.isItem));
+  const inTargetMode = G.mode === 'flashbang_target';
+
+  // Show active mode hint in the banner
+  if(myTurn && G.mode === 'move') {
+    banner.textContent = '🚶 SELECT DESTINATION';
+    banner.className = 'turn-banner';
+  } else if(myTurn && G.mode === 'attack') {
+    banner.textContent = '⚔ SELECT TARGET';
+    banner.className = 'turn-banner';
+  } else if(myTurn && G.mode === 'hostage') {
+    banner.textContent = '⛓ SELECT HOSTAGE';
+    banner.className = 'turn-banner';
+  } else if(myTurn && G.mode === 'flashbang_target') {
+    banner.textContent = '💥 SELECT FLASHBANG CENTER';
+    banner.className = 'turn-banner';
+  }
+  
+  document.getElementById('btn-move').disabled = !hasUnit || !myTurn || cp.ap<1 || inTargetMode;
+  document.getElementById('btn-attack').disabled = !hasUnit || !myTurn || cp.ap<1 || inTargetMode;
+  document.getElementById('btn-collect').disabled = !hasUnit || !myTurn || cp.ap<1 || inTargetMode;
+  document.getElementById('btn-heal').disabled = !hasUnit || !myTurn || cp.ap<1 || inTargetMode;
+  document.getElementById('btn-craft').disabled = !hasUnit || !myTurn || cp.ap<1 || inTargetMode;
+  document.getElementById('btn-new-soldier').disabled = !myTurn || cp.ap<2 || inTargetMode;
+  document.getElementById('btn-inventory').disabled = !hasUnit || !myTurn || !hasItems || inTargetMode;
+  document.getElementById('btn-surrender').disabled = !hasUnit || !myTurn || inTargetMode;
+  document.getElementById('btn-hostage').disabled = !hasUnit || !myTurn || cp.ap<1 || inTargetMode;
+  document.getElementById('btn-end-turn').disabled = !myTurn || inTargetMode;
+  
+  const resDisplay = document.getElementById('resource-display');
+  resDisplay.innerHTML = RESOURCES.map(r => `
+    <div class="res-item">
+      <div class="res-dot" style="background:${RES_COLORS[r]}"></div>
+      <span>${RES_EMOJI[r]} ${r}: <strong style="color:var(--gold-bright)">${myP.resources[r]||0}</strong></span>
+    </div>`).join('');
+  
+  const invDisplay = document.getElementById('inventory-display');
+  if(!myP.inventory.length) {
+    invDisplay.innerHTML = '<div style="color:var(--parchment-dark);font-size:0.8rem;font-style:italic">No items</div>';
+  } else {
+    invDisplay.innerHTML = myP.inventory.map(item => {
+      const recipe = RECIPES.find(r=>r.id===item.id);
+      if(!recipe) return '';
+      const stats = recipe.isItem ? `AP Cost: ${recipe.apCost}` : `DMG ${recipe.dmg||'0'} · RNG ${recipe.range||'—'}`;
+      return `<div class="card-item">
+        <div class="card-name">${recipe.name}<span class="card-count">×${item.count}</span></div>
+        <div class="card-stats">${stats}</div>
+      </div>`;
+    }).join('');
+  }
+}
+
+// =====================================================================
+// LOG
+// =====================================================================
+
+function addLog(msg, cls='') {
+  const log = document.getElementById('game-log');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry ' + cls;
+  entry.textContent = msg;
+  log.appendChild(entry);
+  log.scrollTop = log.scrollHeight;
+  if(log.children.length > 60) log.removeChild(log.firstChild);
+}
+
+// =====================================================================
+// AI TURN
+// =====================================================================
+
+function doAITurn() {
+  if(!G.isAIGame) return;
+  const cp = currentPlayer();
+  if(!cp || !cp.isAI) return;
+
+  addLog(`🤖 AI is thinking...`, 'log-system');
+
+  const actions = [];
+  aiPlanTurn(cp, actions);
+
+  function executeNext(i) {
+    if(G.phase === 'ended') return;
+    if(i >= actions.length) {
+      endTurn(true);
+      return;
+    }
+    const action = actions[i];
+    action();
+    checkVictory();
+    renderBoard();
+    updateUI();
+    if(G.phase === 'ended') return;
+    setTimeout(() => executeNext(i + 1), 420);
+  }
+
+  setTimeout(() => executeNext(0), 600);
+}
+
+function aiMoveUnit(cp, unit, tr, tc) {
+  const maxMove = cp.faction === 'white' ? 4 : 3;
+  const dr = Math.sign(tr - unit.r);
+  const dc = Math.sign(tc - unit.c);
+  const tries = [
+    {r: unit.r+dr, c: unit.c+dc},
+    {r: unit.r+dr, c: unit.c},
+    {r: unit.r,    c: unit.c+dc},
+    {r: unit.r-dr, c: unit.c+dc},
+    {r: unit.r+dr, c: unit.c-dc},
+  ];
+  for(const t of tries) {
+    if(t.r<0||t.r>=BOARD_SIZE||t.c<0||t.c>=BOARD_SIZE) continue;
+    if(isOccupied(t.r, t.c, unit.id)) continue;
+    const dist = chebyshevDist(unit.r, unit.c, t.r, t.c);
+    if(dist > maxMove) continue;
+    unit.r = t.r;
+    unit.c = t.c;
+    cp.ap--;
+    checkMines();
+    return true;
+  }
+  return false;
+}
+
+function aiPlanTurn(cp, actions) {
+  let apSim = cp.ap;
+
+  function nearestEnemy(unit) {
+    let best = null, bestD = Infinity;
+    G.players.filter(p=>p.id!==cp.id&&p.alive).forEach(p=>{
+      p.units.forEach(u=>{
+        const d = chebyshevDist(unit.r,unit.c,u.r,u.c);
+        if(d<bestD){bestD=d;best={player:p,unit:u,dist:d};}
+      });
+    });
+    return best;
+  }
+
+  function nearestResource(unit) {
+    let best = null, bestD = Infinity;
+    G.resources.forEach(res=>{
+      const d = chebyshevDist(unit.r,unit.c,res.r,res.c);
+      if(d<bestD){bestD=d;best={res,dist:d};}
+    });
+    return best;
+  }
+
+  function roomCenter(roomName) {
+    const rooms = getCastleRooms(cp.faction);
+    const z = rooms[roomName];
+    return {r: Math.floor((z.r1+z.r2)/2), c: Math.floor((z.c1+z.c2)/2)};
+  }
+
+  const weaponsList = getWeaponsForAttack(cp);
+  const hasWeapon = weaponsList.length > 0;
+  const totalRes = RESOURCES.reduce((s,r)=>(s+(cp.resources[r]||0)),0);
+  const wantCraft = !hasWeapon && totalRes >= 3;
+  const wantResources = !hasWeapon && totalRes < 3;
+
+  for(let ui=0; ui<cp.units.length; ui++) {
+    if(apSim <= 0) break;
+    const unit = cp.units[ui];
+    if(unit.prisoner) continue;
+
+    const resHere = getResourceAt(unit.r, unit.c);
+    if(resHere && apSim >= 1) {
+      const u = unit;
+      actions.push(() => {
+        cp.resources[resHere.type] = (cp.resources[resHere.type]||0)+1;
+        G.resources = G.resources.filter(x=>!(x.r===u.r&&x.c===u.c));
+        cp.ap--;
+        addLog(`🤖 AI collects ${resHere.type}`, 'log-move');
+      });
+      apSim--;
+      continue;
+    }
+
+    let validWeapons = weaponsList;
+    if(unit.flashbanged > 0) validWeapons = validWeapons.filter(w => w.range <= 2);
+
+    if(validWeapons.length && apSim >= 1) {
+      let attacked = false;
+      for(const weapon of validWeapons) {
+        let target = null, bestD = Infinity;
+        G.players.filter(p=>p.id!==cp.id&&p.alive).forEach(p=>{
+          p.units.forEach(u=>{
+            if(cp.attackedThisTurn.includes(u.id)) return;
+            const d = chebyshevDist(unit.r,unit.c,u.r,u.c);
+            const inRange = d<=weapon.range && (!weapon.minRange || d>=weapon.minRange);
+            if(inRange && d<bestD && !isTradeZone(unit.r,unit.c)){
+              bestD=d; target={player:p,unit:u};
+            }
+          });
+        });
+        if(target) {
+          const w=weapon, tgt=target, atk=unit;
+          actions.push(() => {
+            G.selectedWeapon = w.id;
+            performAttack(atk, tgt.unit, tgt.player, cp, w, tgt.unit.r, tgt.unit.c, true);
+          });
+          apSim--;
+          attacked = true;
+          break;
+        }
+      }
+      if(attacked) continue;
+    }
+
+    const roomInfo = getRoomAt(unit.r, unit.c);
+    if(roomInfo && roomInfo.faction === cp.faction && apSim >= 1) {
+      const craftable = RECIPES.filter(r => r.room===roomInfo.room && canCraft(cp,r) && r.dmg !== undefined && !r.isItem);
+      if(craftable.length) {
+        const recipe = craftable[0], u = unit;
+        actions.push(() => {
+          G.selectedUnit = {playerId:cp.id, unitId:u.id};
+          Object.entries(recipe.cost).forEach(([res,n]) => { cp.resources[res] -= n; });
+          cp.ap--;
+          const existing = cp.inventory.find(x=>x.id===recipe.id);
+          if(existing) existing.count++;
+          else cp.inventory.push({id:recipe.id, count:1});
+          addLog(`🤖 AI crafts ${recipe.name}`, 'log-craft');
+        });
+        apSim--;
+        continue;
+      }
+    }
+
+    if(apSim >= 1) {
+      let dest = null;
+
+      if(!hasWeapon && !wantResources) {
+        dest = roomCenter('armoury');
+        const armRecipes = RECIPES.filter(r=>r.room==='armoury'&&!r.lab&&canCraft(cp,r)&&!r.isItem);
+        if(!armRecipes.length) {
+          const labRecipes = RECIPES.filter(r=>r.room==='lab'&&canCraft(cp,r)&&!r.isItem);
+          if(labRecipes.length) dest = roomCenter('lab');
+        }
+      } else if(wantResources) {
+        const nr = nearestResource(unit);
+        if(nr) dest = {r:nr.res.r, c:nr.res.c};
+      }
+
+      if(validWeapons.length) {
+        const enemy = nearestEnemy(unit);
+        if(enemy) {
+          const weapon = validWeapons[0];
+          const idealRange = weapon.minRange || 1;
+          if(enemy.dist > weapon.range) {
+            // Move toward enemy but stop at minRange if applicable
+            if(weapon.minRange && enemy.dist <= weapon.range) {
+              // Already in range band — don't move
+            } else {
+              dest = {r:enemy.unit.r, c:enemy.unit.c};
+            }
+          } else if(weapon.minRange && enemy.dist < weapon.minRange) {
+            // Too close (e.g. gun) — back away: pick a cell at minRange distance
+            const dr = Math.sign(unit.r - enemy.unit.r);
+            const dc = Math.sign(unit.c - enemy.unit.c);
+            dest = {r: unit.r + dr * 2, c: unit.c + dc * 2};
+          }
+        }
+      }
+
+      if(!dest) {
+        const enemy = nearestEnemy(unit);
+        if(enemy) dest = {r:enemy.unit.r, c:enemy.unit.c};
+      }
+
+      if(dest) {
+        const u = unit, d = dest;
+        if(chebyshevDist(unit.r, unit.c, d.r, d.c) > 0) {
+          actions.push(() => {
+            aiMoveUnit(cp, u, d.r, d.c);
+            addLog(`🤖 AI moves toward objective`, 'log-move');
+          });
+          apSim--;
+          continue;
+        }
+      }
+    }
+
+    if(roomInfo && roomInfo.room==='hospital' && roomInfo.faction===cp.faction && unit.hp < unit.maxHp && apSim >= 1) {
+      const u = unit;
+      actions.push(() => {
+        const healAmt = cp.faction==='blue' ? 2 : 1;
+        u.hp = Math.min(u.maxHp, u.hp + healAmt);
+        cp.ap--;
+        addLog(`🤖 AI heals unit (${u.hp}/${u.maxHp})`, 'log-craft');
+      });
+      apSim--;
+    }
+  }
+
+  if(apSim > 0 && actions.length === 0) {
+    actions.push(() => {
+      addLog(`🤖 AI ends turn`, 'log-system');
+    });
+  }
+}
+
+// =====================================================================
+// MODAL / SCREEN UTILS
+// =====================================================================
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function validateLobbyInput() {
+  const name = document.getElementById('player-name-input').value.trim();
+  if(!name) { document.getElementById('player-name-input').focus(); return false; }
+  if(!getSelectedFaction()) { alert('Please select a faction!'); return false; }
+  return true;
+}
+
+function getPlayerName() { return document.getElementById('player-name-input').value.trim() || 'Unnamed'; }
+function getSelectedFaction() {
+  const btn = document.querySelector('.faction-btn.selected');
+  return btn ? btn.dataset.faction : null;
+}
+
+document.querySelectorAll('.faction-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.faction-btn').forEach(b=>b.classList.remove('selected'));
+    btn.classList.add('selected');
+  };
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lua 2D Game Engine</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fengari-web/0.1.4/fengari-web.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a2e;
+            color: #eee;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .editor-panel {
+            width: 400px;
+            background: #16213e;
+            display: flex;
+            flex-direction: column;
+            border-right: 2px solid #0f3460;
+        }
+        .editor-header {
+            padding: 15px;
+            background: #0f3460;
+            border-bottom: 2px solid #533483;
+        }
+        .editor-header h1 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            padding: 8px 16px;
+            background: #533483;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #6a4c93;
+        }
+        button:disabled {
+            background: #444;
+            cursor: not-allowed;
+        }
+        .code-editor {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+        }
+        textarea {
+            width: 100%;
+            height: 100%;
+            background: #0f0f23;
+            color: #0f0;
+            border: 1px solid #533483;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            resize: none;
+        }
+        .game-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        #gameCanvas {
+            border: 2px solid #533483;
+            background: #000;
+            image-rendering: pixelated;
+        }
+        .console {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            max-height: 150px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #533483;
+            padding: 10px;
+            overflow-y: auto;
+            font-size: 12px;
+            color: #0f0;
+        }
+        .console-line {
+            margin-bottom: 5px;
+        }
+        .console-error {
+            color: #ff5555;
+        }
+        .examples {
+            padding: 15px;
+            border-top: 1px solid #533483;
+        }
+        .examples h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .example-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .example-buttons button {
+            padding: 6px 12px;
+            font-size: 12px;
+            background: #0f3460;
+        }
+    </style>
+</head>
+<body>
+    <div class="editor-panel">
+        <div class="editor-header">
+            <h1>🎮 Lua Game Engine</h1>
+            <div class="controls">
+                <button id="runBtn">▶ Run</button>
+                <button id="stopBtn">⏹ Stop</button>
+                <button id="clearBtn">Clear Console</button>
+            </div>
+        </div>
+        <div class="code-editor">
+            <textarea id="codeEditor" spellcheck="false">-- Bouncing Ball Example
+ball = {
+    x = 400,
+    y = 300,
+    vx = 200,
+    vy = 150,
+    radius = 20
+}
+
+function init()
+    print("Game Started!")
+end
+
+function update(dt)
+    -- Update ball position
+    ball.x = ball.x + ball.vx * dt
+    ball.y = ball.y + ball.vy * dt
+    
+    -- Bounce off walls
+    if ball.x - ball.radius < 0 or ball.x + ball.radius > 800 then
+        ball.vx = -ball.vx
+    end
+    if ball.y - ball.radius < 0 or ball.y + ball.radius > 600 then
+        ball.vy = -ball.vy
+    end
+end
+
+function draw()
+    -- Draw background
+    setColor(20, 20, 40)
+    fillRect(0, 0, 800, 600)
+    
+    -- Draw ball
+    setColor(255, 100, 100)
+    fillCircle(ball.x, ball.y, ball.radius)
+    
+    -- Draw text
+    setColor(255, 255, 255)
+    drawText("Lua Game Engine", 10, 10, 20)
+end</textarea>
+        </div>
+        <div class="examples">
+            <h3>Load Example:</h3>
+            <div class="example-buttons">
+                <button onclick="loadExample('ball')">Bouncing Ball</button>
+                <button onclick="loadExample('snake')">Snake Game</button>
+                <button onclick="loadExample('particles')">Particles</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="game-panel">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div class="console" id="console"></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const consoleEl = document.getElementById('console');
+        const codeEditor = document.getElementById('codeEditor');
+        
+        let gameRunning = false;
+        let lastTime = 0;
+        let animationFrame;
+        
+        // Game engine API
+        const gameAPI = {
+            setColor: (r, g, b, a = 255) => {
+                ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a / 255})`;
+                ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${a / 255})`;
+            },
+            fillRect: (x, y, w, h) => {
+                ctx.fillRect(x, y, w, h);
+            },
+            strokeRect: (x, y, w, h) => {
+                ctx.strokeRect(x, y, w, h);
+            },
+            fillCircle: (x, y, r) => {
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.fill();
+            },
+            strokeCircle: (x, y, r) => {
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.stroke();
+            },
+            drawLine: (x1, y1, x2, y2, width = 1) => {
+                ctx.lineWidth = width;
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            },
+            drawText: (text, x, y, size = 16) => {
+                ctx.font = `${size}px monospace`;
+                ctx.fillText(text, x, y);
+            },
+            print: (msg) => {
+                console.log(msg);
+                addConsoleMessage(msg);
+            },
+            random: (min, max) => {
+                if (max === undefined) {
+                    max = min;
+                    min = 0;
+                }
+                return Math.random() * (max - min) + min;
+            },
+            math: {
+                sin: Math.sin,
+                cos: Math.cos,
+                sqrt: Math.sqrt,
+                abs: Math.abs,
+                floor: Math.floor,
+                ceil: Math.ceil,
+                pi: Math.PI
+            }
+        };
+        
+        function addConsoleMessage(msg, isError = false) {
+            const line = document.createElement('div');
+            line.className = 'console-line' + (isError ? ' console-error' : '');
+            line.textContent = '> ' + msg;
+            consoleEl.appendChild(line);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+        
+        async function runGame() {
+            if (gameRunning) return;
+            
+            try {
+                gameRunning = true;
+                const code = codeEditor.value;
+                
+                // Create Lua state and inject API
+                const L = fengari.lauxlib.luaL_newstate();
+                fengari.lualib.luaL_openlibs(L);
+                
+                // Inject game API into Lua
+                for (const [name, func] of Object.entries(gameAPI)) {
+                    if (typeof func === 'function') {
+                        fengari.lua.lua_pushjsfunction(L, func);
+                        fengari.lua.lua_setglobal(L, fengari.to_luastring(name));
+                    } else if (typeof func === 'object') {
+                        fengari.lua.lua_newtable(L);
+                        for (const [subname, subfunc] of Object.entries(func)) {
+                            fengari.lua.lua_pushjsfunction(L, subfunc);
+                            fengari.lua.lua_setfield(L, -2, fengari.to_luastring(subname));
+                        }
+                        fengari.lua.lua_setglobal(L, fengari.to_luastring(name));
+                    }
+                }
+                
+                // Load and execute user code
+                fengari.lauxlib.luaL_dostring(L, fengari.to_luastring(code));
+                
+                // Call init if exists
+                fengari.lua.lua_getglobal(L, fengari.to_luastring('init'));
+                if (fengari.lua.lua_isfunction(L, -1)) {
+                    fengari.lua.lua_call(L, 0, 0);
+                }
+                
+                // Game loop
+                function gameLoop(timestamp) {
+                    if (!gameRunning) return;
+                    
+                    const dt = (timestamp - lastTime) / 1000;
+                    lastTime = timestamp;
+                    
+                    try {
+                        // Call update
+                        fengari.lua.lua_getglobal(L, fengari.to_luastring('update'));
+                        if (fengari.lua.lua_isfunction(L, -1)) {
+                            fengari.lua.lua_pushnumber(L, dt);
+                            fengari.lua.lua_call(L, 1, 0);
+                        }
+                        
+                        // Call draw
+                        fengari.lua.lua_getglobal(L, fengari.to_luastring('draw'));
+                        if (fengari.lua.lua_isfunction(L, -1)) {
+                            fengari.lua.lua_call(L, 0, 0);
+                        }
+                    } catch (err) {
+                        addConsoleMessage('Runtime error: ' + err.message, true);
+                        stopGame();
+                        return;
+                    }
+                    
+                    animationFrame = requestAnimationFrame(gameLoop);
+                }
+                
+                lastTime = performance.now();
+                animationFrame = requestAnimationFrame(gameLoop);
+                
+            } catch (err) {
+                addConsoleMessage('Error: ' + err.message, true);
+                gameRunning = false;
+            }
+        }
+        
+        function stopGame() {
+            gameRunning = false;
+            if (animationFrame) {
+                cancelAnimationFrame(animationFrame);
+            }
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            addConsoleMessage('Game stopped');
+        }
+        
+        document.getElementById('runBtn').addEventListener('click', runGame);
+        document.getElementById('stopBtn').addEventListener('click', stopGame);
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            consoleEl.innerHTML = '';
+        });
+        
+        const examples = {
+            ball: `-- Bouncing Ball Example
+ball = {
+    x = 400,
+    y = 300,
+    vx = 200,
+    vy = 150,
+    radius = 20
+}
+
+function init()
+    print("Game Started!")
+end
+
+function update(dt)
+    ball.x = ball.x + ball.vx * dt
+    ball.y = ball.y + ball.vy * dt
+    
+    if ball.x - ball.radius < 0 or ball.x + ball.radius > 800 then
+        ball.vx = -ball.vx
+    end
+    if ball.y - ball.radius < 0 or ball.y + ball.radius > 600 then
+        ball.vy = -ball.vy
+    end
+end
+
+function draw()
+    setColor(20, 20, 40)
+    fillRect(0, 0, 800, 600)
+    
+    setColor(255, 100, 100)
+    fillCircle(ball.x, ball.y, ball.radius)
+    
+    setColor(255, 255, 255)
+    drawText("Bouncing Ball", 10, 10, 20)
+end`,
+            snake: `-- Simple Snake Game
+snake = {{x=400, y=300}}
+dir = {x=20, y=0}
+food = {x=200, y=200}
+moveTimer = 0
+moveDelay = 0.15
+gameOver = false
+
+function init()
+    print("Snake Game! Use arrow keys")
+    spawnFood()
+end
+
+function update(dt)
+    if gameOver then return end
+    
+    moveTimer = moveTimer + dt
+    if moveTimer >= moveDelay then
+        moveTimer = 0
+        
+        -- Move snake
+        local head = snake[1]
+        local newHead = {x = head.x + dir.x, y = head.y + dir.y}
+        table.insert(snake, 1, newHead)
+        
+        -- Check food collision
+        if newHead.x == food.x and newHead.y == food.y then
+            spawnFood()
+        else
+            table.remove(snake)
+        end
+        
+        -- Check wall collision
+        if newHead.x < 0 or newHead.x >= 800 or newHead.y < 0 or newHead.y >= 600 then
+            gameOver = true
+            print("Game Over! Score: " .. #snake)
+        end
+    end
+end
+
+function draw()
+    setColor(20, 20, 40)
+    fillRect(0, 0, 800, 600)
+    
+    -- Draw snake
+    setColor(100, 255, 100)
+    for i = 1, #snake do
+        fillRect(snake[i].x, snake[i].y, 18, 18)
+    end
+    
+    -- Draw food
+    setColor(255, 100, 100)
+    fillRect(food.x, food.y, 18, 18)
+    
+    -- Draw score
+    setColor(255, 255, 255)
+    drawText("Score: " .. #snake, 10, 20, 16)
+    
+    if gameOver then
+        drawText("GAME OVER", 300, 300, 32)
+    end
+end
+
+function spawnFood()
+    food.x = math.floor(random(0, 40)) * 20
+    food.y = math.floor(random(0, 30)) * 20
+end`,
+            particles: `-- Particle System
+particles = {}
+maxParticles = 200
+
+function init()
+    print("Particle System - Click to add particles!")
+end
+
+function update(dt)
+    -- Add particles at center
+    if #particles < maxParticles then
+        for i = 1, 3 do
+            addParticle(400, 300)
+        end
+    end
+    
+    -- Update particles
+    for i = #particles, 1, -1 do
+        local p = particles[i]
+        p.x = p.x + p.vx * dt
+        p.y = p.y + p.vy * dt
+        p.vy = p.vy + 200 * dt -- gravity
+        p.life = p.life - dt
+        p.alpha = p.life / p.maxLife
+        
+        if p.life <= 0 then
+            table.remove(particles, i)
+        end
+    end
+end
+
+function draw()
+    setColor(10, 10, 20)
+    fillRect(0, 0, 800, 600)
+    
+    -- Draw particles
+    for i = 1, #particles do
+        local p = particles[i]
+        local alpha = 255 * p.alpha
+        setColor(p.r, p.g, p.b, alpha)
+        fillCircle(p.x, p.y, p.size)
+    end
+    
+    setColor(255, 255, 255)
+    drawText("Particles: " .. #particles, 10, 20, 16)
+end
+
+function addParticle(x, y)
+    local angle = random(0, 2 * math.pi)
+    local speed = random(50, 200)
+    table.insert(particles, {
+        x = x,
+        y = y,
+        vx = math.cos(angle) * speed,
+        vy = math.sin(angle) * speed - 100,
+        life = random(1, 2),
+        maxLife = 2,
+        alpha = 1,
+        size = random(2, 6),
+        r = random(100, 255),
+        g = random(50, 150),
+        b = random(200, 255)
+    })
+end`
+        };
+        
+        function loadExample(name) {
+            if (gameRunning) stopGame();
+            codeEditor.value = examples[name];
+            addConsoleMessage('Loaded example: ' + name);
+        }
+        
+        window.loadExample = loadExample;
+    </script>
+</body>
+</html>
