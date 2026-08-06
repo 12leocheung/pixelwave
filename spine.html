@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPINE</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#0a0303;color:#ffe6e6;font-family:'VT323',monospace;
+    display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:20px;}
+  h1{font-family:'Press Start 2P',cursive;color:#fff;font-size:1.2rem;
+    text-shadow:0 0 8px #ff3b5c,0 0 20px #ff3b5c;letter-spacing:2px;}
+  #hud{display:flex;gap:26px;font-size:1.3rem;color:#ffe14d;margin-bottom:10px;}
+  canvas{background:#140505;border:2px solid #ff3b5c;box-shadow:0 0 24px rgba(255,59,92,.35);}
+  #msg{font-size:1.2rem;color:#ffe14d;margin-top:10px;text-align:center;max-width:640px;}
+  #overlay{position:fixed;inset:0;background:rgba(10,3,3,.94);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:16px;text-align:center;z-index:5;padding:20px;}
+  #overlay h2{font-family:'Press Start 2P',cursive;color:#ff3b5c;font-size:1.1rem;}
+  button{font-family:'Press Start 2P',cursive;font-size:.7rem;background:#ffe14d;color:#04000a;
+    border:none;padding:14px 20px;cursor:pointer;box-shadow:3px 3px 0 rgba(0,0,0,.5);}
+  a.back{color:#00fff2;font-size:1.1rem;text-decoration:none;margin-top:6px;}
+  .stances{display:flex;gap:10px;margin-top:8px;}
+  .stances span{border:1px solid #ff3b5c;padding:4px 10px;font-size:1rem;}
+</style>
+</head>
+<body>
+<h1>SPINE</h1>
+<div id="hud"><span>LEVEL: <span id="lvl">1</span></span><span>MOVES: <span id="moves">0</span></span></div>
+<canvas id="c" width="620" height="260"></canvas>
+<div class="stances"><span>Q: ARCH UP</span><span>W: FLAT</span><span>E: ARCH DOWN</span><span>SPACE: CONTRACT</span></div>
+<div id="msg">pick a stance with Q/W/E, then press SPACE to inchworm forward one segment-length into that shape</div>
+<div id="overlay">
+  <h2>SPINE</h2>
+  <p style="max-width:460px;">You are a segmented creature that can only move by choosing a stance, then contracting into it.<br>
+  Arch up to clear spikes. Arch down to duck under ledges. Get flat to cross open ground. Reach the flag.</p>
+  <button id="startBtn">UNCOIL ▶</button>
+  <a class="back" href="index.html">← back to arcade</a>
+</div>
+<script>
+const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+const W=canvas.width,H=canvas.height;
+const groundY=200, segLen=34;
+let headX=40, stance='flat', level=1, moves=0, obstacles=[], flagX=0, running=false, dead=false;
+
+function buildLevel(n){
+  level=n; headX=40; stance='flat'; moves=0; dead=false;
+  document.getElementById('lvl').textContent=level;
+  document.getElementById('moves').textContent=moves;
+  obstacles=[];
+  let x=180;
+  const count=4+n;
+  for(let i=0;i<count;i++){
+    const type=['spike','ledge','gap'][Math.floor(Math.random()*3)];
+    obstacles.push({x, type});
+    x += 70+Math.random()*40;
+  }
+  flagX = x+40;
+}
+function reset(){ level=1; buildLevel(1); }
+
+window.addEventListener('keydown',e=>{
+  if(!running || dead) return;
+  if(e.key==='q'||e.key==='Q') stance='up';
+  if(e.key==='w'||e.key==='W') stance='flat';
+  if(e.key==='e'||e.key==='E') stance='down';
+  if(e.code==='Space'){
+    e.preventDefault();
+    step();
+  }
+});
+
+function step(){
+  const nextX = headX+segLen;
+  for(const o of obstacles){
+    if(nextX > o.x-14 && nextX < o.x+14){
+      if(o.type==='spike' && stance!=='up'){ fail('IMPALED — needed to arch up over that spike.'); return; }
+      if(o.type==='ledge' && stance!=='down'){ fail('SMACKED A LOW LEDGE — needed to arch down.'); return; }
+      if(o.type==='gap' && stance!=='flat'){ fail('MISJUDGED THE GAP — needed to stay flat and stretch across.'); return; }
+    }
+  }
+  headX=nextX; moves++;
+  document.getElementById('moves').textContent=moves;
+  if(headX >= flagX){
+    document.getElementById('msg').textContent='REACHED THE FLAG! Next terrain loading...';
+    running=false;
+    setTimeout(()=>{ buildLevel(level+1); running=true; document.getElementById('msg').textContent='pick a stance with Q/W/E, then SPACE to advance'; },900);
+  }
+}
+function fail(reason){
+  dead=true; running=false;
+  document.getElementById('msg').textContent=reason+' Press R to try again.';
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#140505'; ctx.fillRect(0,0,W,H);
+
+  const camX = Math.max(0, headX-100);
+  ctx.strokeStyle='rgba(255,59,92,0.4)'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(0-camX,groundY); ctx.lineTo(2000-camX,groundY); ctx.stroke();
+
+  obstacles.forEach(o=>{
+    const sx=o.x-camX;
+    if(sx<-40||sx>W+40) return;
+    if(o.type==='spike'){
+      ctx.fillStyle='#ff3b5c';
+      ctx.beginPath(); ctx.moveTo(sx-10,groundY); ctx.lineTo(sx,groundY-40); ctx.lineTo(sx+10,groundY); ctx.closePath(); ctx.fill();
+    } else if(o.type==='ledge'){
+      ctx.fillStyle='#a742ff';
+      ctx.fillRect(sx-16,groundY-70,32,40);
+    } else if(o.type==='gap'){
+      ctx.fillStyle='#140505';
+      ctx.fillRect(sx-16,groundY,32,20);
+      ctx.strokeStyle='rgba(255,255,255,0.15)';
+      ctx.strokeRect(sx-16,groundY,32,20);
+    }
+  });
+
+  const flagSx=flagX-camX;
+  ctx.fillStyle='#ffe14d'; ctx.shadowColor='#ffe14d'; ctx.shadowBlur=12;
+  ctx.fillRect(flagSx-2,groundY-50,4,50);
+  ctx.beginPath(); ctx.moveTo(flagSx+2,groundY-50); ctx.lineTo(flagSx+26,groundY-42); ctx.lineTo(flagSx+2,groundY-34); ctx.fill();
+  ctx.shadowBlur=0;
+
+  // draw worm body: head at headX, tail behind, arch shape based on stance
+  const hx=headX-camX;
+  ctx.strokeStyle='#ff3b5c'; ctx.lineWidth=10; ctx.lineCap='round'; ctx.shadowColor='#ff3b5c'; ctx.shadowBlur=10;
+  ctx.beginPath();
+  const midY = stance==='up' ? groundY-32 : stance==='down' ? groundY-6 : groundY-16;
+  ctx.moveTo(hx-segLen, groundY-16);
+  ctx.quadraticCurveTo(hx-segLen/2, midY, hx, groundY-16);
+  ctx.stroke();
+  ctx.shadowBlur=0;
+
+  ctx.fillStyle='#fff';
+  ctx.beginPath(); ctx.arc(hx,groundY-16,7,0,7); ctx.fill();
+}
+
+function loop(){ draw(); requestAnimationFrame(loop); }
+window.addEventListener('keydown',e=>{
+  if(e.key==='r'||e.key==='R'){ buildLevel(level); running=true; document.getElementById('msg').textContent='pick a stance with Q/W/E, then SPACE to advance'; }
+});
+document.getElementById('startBtn').addEventListener('click',()=>{
+  document.getElementById('overlay').style.display='none';
+  reset(); running=true;
+});
+reset();
+loop();
+</script>
+</body>
+</html>

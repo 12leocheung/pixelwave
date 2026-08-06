@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PARALLAX</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#04030a;color:#e9e2ff;font-family:'VT323',monospace;
+    display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:20px;}
+  h1{font-family:'Press Start 2P',cursive;color:#fff;font-size:1.2rem;
+    text-shadow:0 0 8px #ff2bd6,0 0 20px #00fff2;letter-spacing:2px;}
+  #hud{display:flex;gap:30px;font-size:1.3rem;color:#ffe14d;margin-bottom:10px;}
+  canvas{background:#080614;border:2px solid #ff2bd6;box-shadow:0 0 24px rgba(255,43,214,.35);}
+  #msg{font-size:1.2rem;color:#ffe14d;margin-top:10px;text-align:center;max-width:600px;}
+  #overlay{position:fixed;inset:0;background:rgba(4,3,10,.94);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:16px;text-align:center;z-index:5;padding:20px;}
+  #overlay h2{font-family:'Press Start 2P',cursive;color:#ff2bd6;font-size:1.1rem;}
+  button{font-family:'Press Start 2P',cursive;font-size:.7rem;background:#ffe14d;color:#04000a;
+    border:none;padding:14px 20px;cursor:pointer;box-shadow:3px 3px 0 rgba(0,0,0,.5);}
+  a.back{color:#00fff2;font-size:1.1rem;text-decoration:none;margin-top:6px;}
+</style>
+</head>
+<body>
+<h1>PARALLAX</h1>
+<div id="hud"><span>DISTANCE: <span id="dist">0</span>m</span><span>BEST: <span id="best">0</span>m</span></div>
+<canvas id="c" width="620" height="340"></canvas>
+<div id="msg">SPACE jump · SHIFT phase between the three depths — obstacles only exist on their own layer</div>
+<div id="overlay">
+  <h2>PARALLAX</h2>
+  <p style="max-width:460px;">Three versions of the same corridor are stacked in front of each other, each scrolling at its own speed.<br>
+  You can only ever exist on one. Phase between foreground, mid and background to dodge what only lives there.</p>
+  <button id="startBtn">PHASE IN ▶</button>
+  <a class="back" href="index.html">← back to arcade</a>
+</div>
+<script>
+const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+const W=canvas.width,H=canvas.height;
+const LAYERS=[
+  {name:'BG', speed:120, color:'#3bb0ff', y:H*0.35, scale:0.7},
+  {name:'MID', speed:200, color:'#a742ff', y:H*0.6, scale:1.0},
+  {name:'FG', speed:320, color:'#ff2bd6', y:H*0.85, scale:1.3},
+];
+let layerIdx=1, playerY=0, vy=0, onGround=true, obstacles=[], dist=0, best=+(localStorage.getItem('parallax_best')||0), running=false, spawnTimers=[0,0,0];
+document.getElementById('best').textContent=best;
+
+function reset(){
+  layerIdx=1; obstacles=[]; dist=0; vy=0; onGround=true; spawnTimers=[0,0,0];
+  document.getElementById('dist').textContent=0;
+}
+
+window.addEventListener('keydown',e=>{
+  if(e.code==='Space'){ e.preventDefault(); if(running && onGround){ vy=-360; onGround=false; } }
+  if(e.key==='Shift'){ e.preventDefault(); if(running){ layerIdx=(layerIdx+1)%3; } }
+});
+
+function spawnFor(li){
+  const l=LAYERS[li];
+  obstacles.push({layer:li, x:W+40, w:22*l.scale, h:34*l.scale});
+}
+
+function update(dt){
+  if(!running) return;
+  dist += LAYERS[layerIdx].speed*dt*0.1;
+  document.getElementById('dist').textContent=Math.floor(dist);
+
+  vy += 900*dt; playerY += vy*dt;
+  if(playerY>=0){ playerY=0; vy=0; onGround=true; }
+
+  for(let i=0;i<3;i++){
+    spawnTimers[i]+=dt;
+    const interval = 1.7 - Math.min(dist*0.002, 0.9);
+    if(spawnTimers[i] > interval + i*0.3){ spawnTimers[i]=0; if(Math.random()<0.85) spawnFor(i); }
+  }
+
+  obstacles.forEach(o=>{ o.x -= LAYERS[o.layer].speed*dt; });
+  obstacles = obstacles.filter(o=>o.x > -60);
+
+  const px=100;
+  obstacles.forEach(o=>{
+    if(o.layer!==layerIdx) return;
+    const l=LAYERS[o.layer];
+    const groundY=l.y;
+    const oy = groundY - o.h;
+    const py = groundY + playerY - 22*l.scale;
+    const hit = px < o.x+o.w && px+16*l.scale > o.x && py < oy+o.h && py+22*l.scale > oy;
+    if(hit){
+      running=false;
+      if(dist>best){ best=Math.floor(dist); localStorage.setItem('parallax_best',best); document.getElementById('best').textContent=best; }
+      document.getElementById('msg').textContent='HIT SOMETHING THAT WASN’T THERE A LAYER AGO. Press R to phase back in.';
+    }
+  });
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#080614'; ctx.fillRect(0,0,W,H);
+
+  LAYERS.forEach((l,li)=>{
+    const alpha = li===layerIdx ? 1 : 0.22;
+    ctx.globalAlpha=alpha;
+    ctx.strokeStyle=l.color; ctx.lineWidth= li===layerIdx?3:1.5;
+    ctx.beginPath(); ctx.moveTo(0,l.y); ctx.lineTo(W,l.y); ctx.stroke();
+
+    obstacles.filter(o=>o.layer===li).forEach(o=>{
+      ctx.fillStyle=l.color; ctx.shadowColor=l.color; ctx.shadowBlur= li===layerIdx?12:0;
+      ctx.fillRect(o.x, l.y-o.h, o.w, o.h);
+      ctx.shadowBlur=0;
+    });
+
+    if(li===layerIdx){
+      const px=100, py=l.y+playerY-22*l.scale;
+      ctx.fillStyle='#fff'; ctx.shadowColor='#fff'; ctx.shadowBlur=14;
+      ctx.fillRect(px,py,16*l.scale,22*l.scale);
+      ctx.shadowBlur=0;
+    }
+    ctx.globalAlpha=1;
+  });
+
+  ctx.fillStyle='#ffe14d'; ctx.font='14px monospace';
+  LAYERS.forEach((l,li)=>{
+    ctx.fillStyle = li===layerIdx ? l.color : 'rgba(255,255,255,0.3)';
+    ctx.fillText(l.name, 10, 20+li*18);
+  });
+}
+
+let last=performance.now();
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
+window.addEventListener('keydown',e=>{
+  if(e.key==='r'||e.key==='R'){ reset(); running=true; document.getElementById('msg').textContent='SPACE jump · SHIFT phase between depths'; }
+});
+document.getElementById('startBtn').addEventListener('click',()=>{
+  document.getElementById('overlay').style.display='none';
+  reset(); running=true;
+});
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

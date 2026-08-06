@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UNSEEN HOUSE</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#040308;color:#e2e2ff;font-family:'VT323',monospace;
+    display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:20px;}
+  h1{font-family:'Press Start 2P',cursive;color:#fff;font-size:1.15rem;
+    text-shadow:0 0 8px #a742ff,0 0 20px #a742ff;letter-spacing:2px;}
+  #hud{display:flex;gap:26px;font-size:1.2rem;color:#ffe14d;margin-bottom:10px;}
+  canvas{background:#0a0812;border:2px solid #a742ff;box-shadow:0 0 24px rgba(167,66,255,.3);}
+  #msg{font-size:1.2rem;color:#ffe14d;margin-top:10px;text-align:center;max-width:640px;}
+  #overlay{position:fixed;inset:0;background:rgba(4,3,8,.94);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:16px;text-align:center;z-index:5;padding:20px;}
+  #overlay h2{font-family:'Press Start 2P',cursive;color:#a742ff;font-size:1.1rem;}
+  button{font-family:'Press Start 2P',cursive;font-size:.7rem;background:#ffe14d;color:#04000a;
+    border:none;padding:14px 20px;cursor:pointer;box-shadow:3px 3px 0 rgba(0,0,0,.5);}
+  a.back{color:#00fff2;font-size:1.1rem;text-decoration:none;margin-top:6px;}
+</style>
+</head>
+<body>
+<h1>UNSEEN HOUSE</h1>
+<div id="hud"><span>TIME LEFT: <span id="time">45</span>s</span><span>ROOM: <span id="room">1</span>/4</span></div>
+<canvas id="c" width="560" height="360"></canvas>
+<div id="msg">arrow keys move the ghost (always invisible) · SPACE shoves the crate you're touching — but only while the sleepwalker's cone isn't on it</div>
+<div id="overlay">
+  <h2>UNSEEN HOUSE</h2>
+  <p style="max-width:460px;">You're a ghost. Nobody can ever see you.<br>
+  But your telekinesis only works on things the sleepwalker <i>isn't looking at</i>. Shove the crate into their path — while their back is turned — to steer them out the door.</p>
+  <button id="startBtn">HAUNT ▶</button>
+  <a class="back" href="index.html">← back to arcade</a>
+</div>
+<script>
+const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+const W=canvas.width,H=canvas.height;
+let ghost, sleeper, crate, doorZone, timeLeft, room=1, running=false, keys={};
+
+function buildRoom(n){
+  room=n;
+  ghost={x:60,y:H-40,r:9};
+  sleeper={x:W/2,y:H/2,r:11,angle:Math.random()*Math.PI*2,turnSpeed:0.5+n*0.1,fov:0.9};
+  crate={x:150+Math.random()*100,y:150+Math.random()*80,w:26,h:26};
+  doorZone={x:W-50,y:H/2-40,w:30,h:80};
+  document.getElementById('room').textContent=room;
+}
+function reset(){ timeLeft=45; room=1; buildRoom(1); }
+
+window.addEventListener('keydown',e=>keys[e.key]=true);
+window.addEventListener('keyup',e=>keys[e.key]=false);
+
+function angleTo(a,b){ return Math.atan2(b.y-a.y, b.x-a.x); }
+function angDiff(a,b){ let d=Math.abs(a-b)%(Math.PI*2); if(d>Math.PI)d=Math.PI*2-d; return d; }
+
+function crateInCone(){
+  const a=angleTo(sleeper,crate);
+  return angDiff(a, sleeper.angle) < sleeper.fov;
+}
+
+window.addEventListener('keydown',e=>{
+  if(e.code==='Space'){
+    e.preventDefault();
+    if(!running) return;
+    const dx=crate.x+13-ghost.x, dy=crate.y+13-ghost.y;
+    const d=Math.hypot(dx,dy);
+    if(d < 34 && d > 0 && !crateInCone()){
+      const push=18;
+      crate.x += (dx/d)*push;
+      crate.y += (dy/d)*push;
+      crate.x = Math.max(10,Math.min(W-crate.w-10,crate.x));
+      crate.y = Math.max(10,Math.min(H-crate.h-10,crate.y));
+    }
+  }
+});
+
+function update(dt){
+  if(!running) return;
+  timeLeft -= dt;
+  document.getElementById('time').textContent=Math.max(0,timeLeft.toFixed(1));
+  if(timeLeft<=0){
+    running=false;
+    document.getElementById('msg').textContent='THE SLEEPWALKER WOKE UP CONFUSED. Press R to try again.';
+    return;
+  }
+
+  const speed=110;
+  let dx=0,dy=0;
+  if(keys['ArrowLeft']) dx-=1; if(keys['ArrowRight']) dx+=1;
+  if(keys['ArrowUp']) dy-=1; if(keys['ArrowDown']) dy+=1;
+  const mag=Math.hypot(dx,dy)||1;
+  ghost.x=Math.max(10,Math.min(W-10,ghost.x+dx/mag*speed*dt));
+  ghost.y=Math.max(10,Math.min(H-10,ghost.y+dy/mag*speed*dt));
+
+  sleeper.angle += sleeper.turnSpeed*dt;
+
+  // sleeper drifts toward crate slowly if crate is in front of them within range, else wanders toward center
+  const toCrate=Math.hypot(crate.x-sleeper.x, crate.y-sleeper.y);
+  if(toCrate < 160){
+    const a=angleTo(sleeper,crate);
+    sleeper.x += Math.cos(a)*14*dt;
+    sleeper.y += Math.sin(a)*14*dt;
+  }
+
+  if(sleeper.x>doorZone.x && sleeper.x<doorZone.x+doorZone.w && sleeper.y>doorZone.y && sleeper.y<doorZone.y+doorZone.h){
+    if(room>=4){
+      running=false;
+      document.getElementById('msg').textContent='ALL FOUR ROOMS CLEARED. The house is quiet again.';
+    } else {
+      document.getElementById('msg').textContent='OUT THE DOOR! Next room...';
+      setTimeout(()=>{ buildRoom(room+1); },900);
+    }
+  }
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0a0812'; ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle='#ffe14d'; ctx.shadowColor='#ffe14d'; ctx.shadowBlur=10;
+  ctx.fillRect(doorZone.x,doorZone.y,doorZone.w,doorZone.h);
+  ctx.shadowBlur=0;
+
+  // vision cone
+  ctx.save();
+  ctx.translate(sleeper.x,sleeper.y);
+  ctx.rotate(sleeper.angle);
+  ctx.fillStyle='rgba(255,225,77,0.12)';
+  ctx.beginPath(); ctx.moveTo(0,0);
+  ctx.arc(0,0,140,-sleeper.fov,sleeper.fov);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+
+  const inCone=crateInCone();
+  ctx.fillStyle= inCone ? '#ff3b5c' : '#c98a3a';
+  ctx.strokeStyle='#04000a'; ctx.lineWidth=2;
+  ctx.fillRect(crate.x,crate.y,crate.w,crate.h);
+  ctx.strokeRect(crate.x,crate.y,crate.w,crate.h);
+
+  ctx.fillStyle='#e9e2ff';
+  ctx.beginPath(); ctx.arc(sleeper.x,sleeper.y,sleeper.r,0,7); ctx.fill();
+
+  ctx.fillStyle='rgba(0,255,242,0.7)'; ctx.shadowColor='#00fff2'; ctx.shadowBlur=12;
+  ctx.beginPath(); ctx.arc(ghost.x,ghost.y,ghost.r,0,7); ctx.fill();
+  ctx.shadowBlur=0;
+}
+
+let last=performance.now();
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
+window.addEventListener('keydown',e=>{
+  if(e.key==='r'||e.key==='R'){ reset(); running=true; document.getElementById('msg').textContent='arrow keys move the ghost · SPACE shoves the crate when unseen'; }
+});
+document.getElementById('startBtn').addEventListener('click',()=>{
+  document.getElementById('overlay').style.display='none';
+  reset(); running=true;
+});
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

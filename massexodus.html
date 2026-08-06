@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MASS EXODUS</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#050d02;color:#e6ffd6;font-family:'VT323',monospace;
+    display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:20px;}
+  h1{font-family:'Press Start 2P',cursive;color:#fff;font-size:1.15rem;
+    text-shadow:0 0 8px #39ff6a,0 0 20px #ffe14d;letter-spacing:2px;}
+  #hud{display:flex;gap:26px;font-size:1.2rem;color:#ffe14d;margin-bottom:10px;}
+  canvas{background:#0b1806;border:2px solid #39ff6a;box-shadow:0 0 24px rgba(57,255,106,.3);}
+  #msg{font-size:1.2rem;color:#ffe14d;margin-top:10px;text-align:center;max-width:640px;}
+  #overlay{position:fixed;inset:0;background:rgba(5,13,2,.94);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:16px;text-align:center;z-index:5;padding:20px;}
+  #overlay h2{font-family:'Press Start 2P',cursive;color:#39ff6a;font-size:1.1rem;}
+  button{font-family:'Press Start 2P',cursive;font-size:.7rem;background:#ffe14d;color:#04000a;
+    border:none;padding:14px 20px;cursor:pointer;box-shadow:3px 3px 0 rgba(0,0,0,.5);}
+  a.back{color:#00fff2;font-size:1.1rem;text-decoration:none;margin-top:6px;}
+</style>
+</head>
+<body>
+<h1>MASS EXODUS</h1>
+<div id="hud"><span>FOOD BANKED: <span id="food">0</span></span><span>INK: <span id="ink">100</span></span><span>TIME: <span id="time">60</span>s</span></div>
+<canvas id="c" width="600" height="380"></canvas>
+<div id="msg">click-drag to paint a scent trail — ants near a trail follow it, otherwise they wander · guide them from nest to food and back</div>
+<div id="overlay">
+  <h2>MASS EXODUS</h2>
+  <p style="max-width:460px;">You can't control a single ant. You can only lay scent.<br>
+  Paint trails from the nest to the food. Ants follow the strongest nearby trail — but your ink is limited and it fades, so drawn paths must earn their keep.</p>
+  <button id="startBtn">LAY SCENT ▶</button>
+  <a class="back" href="index.html">← back to arcade</a>
+</div>
+<script>
+const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+const W=canvas.width,H=canvas.height;
+const nest={x:50,y:H/2};
+let foods=[], ants=[], trail=[], ink=100, food=0, timeLeft=60, running=false, drawing=false;
+
+function reset(){
+  ink=100; food=0; timeLeft=60; trail=[];
+  foods=[];
+  for(let i=0;i<3;i++) foods.push({x:420+Math.random()*150, y:60+Math.random()*(H-120), amount:40});
+  ants=[];
+  for(let i=0;i<26;i++) ants.push({x:nest.x,y:nest.y,angle:Math.random()*Math.PI*2,carrying:false,wanderT:Math.random()*2});
+  document.getElementById('food').textContent=food;
+}
+
+canvas.addEventListener('mousedown',e=>{ drawing=true; addTrailPoint(e); });
+canvas.addEventListener('mousemove',e=>{ if(drawing) addTrailPoint(e); });
+window.addEventListener('mouseup',()=>drawing=false);
+function addTrailPoint(e){
+  if(!running || ink<=0) return;
+  const rect=canvas.getBoundingClientRect();
+  const x=(e.clientX-rect.left)*(W/rect.width), y=(e.clientY-rect.top)*(H/rect.height);
+  const last=trail[trail.length-1];
+  if(last && Math.hypot(last.x-x,last.y-y)<8) return;
+  trail.push({x,y,life:14});
+  ink=Math.max(0,ink-0.6);
+}
+
+function nearestTrail(ant,range){
+  let best=null,bestD=range;
+  for(const t of trail){
+    const d=Math.hypot(t.x-ant.x,t.y-ant.y);
+    if(d<bestD){ bestD=d; best=t; }
+  }
+  return best;
+}
+
+function update(dt){
+  if(!running) return;
+  timeLeft -= dt;
+  document.getElementById('time').textContent=Math.max(0,timeLeft.toFixed(1));
+  document.getElementById('ink').textContent=Math.round(ink);
+  ink=Math.min(100, ink+dt*1.2);
+  trail.forEach(t=>t.life-=dt);
+  trail=trail.filter(t=>t.life>0);
+
+  if(timeLeft<=0){
+    running=false;
+    document.getElementById('msg').textContent='COLONY FED: '+food+'. Press R to lay a new trail network.';
+    return;
+  }
+
+  ants.forEach(ant=>{
+    const speed=48;
+    if(!ant.carrying){
+      let targetFood=null, bestD=9999;
+      foods.forEach(f=>{ if(f.amount>0){ const d=Math.hypot(f.x-ant.x,f.y-ant.y); if(d<bestD){bestD=d;targetFood=f;} } });
+      if(targetFood && bestD<26){
+        targetFood.amount--; ant.carrying=true;
+        ant.angle = Math.atan2(nest.y-ant.y, nest.x-ant.x);
+      } else {
+        const t=nearestTrail(ant,50);
+        if(t){ ant.angle = Math.atan2(t.y-ant.y, t.x-ant.x); }
+        else {
+          ant.wanderT -= dt;
+          if(ant.wanderT<=0){ ant.angle += (Math.random()-0.5)*2; ant.wanderT=0.6+Math.random(); }
+        }
+      }
+    } else {
+      const d=Math.hypot(nest.x-ant.x, nest.y-ant.y);
+      if(d<20){ ant.carrying=false; food++; document.getElementById('food').textContent=food; ant.angle+=Math.PI; }
+      else ant.angle = Math.atan2(nest.y-ant.y, nest.x-ant.x);
+    }
+    ant.x += Math.cos(ant.angle)*speed*dt;
+    ant.y += Math.sin(ant.angle)*speed*dt;
+    ant.x=Math.max(6,Math.min(W-6,ant.x));
+    ant.y=Math.max(6,Math.min(H-6,ant.y));
+  });
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0b1806'; ctx.fillRect(0,0,W,H);
+
+  ctx.strokeStyle='rgba(255,225,77,0.35)'; ctx.lineWidth=6; ctx.lineCap='round';
+  for(let i=1;i<trail.length;i++){
+    ctx.globalAlpha = Math.max(0,trail[i].life/14);
+    ctx.beginPath(); ctx.moveTo(trail[i-1].x,trail[i-1].y); ctx.lineTo(trail[i].x,trail[i].y); ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+
+  ctx.fillStyle='#a0672f'; ctx.shadowColor='#a0672f'; ctx.shadowBlur=14;
+  ctx.beginPath(); ctx.arc(nest.x,nest.y,18,0,7); ctx.fill(); ctx.shadowBlur=0;
+
+  foods.forEach(f=>{
+    if(f.amount<=0) return;
+    ctx.fillStyle='#39ff6a'; ctx.shadowColor='#39ff6a'; ctx.shadowBlur=10;
+    ctx.beginPath(); ctx.arc(f.x,f.y,6+f.amount*0.12,0,7); ctx.fill(); ctx.shadowBlur=0;
+  });
+
+  ants.forEach(a=>{
+    ctx.fillStyle = a.carrying ? '#ffe14d' : '#d6ffd6';
+    ctx.beginPath(); ctx.arc(a.x,a.y,2.6,0,7); ctx.fill();
+  });
+}
+
+let last=performance.now();
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
+window.addEventListener('keydown',e=>{
+  if(e.key==='r'||e.key==='R'){ reset(); running=true; document.getElementById('msg').textContent='click-drag to paint scent — guide ants from nest to food and back'; }
+});
+document.getElementById('startBtn').addEventListener('click',()=>{
+  document.getElementById('overlay').style.display='none';
+  reset(); running=true;
+});
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
