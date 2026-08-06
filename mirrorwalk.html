@@ -43,44 +43,87 @@ let running=false, won=false;
 
 function key(x,y){ return x+'_'+y; }
 
+function inBoundsG(x,y,g){ return x>=0 && x<g && y>=0 && y<g; }
+
+// Solves the joint (self, mirror) state space with BFS to guarantee a level
+// is actually completable before it's shown to the player. Small state space
+// (grid up to 10x10, so at most 10^4 joint states) — instant to search.
+function isSolvable(g, wallSet, sStart, mStart, sGoal, mGoal){
+  const blocked=(x,y)=> !inBoundsG(x,y,g) || wallSet.has(x+'_'+y);
+  const start = sStart.x+','+sStart.y+','+mStart.x+','+mStart.y;
+  const goal = sGoal.x+','+sGoal.y+','+mGoal.x+','+mGoal.y;
+  if(start===goal) return true;
+  const seen=new Set([start]);
+  let frontier=[sStart.x+','+sStart.y+','+mStart.x+','+mStart.y];
+  const dirs=[[0,-1],[0,1],[-1,0],[1,0]];
+  while(frontier.length){
+    const next=[];
+    for(const state of frontier){
+      const [sx,sy,mx,my]=state.split(',').map(Number);
+      for(const [dx,dy] of dirs){
+        const nsx=sx+dx, nsy=sy+dy, nmx=mx-dx, nmy=my+dy;
+        const sOk=!blocked(nsx,nsy), mOk=!blocked(nmx,nmy);
+        if(!sOk && !mOk) continue;
+        const fsx=sOk?nsx:sx, fsy=sOk?nsy:sy, fmx=mOk?nmx:mx, fmy=mOk?nmy:my;
+        const ns=fsx+','+fsy+','+fmx+','+fmy;
+        if(seen.has(ns)) continue;
+        if(ns===goal) return true;
+        seen.add(ns); next.push(ns);
+      }
+    }
+    frontier=next;
+  }
+  return false;
+}
+
 function buildLevel(n){
   GRID = Math.min(7+Math.floor(n/2), 10); cell=W/GRID;
   moves=0; won=false;
   document.getElementById('moves').textContent=moves;
-  walls=new Set();
   self_={x:0,y:0};
   mirror={x:GRID-1,y:0};
   goalSelf={x:GRID-1,y:GRID-1};
   goalMirror={x:0,y:GRID-1};
 
-  // Deliberate "gates": a full row of walls except one gap column.
-  // Since self and mirror share the same grid, self can only cross the row
-  // when self.x === gapCol, and mirror only when self.x === GRID-1-gapCol —
-  // almost always two different moments, forcing you to line one up, let it
-  // through, then walk the other back into position for the second pass.
   const gateCount = Math.min(1+Math.floor(n/2), 4);
-  const usedRows = new Set();
-  for(let g=0; g<gateCount; g++){
-    let gy;
-    do{ gy = 1+Math.floor(Math.random()*(GRID-2)); } while(usedRows.has(gy));
-    usedRows.add(gy);
-    const gapCol = Math.floor(Math.random()*GRID);
-    for(let x=0;x<GRID;x++){
-      if(x!==gapCol) walls.add(key(x,gy));
+  const extra = 2+n;
+
+  // Generate candidates until one is provably solvable — never show an
+  // impossible level. Falls back to fewer obstacles if we keep failing.
+  let attempt=0, found=false;
+  while(!found && attempt<200){
+    attempt++;
+    const candidate=new Set();
+    const usedRows=new Set();
+    const gapCells=[];
+    const thisGateCount = attempt<80 ? gateCount : Math.max(1,gateCount-1);
+    const thisExtra = attempt<80 ? extra : Math.max(0,extra-2);
+    for(let g=0; g<thisGateCount; g++){
+      let gy, tries=0;
+      do{ gy = 1+Math.floor(Math.random()*(GRID-2)); tries++; }
+      while(tries<30 && [...usedRows].some(r=>Math.abs(r-gy)<2));
+      usedRows.add(gy);
+      const gapCol = Math.floor(Math.random()*GRID);
+      gapCells.push(gy+'_'+gapCol);
+      for(let x=0;x<GRID;x++){ if(x!==gapCol) candidate.add(x+'_'+gy); }
+    }
+    for(let i=0;i<thisExtra;i++){
+      const x=Math.floor(Math.random()*GRID), y=1+Math.floor(Math.random()*(GRID-2));
+      candidate.add(x+'_'+y);
+    }
+    // gates' gap cells must always stay open, no matter what extra added
+    gapCells.forEach(c=>candidate.delete(c));
+    candidate.delete(self_.x+'_'+self_.y);
+    candidate.delete(mirror.x+'_'+mirror.y);
+    candidate.delete(goalSelf.x+'_'+goalSelf.y);
+    candidate.delete(goalMirror.x+'_'+goalMirror.y);
+
+    if(isSolvable(GRID, candidate, self_, mirror, goalSelf, goalMirror)){
+      walls=candidate; found=true;
     }
   }
+  if(!found) walls=new Set();
 
-  // sprinkle a few random obstacles for extra texture (never on row 0 or last row)
-  const extra = 2+n;
-  for(let i=0;i<extra;i++){
-    const x=Math.floor(Math.random()*GRID), y=1+Math.floor(Math.random()*(GRID-2));
-    walls.add(key(x,y));
-  }
-
-  walls.delete(key(self_.x,self_.y));
-  walls.delete(key(mirror.x,mirror.y));
-  walls.delete(key(goalSelf.x,goalSelf.y));
-  walls.delete(key(goalMirror.x,goalMirror.y));
   document.getElementById('lvl').textContent=level;
 }
 

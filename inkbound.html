@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INKBOUND</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root{ --ng:#39ff6a; --dim:#1f6b34; --bg:#040a05; }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ng);font-family:'VT323',monospace;
+    display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:20px;}
+  h1{font-family:'Press Start 2P',cursive;color:#fff;font-size:1.2rem;
+    text-shadow:0 0 8px var(--ng),0 0 20px var(--ng);letter-spacing:2px;}
+  .crt{position:fixed;inset:0;pointer-events:none;z-index:9;
+    background:repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0) 4px);}
+  #statbar{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;font-size:1.1rem;color:#c9ffcf;margin-bottom:10px;max-width:700px;}
+  #hpouter{width:140px;height:14px;border:1px solid var(--ng);background:#081a0c;display:inline-block;vertical-align:middle;}
+  #hpinner{height:100%;background:var(--ng);}
+  #screen{width:640px;max-width:92vw;border:2px solid var(--ng);box-shadow:0 0 24px rgba(57,255,106,.3), inset 0 0 20px rgba(57,255,106,.08);
+    background:#050f07;padding:16px;}
+  #location-title{font-family:'Press Start 2P',cursive;font-size:.9rem;color:var(--ng);margin-bottom:10px;text-shadow:0 0 8px var(--ng);}
+  #log{height:220px;overflow-y:auto;font-size:1.15rem;line-height:1.4;color:#b8f5c2;padding-right:6px;}
+  #log div.flavor{color:#7fd98f;}
+  #log div.combat{color:#ffe14d;}
+  #log div.bad{color:#ff5b6a;}
+  #log div.good{color:#39ff6a;}
+  #actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;}
+  button.act{font-family:'VT323',monospace;font-size:1.15rem;background:#081a0c;color:var(--ng);
+    border:1px solid var(--ng);padding:10px 16px;cursor:pointer;}
+  button.act:hover{background:var(--ng);color:#04000a;}
+  #overlay{position:fixed;inset:0;background:rgba(4,10,5,.95);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:16px;text-align:center;z-index:10;padding:20px;}
+  #overlay h2{font-family:'Press Start 2P',cursive;color:var(--ng);font-size:1.1rem;}
+  #startBtn{font-family:'Press Start 2P',cursive;font-size:.75rem;background:var(--ng);color:#04000a;
+    border:none;padding:16px 22px;cursor:pointer;box-shadow:3px 3px 0 rgba(0,0,0,.5);}
+  a.back{color:#7fd98f;font-size:1.1rem;text-decoration:none;margin-top:6px;}
+</style>
+</head>
+<body>
+<div class="crt"></div>
+<h1>INKBOUND</h1>
+<div id="statbar">
+  <span>LV <span id="s-level">1</span></span>
+  <span>HP <span id="hpouter"><span id="hpinner" style="display:inline-block;width:100%"></span></span> <span id="s-hp">10/10</span></span>
+  <span>ATK <span id="s-atk">3</span></span>
+  <span>DEF <span id="s-def">0</span></span>
+  <span>GOLD <span id="s-gold">0</span></span>
+  <span>POTIONS <span id="s-potions">1</span></span>
+</div>
+<div id="screen">
+  <div id="location-title">VILLAGE OF ASHDOWN</div>
+  <div id="log"></div>
+  <div id="actions"></div>
+</div>
+<div id="overlay">
+  <h2>INKBOUND</h2>
+  <p style="max-width:440px;color:#b8f5c2;">A text-bound world of five places: a safe village, a wood, a cave, a ruin, and a crypt where something ancient waits.<br>
+  Fight, loot, level up, gear up — and when you're strong enough, go finish it.</p>
+  <button id="startBtn">BEGIN ▶</button>
+  <a class="back" href="index.html">← back to arcade</a>
+</div>
+<script>
+const LOCATIONS = {
+  village: {
+    title:'VILLAGE OF ASHDOWN',
+    flavor:'Woodsmoke and quiet. The only place in the realm where nothing wants to kill you.',
+  },
+  woods:{
+    title:'WHISPERING WOODS',
+    flavor:'Thin trees, thinner light. Something always seems to be a few steps behind you.',
+    enemies:[
+      {name:'Wolf', hp:10, atk:3, def:0, xp:4, gold:[2,5]},
+      {name:'Bandit', hp:14, atk:4, def:1, xp:6, gold:[4,9]},
+    ],
+    encounterChance:0.6,
+  },
+  cave:{
+    title:'THE SUNKEN CAVE',
+    flavor:'Water drips somewhere you can\'t see. The dark here has weight.',
+    enemies:[
+      {name:'Cave Troll', hp:26, atk:6, def:2, xp:12, gold:[8,15]},
+      {name:'Giant Spider', hp:20, atk:7, def:1, xp:10, gold:[6,12]},
+    ],
+    encounterChance:0.65,
+  },
+  ruins:{
+    title:'ASHEN RUINS',
+    flavor:'A city that died standing up. Its bones still argue with trespassers.',
+    enemies:[
+      {name:'Skeleton Knight', hp:34, atk:8, def:3, xp:18, gold:[12,20]},
+      {name:'Wraith', hp:28, atk:10, def:2, xp:20, gold:[14,22]},
+    ],
+    encounterChance:0.7,
+  },
+  crypt:{
+    title:'THE BLACK CRYPT',
+    flavor:'The air itself seems to be holding its breath. This is where it ends, one way or another.',
+    enemies:[
+      {name:'The Hollow King', hp:70, atk:14, def:4, xp:100, gold:[100,150], boss:true},
+    ],
+    encounterChance:1.0,
+  },
+};
+
+let player, location, enemy, inCombat, gameWon;
+
+function newPlayer(){
+  return {hp:16, maxHp:16, atk:3, def:0, level:1, xp:0, xpNext:15, gold:8, potions:1, swordLv:0, armorLv:0};
+}
+
+function reset(){
+  player=newPlayer(); location='village'; enemy=null; inCombat=false; gameWon=false;
+  document.getElementById('log').innerHTML='';
+  logLine('You wake up in Ashdown with an empty pack and a long road ahead.', 'flavor');
+  renderLocation();
+  updateStats();
+}
+
+function logLine(text, cls){
+  const el=document.getElementById('log');
+  const d=document.createElement('div');
+  if(cls) d.className=cls;
+  d.textContent=text;
+  el.appendChild(d);
+  el.scrollTop=el.scrollHeight;
+  while(el.children.length>80) el.removeChild(el.firstChild);
+}
+
+function updateStats(){
+  document.getElementById('s-level').textContent=player.level;
+  document.getElementById('s-atk').textContent=player.atk;
+  document.getElementById('s-def').textContent=player.def;
+  document.getElementById('s-gold').textContent=player.gold;
+  document.getElementById('s-potions').textContent=player.potions;
+  document.getElementById('s-hp').textContent=player.hp+'/'+player.maxHp;
+  document.getElementById('hpinner').style.width=Math.max(0,player.hp/player.maxHp*100)+'%';
+}
+
+function setActions(list){
+  const el=document.getElementById('actions');
+  el.innerHTML='';
+  list.forEach(a=>{
+    const b=document.createElement('button');
+    b.className='act'; b.textContent=a.label;
+    b.addEventListener('click', a.fn);
+    el.appendChild(b);
+  });
+}
+
+function renderLocation(){
+  const loc=LOCATIONS[location];
+  document.getElementById('location-title').textContent=loc.title;
+  if(location==='village') renderVillage();
+  else renderWild();
+}
+
+function renderVillage(){
+  setActions([
+    {label:'Rest (free)', fn:()=>{ player.hp=player.maxHp; updateStats(); logLine('You rest by the fire. Fully healed.', 'good'); }},
+    {label:'Buy Potion (10g)', fn:buyPotion},
+    {label:'Upgrade Sword ('+(20*(player.swordLv+1))+'g)', fn:buySword},
+    {label:'Upgrade Armor ('+(20*(player.armorLv+1))+'g)', fn:buyArmor},
+    {label:'Travel: Whispering Woods', fn:()=>travel('woods')},
+    {label:'Travel: Sunken Cave', fn:()=>travel('cave')},
+    {label:'Travel: Ashen Ruins', fn:()=>travel('ruins')},
+    {label:'Travel: The Black Crypt', fn:()=>travel('crypt')},
+  ]);
+}
+
+function buyPotion(){
+  if(player.gold<10){ logLine('Not enough gold.', 'bad'); return; }
+  player.gold-=10; player.potions++; updateStats();
+  logLine('Bought a potion. You carry '+player.potions+' now.', 'good');
+}
+function buySword(){
+  const cost=20*(player.swordLv+1);
+  if(player.gold<cost){ logLine('Not enough gold.', 'bad'); return; }
+  player.gold-=cost; player.swordLv++; player.atk+=2; updateStats();
+  logLine('The smith reforges your blade. ATK +2.', 'good');
+  renderVillage();
+}
+function buyArmor(){
+  const cost=20*(player.armorLv+1);
+  if(player.gold<cost){ logLine('Not enough gold.', 'bad'); return; }
+  player.gold-=cost; player.armorLv++; player.def+=1; updateStats();
+  logLine('New plating fitted to your armor. DEF +1.', 'good');
+  renderVillage();
+}
+
+function travel(loc){
+  location=loc;
+  const l=LOCATIONS[loc];
+  logLine('— '+l.title+' —', 'flavor');
+  logLine(l.flavor, 'flavor');
+  renderLocation();
+}
+
+function renderWild(){
+  setActions([
+    {label:'Explore', fn:explore},
+    {label:'Search for loot', fn:searchLoot},
+    {label:'Return to Village', fn:()=>travel('village')},
+  ]);
+}
+
+function explore(){
+  const loc=LOCATIONS[location];
+  if(Math.random() < loc.encounterChance){
+    startEncounter(loc);
+  } else {
+    logLine('You explore for a while and find nothing but silence.', 'flavor');
+  }
+}
+
+function searchLoot(){
+  const loc=LOCATIONS[location];
+  if(Math.random() < loc.encounterChance*0.5){
+    startEncounter(loc);
+    return;
+  }
+  const found=Math.random();
+  if(found<0.5){
+    const g=2+Math.floor(Math.random()*6);
+    player.gold+=g; updateStats();
+    logLine('You find '+g+' gold tucked in the dirt.', 'good');
+  } else if(found<0.8){
+    player.potions++; updateStats();
+    logLine('You find an old potion. Still sealed. You keep it.', 'good');
+  } else {
+    logLine('Nothing here but dust.', 'flavor');
+  }
+}
+
+function startEncounter(loc){
+  const template=loc.enemies[Math.floor(Math.random()*loc.enemies.length)];
+  enemy={...template, maxHp:template.hp};
+  inCombat=true;
+  logLine((enemy.boss? 'A presence fills the room. ' : 'A wild ')+enemy.name+' blocks your path!', 'combat');
+  renderCombat();
+}
+
+function renderCombat(){
+  setActions([
+    {label:'Attack', fn:playerAttack},
+    {label:'Use Potion ('+player.potions+')', fn:usePotionInCombat},
+    {label:'Flee', fn:tryFlee},
+  ]);
+}
+
+function playerAttack(){
+  const variance=0.8+Math.random()*0.4;
+  const dmg=Math.max(1, Math.round((player.atk-enemy.def)*variance));
+  enemy.hp-=dmg;
+  logLine('You strike the '+enemy.name+' for '+dmg+' damage.', 'combat');
+  if(enemy.hp<=0){ winCombat(); return; }
+  enemyStrike();
+}
+
+function usePotionInCombat(){
+  if(player.potions<=0){ logLine('You have no potions.', 'bad'); return; }
+  player.potions--;
+  const heal=Math.round(player.maxHp*0.45);
+  player.hp=Math.min(player.maxHp, player.hp+heal);
+  updateStats();
+  logLine('You drink a potion. +'+heal+' HP.', 'good');
+  enemyStrike();
+}
+
+function tryFlee(){
+  if(Math.random()<0.6){
+    logLine('You break away and flee the fight.', 'flavor');
+    inCombat=false; enemy=null;
+    renderLocation();
+  } else {
+    logLine('You fail to escape!', 'bad');
+    enemyStrike();
+  }
+}
+
+function enemyStrike(){
+  if(!inCombat) return;
+  const variance=0.8+Math.random()*0.4;
+  const dmg=Math.max(1, Math.round((enemy.atk-player.def)*variance));
+  player.hp-=dmg;
+  updateStats();
+  logLine('The '+enemy.name+' hits you for '+dmg+' damage.', 'bad');
+  if(player.hp<=0){ loseCombat(); return; }
+  renderCombat();
+}
+
+function winCombat(){
+  logLine('The '+enemy.name+' falls.', 'good');
+  player.xp+=enemy.xp;
+  const g=enemy.gold[0]+Math.floor(Math.random()*(enemy.gold[1]-enemy.gold[0]+1));
+  player.gold+=g;
+  logLine('+'+enemy.xp+' XP, +'+g+' gold.', 'good');
+  if(player.xp>=player.xpNext){
+    player.xp-=player.xpNext; player.level++; player.xpNext=Math.round(player.xpNext*1.4);
+    player.maxHp+=6; player.atk+=1; player.hp=player.maxHp;
+    logLine('LEVEL UP! You are now level '+player.level+'. Fully healed.', 'good');
+  }
+  const wasBoss=enemy.boss;
+  inCombat=false; enemy=null; updateStats();
+  if(wasBoss){ victory(); return; }
+  renderLocation();
+}
+
+function loseCombat(){
+  logLine('Everything goes dark...', 'bad');
+  const lostGold=Math.floor(player.gold*0.4);
+  player.gold-=lostGold;
+  player.hp=Math.max(1, Math.round(player.maxHp*0.3));
+  inCombat=false; enemy=null;
+  location='village';
+  logLine('You wake up back in Ashdown, '+lostGold+' gold lighter, barely alive.', 'bad');
+  updateStats();
+  renderLocation();
+}
+
+function victory(){
+  gameWon=true;
+  document.getElementById('log').innerHTML='';
+  logLine('The Hollow King collapses into ash and old silence.', 'good');
+  logLine('The crypt exhales. For the first time in longer than anyone can remember, the realm is quiet.', 'flavor');
+  logLine('YOU WIN — final level '+player.level+', '+player.gold+' gold carried out of the dark.', 'good');
+  setActions([
+    {label:'Play Again', fn:()=>{ reset(); }},
+  ]);
+}
+
+document.getElementById('startBtn').addEventListener('click',()=>{
+  document.getElementById('overlay').style.display='none';
+  reset();
+});
+</script>
+</body>
+</html>

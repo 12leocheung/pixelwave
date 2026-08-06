@@ -167,8 +167,8 @@ function draw(){
   // worm body: head at current stance height, tail trailing back to ground level
   ctx.strokeStyle='#ff3b5c'; ctx.lineWidth=10; ctx.lineCap='round'; ctx.shadowColor='#ff3b5c'; ctx.shadowBlur=10;
   ctx.beginPath();
-  ctx.moveTo(hx-segLen, groundY-14);
-  ctx.quadraticCurveTo(hx-segLen/2, (headY+groundY-14)/2, hx, headY);
+  ctx.moveTo(hx-segLen, STANCE_Y.flat);
+  ctx.quadraticCurveTo(hx-segLen/2, (headY+STANCE_Y.flat)/2, hx, headY);
   ctx.stroke();
   ctx.shadowBlur=0;
 

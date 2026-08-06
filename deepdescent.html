@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DEEP DESCENT</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#050308;color:#e9e2ff;font-family:'VT323',monospace;
+    display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:20px;}
+  h1{font-family:'Press Start 2P',cursive;color:#fff;font-size:1.2rem;
+    text-shadow:0 0 8px #a742ff,0 0 20px #ff2bd6;letter-spacing:2px;}
+  #hud{display:flex;gap:20px;font-size:1.15rem;color:#ffe14d;margin-bottom:8px;flex-wrap:wrap;justify-content:center;max-width:700px;}
+  #hpouter{width:160px;height:14px;border:1px solid #ff3b5c;background:#1a0508;}
+  #hpinner{height:100%;background:#ff3b5c;}
+  canvas{background:#0a0714;border:2px solid #a742ff;box-shadow:0 0 24px rgba(167,66,255,.35);}
+  #log{width:640px;max-width:90vw;height:70px;overflow-y:auto;background:#0a0714;border:1px solid rgba(167,66,255,0.4);
+    font-size:1.05rem;color:#c9baff;padding:6px 10px;margin-top:8px;}
+  #msg{font-size:1.2rem;color:#ffe14d;margin-top:8px;text-align:center;max-width:640px;}
+  #overlay{position:fixed;inset:0;background:rgba(5,3,8,.94);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:16px;text-align:center;z-index:5;padding:20px;}
+  #overlay h2{font-family:'Press Start 2P',cursive;color:#a742ff;font-size:1.1rem;}
+  button{font-family:'Press Start 2P',cursive;font-size:.7rem;background:#ffe14d;color:#04000a;
+    border:none;padding:14px 20px;cursor:pointer;box-shadow:3px 3px 0 rgba(0,0,0,.5);}
+  a.back{color:#00fff2;font-size:1.1rem;text-decoration:none;margin-top:6px;}
+</style>
+</head>
+<body>
+<h1>DEEP DESCENT</h1>
+<div id="hud">
+  <span>FLOOR: <span id="floor">1</span></span>
+  <span>LV <span id="level">1</span></span>
+  <span>HP <span id="hpouter"><span id="hpinner" style="display:block;width:100%"></span></span> <span id="hptext">10/10</span></span>
+  <span>ATK <span id="atk">3</span></span>
+  <span>DEF <span id="def">0</span></span>
+  <span>GOLD <span id="gold">0</span></span>
+  <span>BEST FLOOR: <span id="best">0</span></span>
+</div>
+<canvas id="c" width="640" height="400"></canvas>
+<div id="log"></div>
+<div id="msg">WASD / arrow keys move · walk into an enemy to attack · find the stairs (&gt;) to descend</div>
+<div id="overlay">
+  <h2>DEEP DESCENT</h2>
+  <p style="max-width:460px;">A fresh dungeon every floor. Bump enemies to fight, grab loot as you pass, find the stairs down.<br>
+  Level up from kills, gear up from drops — and when you die, it's back to floor one. How deep can you get?</p>
+  <button id="startBtn">DESCEND ▶</button>
+  <a class="back" href="index.html">← back to arcade</a>
+</div>
+<script>
+const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+const COLS=20, ROWS=12, TILE=32;
+const W=canvas.width, H=canvas.height;
+
+let map, rooms, player, enemies, items, stairs, floor, running=false, seen, visible;
+let best=+(localStorage.getItem('deepdescent_best')||0);
+document.getElementById('best').textContent=best;
+
+const ENEMY_TYPES=[
+  {name:'rat',      glyph:'r', hp:4,  atk:1, def:0, xp:2, gold:[1,3],  color:'#a0672f', minFloor:1},
+  {name:'goblin',   glyph:'g', hp:7,  atk:2, def:0, xp:3, gold:[2,5],  color:'#39ff6a', minFloor:1},
+  {name:'skeleton', glyph:'s', hp:10, atk:3, def:1, xp:5, gold:[3,7],  color:'#e9e2ff', minFloor:3},
+  {name:'orc',      glyph:'o', hp:15, atk:4, def:1, xp:8, gold:[5,10], color:'#ff7a2b', minFloor:5},
+  {name:'wraith',   glyph:'w', hp:18, atk:6, def:2, xp:12,gold:[8,14], color:'#a742ff', minFloor:8},
+];
+
+function log(msg){
+  const el=document.getElementById('log');
+  const line=document.createElement('div');
+  line.textContent=msg;
+  el.appendChild(line);
+  el.scrollTop=el.scrollHeight;
+  while(el.children.length>40) el.removeChild(el.firstChild);
+}
+
+function newPlayer(){
+  return {x:0,y:0,hp:14,maxHp:14,atk:3,def:0,level:1,xp:0,xpNext:10,gold:0};
+}
+
+function inBounds(x,y){ return x>=0&&x<COLS&&y>=0&&y<ROWS; }
+
+function generateFloor(n){
+  map = Array.from({length:ROWS},()=>Array(COLS).fill('#'));
+  rooms=[];
+  const roomCount=6+Math.floor(Math.random()*3);
+  let tries=0;
+  while(rooms.length<roomCount && tries<200){
+    tries++;
+    const w=3+Math.floor(Math.random()*4), h=3+Math.floor(Math.random()*3);
+    const x=1+Math.floor(Math.random()*(COLS-w-2)), y=1+Math.floor(Math.random()*(ROWS-h-2));
+    const overlaps=rooms.some(r=> x<r.x+r.w+1 && x+w+1>r.x && y<r.y+r.h+1 && y+h+1>r.y);
+    if(overlaps) continue;
+    rooms.push({x,y,w,h});
+    for(let ry=y;ry<y+h;ry++) for(let rx=x;rx<x+w;rx++) map[ry][rx]='.';
+  }
+  for(let i=1;i<rooms.length;i++){
+    const a=rooms[i-1], b=rooms[i];
+    const ax=Math.floor(a.x+a.w/2), ay=Math.floor(a.y+a.h/2);
+    const bx=Math.floor(b.x+b.w/2), by=Math.floor(b.y+b.h/2);
+    if(Math.random()<0.5){
+      for(let x=Math.min(ax,bx);x<=Math.max(ax,bx);x++) map[ay][x]='.';
+      for(let y=Math.min(ay,by);y<=Math.max(ay,by);y++) map[y][bx]='.';
+    } else {
+      for(let y=Math.min(ay,by);y<=Math.max(ay,by);y++) map[y][ax]='.';
+      for(let x=Math.min(ax,bx);x<=Math.max(ax,bx);x++) map[by][x]='.';
+    }
+  }
+
+  const start=rooms[0];
+  player.x=Math.floor(start.x+start.w/2); player.y=Math.floor(start.y+start.h/2);
+
+  const last=rooms[rooms.length-1];
+  stairs={x:Math.floor(last.x+last.w/2), y:Math.floor(last.y+last.h/2)};
+
+  enemies=[];
+  const enemyCount=Math.min(3+Math.floor(n*0.8), 12);
+  const available=ENEMY_TYPES.filter(t=>t.minFloor<=n);
+  for(let i=0;i<enemyCount;i++){
+    const room=rooms[1+Math.floor(Math.random()*(rooms.length-1))];
+    const ex=room.x+1+Math.floor(Math.random()*Math.max(1,room.w-2));
+    const ey=room.y+1+Math.floor(Math.random()*Math.max(1,room.h-2));
+    if(ex===player.x&&ey===player.y) continue;
+    const type=available[Math.floor(Math.random()*available.length)];
+    const scale=1+n*0.12;
+    enemies.push({x:ex,y:ey,type,hp:Math.round(type.hp*scale),maxHp:Math.round(type.hp*scale),alive:true});
+  }
+
+  items=[];
+  const itemCount=3+Math.floor(Math.random()*3);
+  for(let i=0;i<itemCount;i++){
+    const room=rooms[Math.floor(Math.random()*rooms.length)];
+    const ix=room.x+1+Math.floor(Math.random()*Math.max(1,room.w-2));
+    const iy=room.y+1+Math.floor(Math.random()*Math.max(1,room.h-2));
+    const r=Math.random();
+    const kind = r<0.45 ? 'gold' : r<0.8 ? 'potion' : (Math.random()<0.5 ? 'atkshard' : 'defshard');
+    items.push({x:ix,y:iy,kind});
+  }
+
+  seen = Array.from({length:ROWS},()=>Array(COLS).fill(false));
+  visible = Array.from({length:ROWS},()=>Array(COLS).fill(false));
+  updateVisibility();
+}
+
+function updateVisibility(){
+  visible = Array.from({length:ROWS},()=>Array(COLS).fill(false));
+  const R=4.5;
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+    if(Math.hypot(x-player.x,y-player.y)<=R){ visible[y][x]=true; seen[y][x]=true; }
+  }
+}
+
+function reset(){
+  floor=1; player=newPlayer(); generateFloor(floor);
+  updateHud();
+  document.getElementById('log').innerHTML='';
+  log('You descend into floor 1.');
+}
+
+function updateHud(){
+  document.getElementById('floor').textContent=floor;
+  document.getElementById('level').textContent=player.level;
+  document.getElementById('atk').textContent=player.atk;
+  document.getElementById('def').textContent=player.def;
+  document.getElementById('gold').textContent=player.gold;
+  document.getElementById('hptext').textContent=player.hp+'/'+player.maxHp;
+  document.getElementById('hpinner').style.width=Math.max(0,player.hp/player.maxHp*100)+'%';
+}
+
+function enemyAt(x,y){ return enemies.find(e=>e.alive && e.x===x && e.y===y); }
+
+function playerAttack(enemy){
+  const dmg=Math.max(1, player.atk - enemy.type.def);
+  enemy.hp-=dmg;
+  log('You hit the '+enemy.type.name+' for '+dmg+'.');
+  if(enemy.hp<=0){
+    enemy.alive=false;
+    player.xp+=enemy.type.xp;
+    const g=enemy.type.gold[0]+Math.floor(Math.random()*(enemy.type.gold[1]-enemy.type.gold[0]+1));
+    player.gold+=g;
+    log('The '+enemy.type.name+' dies. +'+enemy.type.xp+' XP, +'+g+' gold.');
+    if(player.xp>=player.xpNext){
+      player.xp-=player.xpNext; player.level++; player.xpNext=Math.round(player.xpNext*1.35);
+      player.maxHp+=4; player.atk+=1; player.hp=player.maxHp;
+      log('LEVEL UP! You are now level '+player.level+'.');
+    }
+  } else {
+    const dmg2=Math.max(1, enemy.type.atk - player.def);
+    player.hp-=dmg2;
+    log('The '+enemy.type.name+' hits back for '+dmg2+'.');
+  }
+}
+
+function tryMove(dx,dy){
+  if(!running) return;
+  const nx=player.x+dx, ny=player.y+dy;
+  if(!inBounds(nx,ny) || map[ny][nx]==='#') return;
+  const enemy=enemyAt(nx,ny);
+  if(enemy){ playerAttack(enemy); }
+  else {
+    player.x=nx; player.y=ny;
+    const item=items.find(it=>it.x===nx&&it.y===ny);
+    if(item) pickup(item);
+    if(nx===stairs.x && ny===stairs.y){ descend(); return; }
+  }
+  enemyTurn();
+  updateVisibility();
+  updateHud();
+  checkDeath();
+}
+
+function pickup(item){
+  items=items.filter(i=>i!==item);
+  if(item.kind==='gold'){ const g=3+Math.floor(Math.random()*8); player.gold+=g; log('Found '+g+' gold.'); }
+  else if(item.kind==='potion'){ const heal=Math.round(player.maxHp*0.5); player.hp=Math.min(player.maxHp,player.hp+heal); log('Drank a potion, +'+heal+' HP.'); }
+  else if(item.kind==='atkshard'){ player.atk+=1; log('Attack shard absorbed! ATK +1.'); }
+  else if(item.kind==='defshard'){ player.def+=1; log('Defense shard absorbed! DEF +1.'); }
+}
+
+function descend(){
+  floor++;
+  player.hp=Math.min(player.maxHp, player.hp+Math.round(player.maxHp*0.2));
+  generateFloor(floor);
+  log('You descend to floor '+floor+'.');
+  if(floor-1>best){ best=floor-1; localStorage.setItem('deepdescent_best',best); document.getElementById('best').textContent=best; }
+  updateHud();
+}
+
+function enemyTurn(){
+  enemies.forEach(e=>{
+    if(!e.alive) return;
+    const dist=Math.hypot(e.x-player.x, e.y-player.y);
+    if(dist<1.5){
+      const dmg=Math.max(1, e.type.atk-player.def);
+      player.hp-=dmg;
+      log('The '+e.type.name+' attacks you for '+dmg+'.');
+      return;
+    }
+    if(dist<6){
+      const dx=Math.sign(player.x-e.x), dy=Math.sign(player.y-e.y);
+      let mx=e.x, my=e.y;
+      if(Math.random()<0.5 && dx!==0 && inBounds(e.x+dx,e.y) && map[e.y][e.x+dx]!=='#' && !enemyAt(e.x+dx,e.y) && !(e.x+dx===player.x&&e.y===player.y)) mx=e.x+dx;
+      else if(dy!==0 && inBounds(e.x,e.y+dy) && map[e.y+dy][e.x]!=='#' && !enemyAt(e.x,e.y+dy) && !(e.x===player.x&&e.y+dy===player.y)) my=e.y+dy;
+      else if(dx!==0 && inBounds(e.x+dx,e.y) && map[e.y][e.x+dx]!=='#' && !enemyAt(e.x+dx,e.y) && !(e.x+dx===player.x&&e.y===player.y)) mx=e.x+dx;
+      e.x=mx; e.y=my;
+    }
+  });
+}
+
+function checkDeath(){
+  if(player.hp<=0){
+    running=false;
+    log('You die on floor '+floor+'.');
+    document.getElementById('msg').textContent='YOU DIED on floor '+floor+' with '+player.gold+' gold. Press R to descend again.';
+  }
+}
+
+window.addEventListener('keydown',e=>{
+  if(!running) return;
+  if(e.key==='ArrowUp'||e.key==='w'||e.key==='W'){ e.preventDefault(); tryMove(0,-1); }
+  else if(e.key==='ArrowDown'||e.key==='s'||e.key==='S'){ e.preventDefault(); tryMove(0,1); }
+  else if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A'){ e.preventDefault(); tryMove(-1,0); }
+  else if(e.key==='ArrowRight'||e.key==='d'||e.key==='D'){ e.preventDefault(); tryMove(1,0); }
+});
+window.addEventListener('keydown',e=>{
+  if(e.key==='r'||e.key==='R'){ reset(); running=true; document.getElementById('msg').textContent='WASD / arrows move · bump to attack · find the stairs (>)'; }
+});
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0a0714'; ctx.fillRect(0,0,W,H);
+
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+    if(!seen[y][x]) continue;
+    const dim = !visible[y][x];
+    const px=x*TILE, py=y*TILE;
+    if(map[y][x]==='.'){
+      ctx.fillStyle = dim ? 'rgba(167,66,255,0.08)' : 'rgba(167,66,255,0.18)';
+      ctx.fillRect(px,py,TILE,TILE);
+    } else {
+      ctx.fillStyle = dim ? 'rgba(167,66,255,0.04)' : 'rgba(167,66,255,0.1)';
+      ctx.fillRect(px,py,TILE,TILE);
+    }
+  }
+
+  if(seen[stairs.y][stairs.x]){
+    const dim=!visible[stairs.y][stairs.x];
+    ctx.fillStyle = dim ? 'rgba(255,225,77,0.35)' : '#ffe14d';
+    ctx.font='22px monospace'; ctx.textAlign='center';
+    ctx.fillText('>', stairs.x*TILE+TILE/2, stairs.y*TILE+TILE/2+8);
+  }
+
+  items.forEach(it=>{
+    if(!seen[it.y][it.x]) return;
+    const dim=!visible[it.y][it.x];
+    const glyph = it.kind==='gold' ? '$' : it.kind==='potion' ? '!' : it.kind==='atkshard' ? '^' : '+';
+    const color = it.kind==='gold' ? '#ffe14d' : it.kind==='potion' ? '#39ff6a' : '#00fff2';
+    ctx.fillStyle = dim ? color+'55' : color;
+    ctx.font='18px monospace'; ctx.textAlign='center';
+    ctx.fillText(glyph, it.x*TILE+TILE/2, it.y*TILE+TILE/2+6);
+  });
+
+  enemies.forEach(e=>{
+    if(!e.alive || !visible[e.y][e.x]) return;
+    ctx.fillStyle=e.type.color; ctx.shadowColor=e.type.color; ctx.shadowBlur=8;
+    ctx.font='18px monospace'; ctx.textAlign='center';
+    ctx.fillText(e.type.glyph, e.x*TILE+TILE/2, e.y*TILE+TILE/2+6);
+    ctx.shadowBlur=0;
+    const barW=TILE-8;
+    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(e.x*TILE+4, e.y*TILE+2, barW, 4);
+    ctx.fillStyle='#ff3b5c'; ctx.fillRect(e.x*TILE+4, e.y*TILE+2, barW*Math.max(0,e.hp/e.maxHp), 4);
+  });
+
+  ctx.fillStyle='#fff'; ctx.shadowColor='#fff'; ctx.shadowBlur=12;
+  ctx.font='20px monospace'; ctx.textAlign='center';
+  ctx.fillText('@', player.x*TILE+TILE/2, player.y*TILE+TILE/2+7);
+  ctx.shadowBlur=0;
+  ctx.textAlign='left';
+}
+
+function loop(){ draw(); requestAnimationFrame(loop); }
+document.getElementById('startBtn').addEventListener('click',()=>{
+  document.getElementById('overlay').style.display='none';
+  reset(); running=true;
+});
+reset();
+loop();
+</script>
+</body>
+</html>
