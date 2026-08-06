@@ -26,7 +26,7 @@
 <h1>MASS EXODUS</h1>
 <div id="hud"><span>FOOD BANKED: <span id="food">0</span></span><span>INK: <span id="ink">100</span></span><span>TIME: <span id="time">60</span>s</span></div>
 <canvas id="c" width="600" height="380"></canvas>
-<div id="msg">click-drag to paint a scent trail — ants near a trail follow it, otherwise they wander · guide them from nest to food and back</div>
+<div id="msg">click-drag to paint a scent trail — ants on a trail move fast and sure, but wander close to the nest and never make it far without one</div>
 <div id="overlay">
   <h2>MASS EXODUS</h2>
   <p style="max-width:460px;">You can't control a single ant. You can only lay scent.<br>
@@ -87,7 +87,7 @@ function update(dt){
   }
 
   ants.forEach(ant=>{
-    const speed=48;
+    let onTrail=false;
     if(!ant.carrying){
       let targetFood=null, bestD=9999;
       foods.forEach(f=>{ if(f.amount>0){ const d=Math.hypot(f.x-ant.x,f.y-ant.y); if(d<bestD){bestD=d;targetFood=f;} } });
@@ -95,9 +95,13 @@ function update(dt){
         targetFood.amount--; ant.carrying=true;
         ant.angle = Math.atan2(nest.y-ant.y, nest.x-ant.x);
       } else {
-        const t=nearestTrail(ant,50);
-        if(t){ ant.angle = Math.atan2(t.y-ant.y, t.x-ant.x); }
-        else {
+        const t=nearestTrail(ant,70);
+        const distFromNest=Math.hypot(nest.x-ant.x, nest.y-ant.y);
+        if(t){ ant.angle = Math.atan2(t.y-ant.y, t.x-ant.x); onTrail=true; }
+        else if(distFromNest > 100){
+          // wandering alone doesn't get you far — without a trail, drift back toward home
+          ant.angle = Math.atan2(nest.y-ant.y, nest.x-ant.x) + (Math.random()-0.5)*0.7;
+        } else {
           ant.wanderT -= dt;
           if(ant.wanderT<=0){ ant.angle += (Math.random()-0.5)*2; ant.wanderT=0.6+Math.random(); }
         }
@@ -105,8 +109,9 @@ function update(dt){
     } else {
       const d=Math.hypot(nest.x-ant.x, nest.y-ant.y);
       if(d<20){ ant.carrying=false; food++; document.getElementById('food').textContent=food; ant.angle+=Math.PI; }
-      else ant.angle = Math.atan2(nest.y-ant.y, nest.x-ant.x);
+      else { ant.angle = Math.atan2(nest.y-ant.y, nest.x-ant.x); onTrail=true; }
     }
+    const speed = onTrail ? 78 : 40;
     ant.x += Math.cos(ant.angle)*speed*dt;
     ant.y += Math.sin(ant.angle)*speed*dt;
     ant.x=Math.max(6,Math.min(W-6,ant.x));
@@ -147,7 +152,7 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 window.addEventListener('keydown',e=>{
-  if(e.key==='r'||e.key==='R'){ reset(); running=true; document.getElementById('msg').textContent='click-drag to paint scent — guide ants from nest to food and back'; }
+  if(e.key==='r'||e.key==='R'){ reset(); running=true; document.getElementById('msg').textContent='click-drag to paint scent — ants stay near the nest until you lay a trail out to the food'; }
 });
 document.getElementById('startBtn').addEventListener('click',()=>{
   document.getElementById('overlay').style.display='none';

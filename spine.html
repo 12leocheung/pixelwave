@@ -29,11 +29,11 @@
 <div id="hud"><span>LEVEL: <span id="lvl">1</span></span><span>MOVES: <span id="moves">0</span></span></div>
 <canvas id="c" width="620" height="260"></canvas>
 <div class="stances"><span>Q: ARCH UP</span><span>W: FLAT</span><span>E: ARCH DOWN</span><span>SPACE: CONTRACT</span></div>
-<div id="msg">pick a stance with Q/W/E, then press SPACE to inchworm forward one segment-length into that shape</div>
+<div id="msg">pick a stance with Q/W/E, then press SPACE to inchworm forward — the ghost ahead shows exactly where your head lands and whether it clears</div>
 <div id="overlay">
   <h2>SPINE</h2>
   <p style="max-width:460px;">You are a segmented creature that can only move by choosing a stance, then contracting into it.<br>
-  Arch up to clear spikes. Arch down to duck under ledges. Get flat to cross open ground. Reach the flag.</p>
+  Arch up to clear spikes. Arch down to duck under ledges. Get flat to cross open ground. The collapse behind you never stops closing in — keep moving.</p>
   <button id="startBtn">UNCOIL ▶</button>
   <a class="back" href="index.html">← back to arcade</a>
 </div>
@@ -41,10 +41,11 @@
 const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
 const W=canvas.width,H=canvas.height;
 const groundY=200, segLen=34;
-let headX=40, stance='flat', level=1, moves=0, obstacles=[], flagX=0, running=false, dead=false;
+const STANCE_Y = { up: groundY-46, flat: groundY-20, down: groundY-2 };
+let headX=40, stance='flat', level=1, moves=0, obstacles=[], flagX=0, running=false, dead=false, chaserX=0, chaserSpeed=26;
 
 function buildLevel(n){
-  level=n; headX=40; stance='flat'; moves=0; dead=false;
+  level=n; headX=40; stance='flat'; moves=0; dead=false; chaserX=headX-260; chaserSpeed=26+level*5;
   document.getElementById('lvl').textContent=level;
   document.getElementById('moves').textContent=moves;
   obstacles=[];
@@ -59,6 +60,17 @@ function buildLevel(n){
 }
 function reset(){ level=1; buildLevel(1); }
 
+function stanceClearsAt(x, st){
+  for(const o of obstacles){
+    if(x > o.x-14 && x < o.x+14){
+      if(o.type==='spike' && st!=='up') return false;
+      if(o.type==='ledge' && st!=='down') return false;
+      if(o.type==='gap' && st!=='flat') return false;
+    }
+  }
+  return true;
+}
+
 window.addEventListener('keydown',e=>{
   if(!running || dead) return;
   if(e.key==='q'||e.key==='Q') stance='up';
@@ -72,24 +84,32 @@ window.addEventListener('keydown',e=>{
 
 function step(){
   const nextX = headX+segLen;
-  for(const o of obstacles){
-    if(nextX > o.x-14 && nextX < o.x+14){
-      if(o.type==='spike' && stance!=='up'){ fail('IMPALED — needed to arch up over that spike.'); return; }
-      if(o.type==='ledge' && stance!=='down'){ fail('SMACKED A LOW LEDGE — needed to arch down.'); return; }
-      if(o.type==='gap' && stance!=='flat'){ fail('MISJUDGED THE GAP — needed to stay flat and stretch across.'); return; }
-    }
+  if(!stanceClearsAt(nextX, stance)){
+    const o=obstacles.find(o=>nextX>o.x-14 && nextX<o.x+14);
+    if(o.type==='spike') fail('IMPALED — needed to arch up over that spike.');
+    else if(o.type==='ledge') fail('SMACKED A LOW LEDGE — needed to arch down.');
+    else fail('MISJUDGED THE GAP — needed to stay flat and stretch across.');
+    return;
   }
   headX=nextX; moves++;
   document.getElementById('moves').textContent=moves;
   if(headX >= flagX){
     document.getElementById('msg').textContent='REACHED THE FLAG! Next terrain loading...';
     running=false;
-    setTimeout(()=>{ buildLevel(level+1); running=true; document.getElementById('msg').textContent='pick a stance with Q/W/E, then SPACE to advance'; },900);
+    setTimeout(()=>{ buildLevel(level+1); running=true; document.getElementById('msg').textContent='pick a stance with Q/W/E, then SPACE to advance — the collapse keeps closing in'; },900);
   }
 }
 function fail(reason){
   dead=true; running=false;
   document.getElementById('msg').textContent=reason+' Press R to try again.';
+}
+
+function update(dt){
+  if(!running) return;
+  chaserX += chaserSpeed*dt;
+  if(chaserX > headX-16){
+    fail('THE COLLAPSE CAUGHT YOU — move faster.');
+  }
 }
 
 function draw(){
@@ -105,10 +125,10 @@ function draw(){
     if(sx<-40||sx>W+40) return;
     if(o.type==='spike'){
       ctx.fillStyle='#ff3b5c';
-      ctx.beginPath(); ctx.moveTo(sx-10,groundY); ctx.lineTo(sx,groundY-40); ctx.lineTo(sx+10,groundY); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(sx-10,groundY); ctx.lineTo(sx,groundY-34); ctx.lineTo(sx+10,groundY); ctx.closePath(); ctx.fill();
     } else if(o.type==='ledge'){
       ctx.fillStyle='#a742ff';
-      ctx.fillRect(sx-16,groundY-70,32,40);
+      ctx.fillRect(sx-16,groundY-90,32,76);
     } else if(o.type==='gap'){
       ctx.fillStyle='#140505';
       ctx.fillRect(sx-16,groundY,32,20);
@@ -117,29 +137,53 @@ function draw(){
     }
   });
 
+  // the collapse: a creeping wall of red fog behind the worm
+  const csx=chaserX-camX;
+  const grad=ctx.createLinearGradient(csx-60,0,csx,0);
+  grad.addColorStop(0,'rgba(255,59,92,0)'); grad.addColorStop(1,'rgba(255,59,92,0.55)');
+  ctx.fillStyle=grad;
+  ctx.fillRect(csx-60,0,60,H);
+  ctx.fillStyle='#ff3b5c'; ctx.fillRect(csx-2,0,2,H);
+
   const flagSx=flagX-camX;
   ctx.fillStyle='#ffe14d'; ctx.shadowColor='#ffe14d'; ctx.shadowBlur=12;
   ctx.fillRect(flagSx-2,groundY-50,4,50);
   ctx.beginPath(); ctx.moveTo(flagSx+2,groundY-50); ctx.lineTo(flagSx+26,groundY-42); ctx.lineTo(flagSx+2,groundY-34); ctx.fill();
   ctx.shadowBlur=0;
 
-  // draw worm body: head at headX, tail behind, arch shape based on stance
   const hx=headX-camX;
+  const headY=STANCE_Y[stance];
+
+  // ghost preview of where the head lands on the next step, color-coded pass/fail
+  if(running){
+    const nextX=headX+segLen, nsx=nextX-camX, nextY=STANCE_Y[stance];
+    const ok=stanceClearsAt(nextX,stance);
+    ctx.strokeStyle = ok ? 'rgba(57,255,106,0.8)' : 'rgba(255,59,92,0.9)';
+    ctx.lineWidth=2; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.arc(nsx,nextY,9,0,7); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // worm body: head at current stance height, tail trailing back to ground level
   ctx.strokeStyle='#ff3b5c'; ctx.lineWidth=10; ctx.lineCap='round'; ctx.shadowColor='#ff3b5c'; ctx.shadowBlur=10;
   ctx.beginPath();
-  const midY = stance==='up' ? groundY-32 : stance==='down' ? groundY-6 : groundY-16;
-  ctx.moveTo(hx-segLen, groundY-16);
-  ctx.quadraticCurveTo(hx-segLen/2, midY, hx, groundY-16);
+  ctx.moveTo(hx-segLen, groundY-14);
+  ctx.quadraticCurveTo(hx-segLen/2, (headY+groundY-14)/2, hx, headY);
   ctx.stroke();
   ctx.shadowBlur=0;
 
   ctx.fillStyle='#fff';
-  ctx.beginPath(); ctx.arc(hx,groundY-16,7,0,7); ctx.fill();
+  ctx.beginPath(); ctx.arc(hx,headY,7,0,7); ctx.fill();
 }
 
-function loop(){ draw(); requestAnimationFrame(loop); }
+let last=performance.now();
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
 window.addEventListener('keydown',e=>{
-  if(e.key==='r'||e.key==='R'){ buildLevel(level); running=true; document.getElementById('msg').textContent='pick a stance with Q/W/E, then SPACE to advance'; }
+  if(e.key==='r'||e.key==='R'){ buildLevel(level); running=true; document.getElementById('msg').textContent='pick a stance with Q/W/E, then SPACE to advance — the collapse keeps closing in'; }
 });
 document.getElementById('startBtn').addEventListener('click',()=>{
   document.getElementById('overlay').style.display='none';

@@ -26,7 +26,7 @@
 <h1>SECOND HAND</h1>
 <div id="hud"><span>GEARS WOUND: <span id="score">0</span></span><span>LIVES: <span id="lives">3</span></span><span>BEST: <span id="best">0</span></span></div>
 <canvas id="c" width="440" height="440"></canvas>
-<div id="msg">← → orbit the face · SPACE winds a gear you're standing on · the red hand always sweeps clockwise — don't let it catch you</div>
+<div id="msg">← → orbit the face · HOLD SPACE still on a gear for a beat to wind it · the red hand always sweeps clockwise — don't let it catch you</div>
 <div id="overlay">
   <h2>SECOND HAND</h2>
   <p style="max-width:420px;">You are the minute hand of a dying clock. You can only move along the rim.<br>
@@ -43,7 +43,7 @@ document.getElementById('best').textContent=best;
 function makeGears(n){
   gears=[];
   for(let i=0;i<n;i++){
-    gears.push({angle: (i/n)*Math.PI*2 + Math.random()*0.3, wound:false});
+    gears.push({angle: (i/n)*Math.PI*2 + Math.random()*0.3, wound:false, progress:0});
   }
 }
 function reset(){
@@ -61,28 +61,35 @@ function angDist(a,b){ let d=Math.abs(norm(a)-norm(b))%(Math.PI*2); return Math.
 let keys={};
 window.addEventListener('keydown',e=>{
   keys[e.key]=true;
-  if(e.code==='Space'){
-    e.preventDefault();
-    if(!running) return;
-    gears.forEach(g=>{
-      if(!g.wound && angDist(g.angle, playerAngle) < 0.14){
-        g.wound=true; score++; updateHud();
-        if(gears.every(x=>x.wound)){
-          level++; secondSpeed += 0.12; makeGears(5+Math.min(level,5));
-          document.getElementById('msg').textContent='FACE CLEARED! Next face spinning up, level '+level;
-        }
-      }
-    });
-  }
+  if(e.code==='Space') e.preventDefault();
 });
 window.addEventListener('keyup',e=>keys[e.key]=false);
 
+const WIND_TIME = 0.7;
 function update(dt){
   if(!running) return;
   if(invuln>0) invuln-=dt;
   if(keys['ArrowLeft']) playerAngle -= 1.6*dt;
   if(keys['ArrowRight']) playerAngle += 1.6*dt;
   secondAngle += secondSpeed*dt;
+
+  const spaceHeld = !!keys[' '];
+  gears.forEach(g=>{
+    if(g.wound) return;
+    const near = angDist(g.angle, playerAngle) < 0.12;
+    if(spaceHeld && near){
+      g.progress += dt;
+      if(g.progress >= WIND_TIME){
+        g.wound=true; score++; updateHud();
+        if(gears.every(x=>x.wound)){
+          level++; secondSpeed += 0.12; makeGears(5+Math.min(level,5));
+          document.getElementById('msg').textContent='FACE CLEARED! Next face spinning up, level '+level;
+        }
+      }
+    } else {
+      g.progress = Math.max(0, g.progress - dt*1.5);
+    }
+  });
 
   if(invuln<=0 && angDist(playerAngle, secondAngle) < 0.1){
     lives--; invuln=1.4; updateHud();
@@ -112,10 +119,15 @@ function draw(){
 
   gears.forEach(g=>{
     const p=ptOn(g.angle,R);
+    const t = g.wound ? 1 : g.progress/WIND_TIME;
     ctx.fillStyle = g.wound ? '#ffe14d' : '#3a3450';
-    ctx.shadowColor = g.wound ? '#ffe14d' : 'transparent'; ctx.shadowBlur = g.wound ? 14 : 0;
+    ctx.shadowColor = t>0 ? '#ffe14d' : 'transparent'; ctx.shadowBlur = 4+t*14;
     ctx.beginPath(); ctx.arc(p.x,p.y,11,0,7); ctx.fill(); ctx.shadowBlur=0;
     ctx.strokeStyle='#04000a'; ctx.lineWidth=2; ctx.stroke();
+    if(!g.wound && t>0){
+      ctx.strokeStyle='#ffe14d'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.arc(p.x,p.y,15,-Math.PI/2,-Math.PI/2+t*Math.PI*2); ctx.stroke();
+    }
   });
 
   const sp=ptOn(secondAngle,R);
@@ -137,7 +149,7 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 window.addEventListener('keydown',e=>{
-  if(e.key==='r'||e.key==='R'){ reset(); running=true; document.getElementById('msg').textContent='← → orbit the face · SPACE winds a gear · dodge the red hand'; }
+  if(e.key==='r'||e.key==='R'){ reset(); running=true; document.getElementById('msg').textContent='← → orbit the face · HOLD SPACE still on a gear to wind it · dodge the red hand'; }
 });
 document.getElementById('startBtn').addEventListener('click',()=>{
   document.getElementById('overlay').style.display='none';
