@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OVERRUN</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#050308;color:#e9e2ff;font-family:'VT323',monospace;
+    display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:20px;}
+  h1{font-family:'Press Start 2P',cursive;color:#fff;font-size:1.2rem;
+    text-shadow:0 0 8px #00fff2,0 0 20px #ff2bd6;letter-spacing:2px;}
+  #hud{display:flex;gap:22px;font-size:1.2rem;color:#ffe14d;margin-bottom:8px;flex-wrap:wrap;justify-content:center;}
+  #hpouter{width:140px;height:14px;border:1px solid #ff3b5c;background:#1a0508;display:inline-block;vertical-align:middle;}
+  #hpinner{height:100%;background:#ff3b5c;}
+  #xpouter{width:140px;height:8px;border:1px solid #00fff2;background:#04121a;display:inline-block;vertical-align:middle;}
+  #xpinner{height:100%;background:#00fff2;}
+  canvas{background:#0a0714;border:2px solid #00fff2;box-shadow:0 0 24px rgba(0,255,242,.35);cursor:none;}
+  #msg{font-size:1.2rem;color:#ffe14d;margin-top:10px;text-align:center;max-width:600px;}
+  #overlay,#levelup{position:fixed;inset:0;background:rgba(5,3,8,.94);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:16px;text-align:center;z-index:5;padding:20px;}
+  #levelup{display:none;}
+  #overlay h2,#levelup h2{font-family:'Press Start 2P',cursive;color:#00fff2;font-size:1.1rem;}
+  button{font-family:'Press Start 2P',cursive;font-size:.7rem;background:#ffe14d;color:#04000a;
+    border:none;padding:14px 20px;cursor:pointer;box-shadow:3px 3px 0 rgba(0,0,0,.5);}
+  .upgrade-btn{background:#0a0714;color:#00fff2;border:2px solid #00fff2;padding:16px 20px;width:280px;text-align:left;font-family:'VT323',monospace;font-size:1.1rem;}
+  .upgrade-btn:hover{background:#00fff2;color:#04000a;}
+  a.back{color:#00fff2;font-size:1.1rem;text-decoration:none;margin-top:6px;}
+</style>
+</head>
+<body>
+<h1>OVERRUN</h1>
+<div id="hud">
+  <span>LV <span id="s-level">1</span> <span id="xpouter"><span id="xpinner" style="display:block;width:0%"></span></span></span>
+  <span>HP <span id="hpouter"><span id="hpinner" style="display:block;width:100%"></span></span></span>
+  <span>TIME <span id="s-time">0</span>s</span>
+  <span>KILLS <span id="s-kills">0</span></span>
+  <span>BEST <span id="s-best">0</span>s</span>
+</div>
+<canvas id="c" width="640" height="420"></canvas>
+<div id="msg">WASD move · you auto-fire at the nearest enemy · survive, level up, get stronger, don't stop moving</div>
+<div id="overlay">
+  <h2>OVERRUN</h2>
+  <p style="max-width:440px;">They keep coming from every side, more each second.<br>
+  You never aim, never reload — just move, survive, and pick an upgrade every time you level up. How long can you hold the line?</p>
+  <button id="startBtn">HOLD THE LINE ▶</button>
+  <a class="back" href="index.html">← back to arcade</a>
+</div>
+<div id="levelup">
+  <h2>LEVEL UP</h2>
+  <div id="upgrade-list" style="display:flex;flex-direction:column;gap:12px;"></div>
+</div>
+<script>
+const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+const W=canvas.width,H=canvas.height;
+let player, bullets, enemies, xpOrbs, kills, elapsed, best=+(localStorage.getItem('overrun_best')||0), running=false, paused=false, spawnTimer=0, fireTimer=0, keys={};
+document.getElementById('s-best').textContent=best;
+
+const UPGRADES=[
+  {label:'+ Damage', desc:'Bullets hit harder. DMG +2.', apply:p=>p.dmg+=2},
+  {label:'+ Fire Rate', desc:'Shoot faster. Cooldown -15%.', apply:p=>p.fireCd*=0.85},
+  {label:'+ Max HP', desc:'Tougher, and fully healed. Max HP +20.', apply:p=>{p.maxHp+=20; p.hp=p.maxHp;}},
+  {label:'+ Move Speed', desc:'Outrun the swarm. Speed +12%.', apply:p=>p.speed*=1.12},
+  {label:'+ Extra Shot', desc:'Fire one more projectile per volley.', apply:p=>p.shots+=1},
+  {label:'+ Pickup Radius', desc:'Vacuum up XP orbs from further away.', apply:p=>p.pickupR+=25},
+];
+
+function newPlayer(){
+  return {x:W/2,y:H/2,r:9,hp:60,maxHp:60,speed:150,dmg:5,fireCd:0.45,shots:1,pickupR:50,level:1,xp:0,xpNext:10};
+}
+
+function reset(){
+  player=newPlayer(); bullets=[]; enemies=[]; xpOrbs=[]; kills=0; elapsed=0; spawnTimer=0; fireTimer=0;
+  updateHud();
+}
+function updateHud(){
+  document.getElementById('s-level').textContent=player.level;
+  document.getElementById('s-kills').textContent=kills;
+  document.getElementById('s-time').textContent=Math.floor(elapsed);
+  document.getElementById('hpinner').style.width=Math.max(0,player.hp/player.maxHp*100)+'%';
+  document.getElementById('xpinner').style.width=Math.max(0,player.xp/player.xpNext*100)+'%';
+}
+
+window.addEventListener('keydown',e=>keys[e.key.toLowerCase()]=true);
+window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+
+function spawnEnemy(){
+  const side=Math.floor(Math.random()*4);
+  let x,y;
+  if(side===0){ x=-20; y=Math.random()*H; }
+  else if(side===1){ x=W+20; y=Math.random()*H; }
+  else if(side===2){ x=Math.random()*W; y=-20; }
+  else { x=Math.random()*W; y=H+20; }
+  const t=elapsed/30;
+  enemies.push({x,y,r:9,hp:8+t*4,maxHp:8+t*4,speed:45+Math.min(t*6,60),dmg:6+Math.min(t*1.5,14),hitCd:0});
+}
+
+function nearestEnemy(){
+  let best=null,bestD=Infinity;
+  enemies.forEach(e=>{ const d=Math.hypot(e.x-player.x,e.y-player.y); if(d<bestD){bestD=d;best=e;} });
+  return best;
+}
+
+function fire(){
+  const target=nearestEnemy();
+  if(!target) return;
+  const baseA=Math.atan2(target.y-player.y, target.x-player.x);
+  const spread=0.18;
+  for(let i=0;i<player.shots;i++){
+    const off=(i-(player.shots-1)/2)*spread;
+    const a=baseA+off;
+    bullets.push({x:player.x,y:player.y,vx:Math.cos(a)*380,vy:Math.sin(a)*380,dmg:player.dmg});
+  }
+}
+
+function gainXp(amount){
+  player.xp+=amount;
+  if(player.xp>=player.xpNext){
+    player.xp-=player.xpNext;
+    player.level++;
+    player.xpNext=Math.round(player.xpNext*1.25+4);
+    openLevelUp();
+  }
+  updateHud();
+}
+
+function openLevelUp(){
+  paused=true;
+  const el=document.getElementById('upgrade-list');
+  el.innerHTML='';
+  const pool=[...UPGRADES].sort(()=>Math.random()-0.5).slice(0,3);
+  pool.forEach(u=>{
+    const b=document.createElement('button');
+    b.className='upgrade-btn';
+    b.innerHTML='<b>'+u.label+'</b><br>'+u.desc;
+    b.addEventListener('click',()=>{
+      u.apply(player);
+      document.getElementById('levelup').style.display='none';
+      paused=false;
+      updateHud();
+    });
+    el.appendChild(b);
+  });
+  document.getElementById('levelup').style.display='flex';
+}
+
+function update(dt){
+  if(!running || paused) return;
+  elapsed+=dt;
+
+  let dx=0,dy=0;
+  if(keys['w']) dy-=1; if(keys['s']) dy+=1; if(keys['a']) dx-=1; if(keys['d']) dx+=1;
+  const mag=Math.hypot(dx,dy)||1;
+  player.x=Math.max(player.r,Math.min(W-player.r,player.x+dx/mag*player.speed*dt));
+  player.y=Math.max(player.r,Math.min(H-player.r,player.y+dy/mag*player.speed*dt));
+
+  spawnTimer+=dt;
+  const spawnInterval=Math.max(0.25, 1.3-elapsed*0.012);
+  if(spawnTimer>spawnInterval){ spawnTimer=0; spawnEnemy(); }
+
+  fireTimer+=dt;
+  if(fireTimer>=player.fireCd){ fireTimer=0; fire(); }
+
+  bullets.forEach(b=>{ b.x+=b.vx*dt; b.y+=b.vy*dt; });
+  bullets=bullets.filter(b=>b.x>-20&&b.x<W+20&&b.y>-20&&b.y<H+20);
+
+  enemies.forEach(en=>{
+    const a=Math.atan2(player.y-en.y, player.x-en.x);
+    en.x+=Math.cos(a)*en.speed*dt;
+    en.y+=Math.sin(a)*en.speed*dt;
+    if(en.hitCd>0) en.hitCd-=dt;
+  });
+
+  for(let i=enemies.length-1;i>=0;i--){
+    for(let j=bullets.length-1;j>=0;j--){
+      if(Math.hypot(enemies[i].x-bullets[j].x, enemies[i].y-bullets[j].y) < enemies[i].r+3){
+        enemies[i].hp-=bullets[j].dmg;
+        bullets.splice(j,1);
+      }
+    }
+  }
+  enemies=enemies.filter(en=>{
+    if(en.hp<=0){
+      kills++;
+      xpOrbs.push({x:en.x,y:en.y,val:3+Math.random()*3});
+      return false;
+    }
+    return true;
+  });
+
+  enemies.forEach(en=>{
+    if(en.hitCd<=0 && Math.hypot(en.x-player.x,en.y-player.y) < en.r+player.r){
+      player.hp-=en.dmg;
+      en.hitCd=0.6;
+    }
+  });
+
+  xpOrbs.forEach(o=>{
+    const d=Math.hypot(o.x-player.x,o.y-player.y);
+    if(d<player.pickupR){
+      const a=Math.atan2(player.y-o.y,player.x-o.x);
+      o.x+=Math.cos(a)*260*dt; o.y+=Math.sin(a)*260*dt;
+    }
+  });
+  xpOrbs=xpOrbs.filter(o=>{
+    if(Math.hypot(o.x-player.x,o.y-player.y)<player.r+4){ gainXp(o.val); return false; }
+    return true;
+  });
+
+  updateHud();
+  if(player.hp<=0){
+    running=false;
+    if(Math.floor(elapsed)>best){ best=Math.floor(elapsed); localStorage.setItem('overrun_best',best); document.getElementById('s-best').textContent=best; }
+    document.getElementById('msg').textContent='OVERRUN at '+Math.floor(elapsed)+'s, level '+player.level+', '+kills+' kills. Press R to hold the line again.';
+  }
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0a0714'; ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle='#ffe14d';
+  xpOrbs.forEach(o=>{ ctx.beginPath(); ctx.arc(o.x,o.y,3,0,7); ctx.fill(); });
+
+  ctx.fillStyle='#00fff2'; ctx.shadowColor='#00fff2'; ctx.shadowBlur=6;
+  bullets.forEach(b=>{ ctx.beginPath(); ctx.arc(b.x,b.y,3,0,7); ctx.fill(); });
+  ctx.shadowBlur=0;
+
+  enemies.forEach(en=>{
+    ctx.fillStyle='#ff2bd6'; ctx.shadowColor='#ff2bd6'; ctx.shadowBlur=8;
+    ctx.beginPath();
+    ctx.moveTo(en.x, en.y-en.r); ctx.lineTo(en.x+en.r,en.y+en.r*0.8); ctx.lineTo(en.x-en.r,en.y+en.r*0.8); ctx.closePath();
+    ctx.fill(); ctx.shadowBlur=0;
+    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(en.x-10,en.y-en.r-8,20,3);
+    ctx.fillStyle='#ff3b5c'; ctx.fillRect(en.x-10,en.y-en.r-8,20*Math.max(0,en.hp/en.maxHp),3);
+  });
+
+  if(running){
+    ctx.fillStyle='#fff'; ctx.shadowColor='#fff'; ctx.shadowBlur=14;
+    ctx.beginPath(); ctx.arc(player.x,player.y,player.r,0,7); ctx.fill(); ctx.shadowBlur=0;
+  }
+}
+
+let last=performance.now();
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
+window.addEventListener('keydown',e=>{
+  if(e.key==='r'||e.key==='R'){ reset(); running=true; paused=false; document.getElementById('levelup').style.display='none'; document.getElementById('msg').textContent='WASD move · auto-fire at the nearest enemy · survive and level up'; }
+});
+document.getElementById('startBtn').addEventListener('click',()=>{
+  document.getElementById('overlay').style.display='none';
+  reset(); running=true;
+});
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

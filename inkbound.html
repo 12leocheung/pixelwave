@@ -103,14 +103,14 @@ const LOCATIONS = {
   },
 };
 
-let player, location, enemy, inCombat, gameWon;
+let player, place, enemy, inCombat, gameWon;
 
 function newPlayer(){
   return {hp:16, maxHp:16, atk:3, def:0, level:1, xp:0, xpNext:15, gold:8, potions:1, swordLv:0, armorLv:0};
 }
 
 function reset(){
-  player=newPlayer(); location='village'; enemy=null; inCombat=false; gameWon=false;
+  player=newPlayer(); place='village'; enemy=null; inCombat=false; gameWon=false;
   document.getElementById('log').innerHTML='';
   logLine('You wake up in Ashdown with an empty pack and a long road ahead.', 'flavor');
   renderLocation();
@@ -149,9 +149,9 @@ function setActions(list){
 }
 
 function renderLocation(){
-  const loc=LOCATIONS[location];
+  const loc=LOCATIONS[place];
   document.getElementById('location-title').textContent=loc.title;
-  if(location==='village') renderVillage();
+  if(place==='village') renderVillage();
   else renderWild();
 }
 
@@ -189,7 +189,7 @@ function buyArmor(){
 }
 
 function travel(loc){
-  location=loc;
+  place=loc;
   const l=LOCATIONS[loc];
   logLine('— '+l.title+' —', 'flavor');
   logLine(l.flavor, 'flavor');
@@ -205,7 +205,7 @@ function renderWild(){
 }
 
 function explore(){
-  const loc=LOCATIONS[location];
+  const loc=LOCATIONS[place];
   if(Math.random() < loc.encounterChance){
     startEncounter(loc);
   } else {
@@ -214,7 +214,7 @@ function explore(){
 }
 
 function searchLoot(){
-  const loc=LOCATIONS[location];
+  const loc=LOCATIONS[place];
   if(Math.random() < loc.encounterChance*0.5){
     startEncounter(loc);
     return;
@@ -312,7 +312,7 @@ function loseCombat(){
   player.gold-=lostGold;
   player.hp=Math.max(1, Math.round(player.maxHp*0.3));
   inCombat=false; enemy=null;
-  location='village';
+  place='village';
   logLine('You wake up back in Ashdown, '+lostGold+' gold lighter, barely alive.', 'bad');
   updateStats();
   renderLocation();
