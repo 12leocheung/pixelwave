@@ -288,6 +288,31 @@
     color:var(--dim);
   }
 
+  /* ---------- demo ---------- */
+  .demo-wrap{
+    max-width:640px; margin:26px auto 0; text-align:center;
+    background:var(--card);
+    border:2px solid var(--cyan);
+    box-shadow:0 0 30px rgba(0,255,242,0.2), inset 0 0 30px rgba(0,255,242,0.05);
+    padding:40px 30px;
+  }
+  .demo-wrap h2{color:#fff; font-size:1.15rem; margin-top:0;}
+  .demo-wrap p{color:var(--dim); font-size:1.2rem; line-height:1.5;}
+  .demo-btn{
+    display:inline-block;
+    margin-top:20px;
+    font-family:'Press Start 2P', cursive;
+    font-size:.75rem;
+    background:var(--cyan);
+    color:#04000a;
+    padding:16px 26px;
+    text-decoration:none;
+    box-shadow:5px 5px 0 rgba(0,0,0,0.5);
+    transition:transform .12s ease;
+    letter-spacing:1px;
+  }
+  .demo-btn:hover{transform:translateY(-3px);}
+
   footer{
     position:relative; z-index:2;
     text-align:center;
@@ -410,6 +435,13 @@
       -->
       <a class="donate-btn" href="https://ko-fi.com/leocheung314159" target="_blank" rel="noopener">☕ DONATE VIA KO-FI</a>
       <div class="donate-note">Opens Ko-fi in a new tab. Card, PayPal and Apple/Google Pay all supported.</div>
+    </div>
+
+    <div class="demo-wrap">
+      <h2>🎮 WHAT YOUR MONEY BUILDS</h2>
+      <p>This isn't hypothetical — it's already in progress. <b>Conway's Dungeon</b> is a full Unity project currently in development, and funding buys it more time to get finished.</p>
+      <a class="demo-btn" href="conways-dungeon/index.html">▶ PLAY THE WORK-IN-PROGRESS DEMO</a>
+      <div class="donate-note">A real Unity WebGL build — give it a minute to load, it's a big one.</div>
     </div>
   </section>
 
