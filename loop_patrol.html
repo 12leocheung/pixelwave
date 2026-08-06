@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LOOP PATROL</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#020608;color:#d4fff0;font-family:'VT323',monospace;
+    display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:20px;}
+  h1{font-family:'Press Start 2P',cursive;color:#fff;font-size:1.2rem;
+    text-shadow:0 0 8px #00fff2,0 0 20px #00fff2;letter-spacing:2px;}
+  #hud{display:flex;gap:30px;font-size:1.3rem;color:#ffe14d;margin-bottom:10px;}
+  canvas{background:#010a0a;border:2px solid #00fff2;box-shadow:0 0 24px rgba(0,255,242,.4);}
+  #msg{font-size:1.2rem;color:#ffe14d;margin-top:10px;text-align:center;max-width:600px;}
+  #overlay{position:fixed;inset:0;background:rgba(2,6,8,.94);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:16px;text-align:center;z-index:5;}
+  #overlay h2{font-family:'Press Start 2P',cursive;color:#00fff2;font-size:1.1rem;}
+  button{font-family:'Press Start 2P',cursive;font-size:.7rem;background:#ffe14d;color:#04000a;
+    border:none;padding:14px 20px;cursor:pointer;box-shadow:3px 3px 0 rgba(0,0,0,.5);}
+  a.back{color:#00fff2;font-size:1.1rem;text-decoration:none;margin-top:6px;}
+</style>
+</head>
+<body>
+<h1>LOOP PATROL</h1>
+<div id="hud"><span>NIGHT: <span id="night">1</span></span><span>CAUGHT: <span id="caught">0</span></span><span>ESCAPED: <span id="escaped">0</span></span></div>
+<canvas id="c" width="560" height="560"></canvas>
+<div id="msg">arrow keys move your guard along the corridor loop · catch every intruder dot before it slips out the vault door</div>
+<div id="overlay">
+  <h2>LOOP PATROL</h2>
+  <p style="max-width:420px;">You only ever walk one corridor, round and round.<br>
+  Intruders slip in from the shadows and crawl toward the vault door. Catch them before they get there. Miss 3 in a night and you're fired.</p>
+  <button id="startBtn">START SHIFT ▶</button>
+  <a class="back" href="index.html">← back to arcade</a>
+</div>
+<script>
+const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+const W=canvas.width,H=canvas.height;
+
+// build a square loop path of points (corridor)
+const margin=70, size=W-margin*2;
+const pathPoints=[];
+const steps=24;
+for(let i=0;i<steps;i++) pathPoints.push({x:margin+size*(i/steps), y:margin});
+for(let i=0;i<steps;i++) pathPoints.push({x:margin+size, y:margin+size*(i/steps)});
+for(let i=0;i<steps;i++) pathPoints.push({x:margin+size-size*(i/steps), y:margin+size});
+for(let i=0;i<steps;i++) pathPoints.push({x:margin, y:margin+size-size*(i/steps)});
+const N=pathPoints.length;
+const vaultIndex = Math.floor(N*0.5); // vault door position along loop
+
+let guardIdx=0, night=1, caught=0, escaped=0, running=false;
+let intruders=[]; // {idx, progress speed, alive}
+let spawnTimer=0, spawnInterval=3.2;
+
+function reset(){
+  night=1; caught=0; escaped=0; guardIdx=0; intruders=[]; spawnTimer=0; spawnInterval=3.2;
+  document.getElementById('night').textContent=night;
+  document.getElementById('caught').textContent=caught;
+  document.getElementById('escaped').textContent=escaped;
+}
+
+function spawnIntruder(){
+  const startIdx = (vaultIndex + Math.floor(N/2) + (Math.random()<0.5?-6:6) + Math.floor((Math.random()-0.5)*10) + N) % N;
+  intruders.push({idx:startIdx, dir: Math.random()<0.5?1:-1, speed:0.55+night*0.05, cool:0});
+}
+
+function keysHeld(){}
+let keys={};
+window.addEventListener('keydown',e=>keys[e.key]=true);
+window.addEventListener('keyup',e=>keys[e.key]=false);
+
+function nearestDirTo(fromIdx,toIdx){
+  let fwd=(toIdx-fromIdx+N)%N;
+  let bwd=(fromIdx-toIdx+N)%N;
+  return fwd<=bwd ? 1 : -1;
+}
+
+function update(dt){
+  if(!running) return;
+  spawnTimer+=dt;
+  if(spawnTimer>spawnInterval){ spawnTimer=0; spawnIntruder(); if(spawnInterval>1.4) spawnInterval-=0.06; }
+
+  let move=0;
+  if(keys['ArrowUp']||keys['ArrowRight']) move=1;
+  if(keys['ArrowDown']||keys['ArrowLeft']) move=-1;
+  if(move!==0){
+    guardIdx = (guardIdx + move*0.9 + N) % N;
+  }
+
+  intruders.forEach(it=>{
+    it.idx = (it.idx + it.dir*it.speed*dt*8 + N) % N;
+  });
+
+  // check catch
+  intruders = intruders.filter(it=>{
+    const d = Math.min(Math.abs(it.idx-guardIdx), N-Math.abs(it.idx-guardIdx));
+    if(d<3.5){ caught++; document.getElementById('caught').textContent=caught; return false; }
+    const dv = Math.min(Math.abs(it.idx-vaultIndex), N-Math.abs(it.idx-vaultIndex));
+    if(dv<1.2){ escaped++; document.getElementById('escaped').textContent=escaped;
+      if(escaped>=3){ running=false; document.getElementById('msg').textContent="VAULT BREACHED. You're fired. Press R to try again."; }
+      return false;
+    }
+    return true;
+  });
+
+  if(caught>0 && caught % 8===0 && caught/8 >= night){
+    night++;
+    document.getElementById('night').textContent=night;
+  }
+}
+
+function ptAt(idx){
+  const i0=Math.floor(idx)%N, i1=(i0+1)%N, f=idx-Math.floor(idx);
+  const a=pathPoints[i0], b=pathPoints[i1];
+  return {x:a.x+(b.x-a.x)*f, y:a.y+(b.y-a.y)*f};
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#010a0a'; ctx.fillRect(0,0,W,H);
+
+  ctx.strokeStyle='rgba(0,255,242,0.35)'; ctx.lineWidth=14; ctx.lineJoin='round';
+  ctx.beginPath();
+  pathPoints.forEach((p,i)=> i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+  ctx.closePath(); ctx.stroke();
+
+  // vault door
+  const vp=ptAt(vaultIndex);
+  ctx.fillStyle='#ffe14d'; ctx.shadowColor='#ffe14d'; ctx.shadowBlur=16;
+  ctx.beginPath(); ctx.arc(vp.x,vp.y,12,0,7); ctx.fill(); ctx.shadowBlur=0;
+  ctx.fillStyle='#04000a'; ctx.font='10px monospace'; ctx.fillText('VAULT', vp.x-16, vp.y-18);
+
+  // intruders
+  intruders.forEach(it=>{
+    const p=ptAt(it.idx);
+    ctx.fillStyle='#ff2b2b'; ctx.shadowColor='#ff2b2b'; ctx.shadowBlur=10;
+    ctx.beginPath(); ctx.arc(p.x,p.y,7,0,7); ctx.fill(); ctx.shadowBlur=0;
+  });
+
+  // guard
+  const gp=ptAt(guardIdx);
+  ctx.fillStyle='#00fff2'; ctx.shadowColor='#00fff2'; ctx.shadowBlur=16;
+  ctx.beginPath(); ctx.arc(gp.x,gp.y,10,0,7); ctx.fill(); ctx.shadowBlur=0;
+}
+
+let last=performance.now();
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
+
+window.addEventListener('keydown',e=>{
+  if(e.key==='r'||e.key==='R'){
+    reset(); running=true;
+    document.getElementById('msg').textContent='arrow keys move your guard along the loop · catch every intruder';
+  }
+});
+document.getElementById('startBtn').addEventListener('click',()=>{
+  document.getElementById('overlay').style.display='none';
+  reset(); running=true;
+});
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

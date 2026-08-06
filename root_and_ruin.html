@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROOT &amp; RUIN</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#03120a;color:#daffe9;font-family:'VT323',monospace;
+    display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:20px;}
+  h1{font-family:'Press Start 2P',cursive;color:#fff;font-size:1.2rem;
+    text-shadow:0 0 8px #39ff6a,0 0 20px #39ff6a;letter-spacing:2px;}
+  #hud{display:flex;gap:24px;font-size:1.25rem;color:#ffe14d;margin-bottom:10px;flex-wrap:wrap;justify-content:center;}
+  canvas{background:#06180f;border:2px solid #39ff6a;box-shadow:0 0 24px rgba(57,255,106,.35);}
+  #msg{font-size:1.2rem;color:#ffe14d;margin-top:10px;text-align:center;max-width:600px;}
+  #overlay{position:fixed;inset:0;background:rgba(3,18,10,.94);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:16px;text-align:center;z-index:5;}
+  #overlay h2{font-family:'Press Start 2P',cursive;color:#39ff6a;font-size:1.1rem;}
+  button{font-family:'Press Start 2P',cursive;font-size:.7rem;background:#ffe14d;color:#04000a;
+    border:none;padding:14px 20px;cursor:pointer;box-shadow:3px 3px 0 rgba(0,0,0,.5);}
+  a.back{color:#00fff2;font-size:1.1rem;text-decoration:none;margin-top:6px;}
+</style>
+</head>
+<body>
+<h1>ROOT &amp; RUIN</h1>
+<div id="hud"><span>SAP: <span id="sap">50</span></span><span>CORE HP: <span id="hp">100</span></span><span>WAVE: <span id="wave">1</span></span></div>
+<canvas id="c" width="620" height="380"></canvas>
+<div id="msg">click a lane to grow a root node (costs sap) — roots strike bugs crawling toward the seed core on the left</div>
+<div id="overlay">
+  <h2>ROOT &amp; RUIN</h2>
+  <p style="max-width:440px;">Bugs crawl in from the right, hungry for your seed core.<br>
+  Spend sap to grow root nodes along the lanes. Sap regenerates slowly — plant wisely.</p>
+  <button id="startBtn">GROW ▶</button>
+  <a class="back" href="index.html">← back to arcade</a>
+</div>
+<script>
+const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+const W=canvas.width,H=canvas.height;
+const LANES=5, laneH=H/LANES, coreX=40;
+let sap=50, hp=100, wave=1, running=false, bugs=[], roots=[], waveTimer=0, waveBugsLeft=0, spawnTimer=0;
+
+function reset(){
+  sap=50; hp=100; wave=1; bugs=[]; roots=[]; waveTimer=0; spawnTimer=0;
+  startWave();
+  updateHud();
+}
+function updateHud(){
+  document.getElementById('sap').textContent=Math.floor(sap);
+  document.getElementById('hp').textContent=Math.max(0,Math.floor(hp));
+  document.getElementById('wave').textContent=wave;
+}
+function startWave(){
+  waveBugsLeft = 5 + wave*2;
+}
+
+canvas.addEventListener('click',e=>{
+  if(!running) return;
+  const rect=canvas.getBoundingClientRect();
+  const x=(e.clientX-rect.left)*(W/rect.width), y=(e.clientY-rect.top)*(H/rect.height);
+  const lane=Math.floor(y/laneH);
+  if(lane<0||lane>=LANES) return;
+  if(x < coreX+30) return;
+  const cost=15;
+  if(sap<cost) return;
+  const colBase=coreX+70;
+  const colW=60;
+  const col=Math.floor((x-colBase)/colW);
+  if(col<0||col>7) return;
+  const cx=colBase+col*colW+colW/2, cy=lane*laneH+laneH/2;
+  if(roots.some(r=>r.lane===lane && Math.abs(r.x-cx)<20)) return;
+  sap-=cost;
+  roots.push({lane, x:cx, y:cy, range:75, cooldown:0, fireRate:0.5});
+});
+
+function spawnBug(){
+  const lane=Math.floor(Math.random()*LANES);
+  bugs.push({lane, x:W+10, y:lane*laneH+laneH/2, hp:8+wave*2, speed:22+wave*2});
+}
+
+function update(dt){
+  if(!running) return;
+  spawnTimer+=dt;
+  if(waveBugsLeft>0 && spawnTimer>0.9){ spawnTimer=0; spawnBug(); waveBugsLeft--; }
+
+  sap = Math.min(150, sap + dt*3.5);
+
+  roots.forEach(r=>{
+    r.cooldown-=dt;
+    if(r.cooldown<=0){
+      const target = bugs.filter(b=>b.lane===r.lane && Math.abs(b.x-r.x)<r.range).sort((a,b)=>a.x-b.x)[0];
+      if(target){ target.hp-=5; r.cooldown=r.fireRate; r.flash=0.12; }
+    }
+    if(r.flash>0) r.flash-=dt;
+  });
+
+  bugs.forEach(b=>{ b.x -= b.speed*dt; });
+  bugs = bugs.filter(b=>{
+    if(b.hp<=0){ sap+=2; return false; }
+    if(b.x<=coreX){ hp-=10; return false; }
+    return true;
+  });
+
+  if(hp<=0){
+    running=false;
+    document.getElementById('msg').textContent='THE CORE IS LOST. Press R to regrow.';
+  } else if(waveBugsLeft<=0 && bugs.length===0){
+    wave++; startWave();
+    document.getElementById('msg').textContent='Wave cleared! Wave '+wave+' incoming...';
+  }
+  updateHud();
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#06180f'; ctx.fillRect(0,0,W,H);
+  for(let i=1;i<LANES;i++){
+    ctx.strokeStyle='rgba(57,255,106,0.15)';
+    ctx.beginPath(); ctx.moveTo(0,i*laneH); ctx.lineTo(W,i*laneH); ctx.stroke();
+  }
+  // core
+  ctx.fillStyle='#ffe14d'; ctx.shadowColor='#ffe14d'; ctx.shadowBlur=16;
+  ctx.beginPath(); ctx.arc(coreX,H/2,20,0,7); ctx.fill(); ctx.shadowBlur=0;
+  ctx.fillStyle='#04000a'; ctx.font='10px monospace'; ctx.textAlign='center';
+  ctx.fillText('SEED', coreX, H/2+4);
+  ctx.textAlign='left';
+
+  roots.forEach(r=>{
+    ctx.fillStyle= r.flash>0 ? '#fff' : '#39ff6a';
+    ctx.shadowColor='#39ff6a'; ctx.shadowBlur=10;
+    ctx.beginPath(); ctx.arc(r.x,r.y,12,0,7); ctx.fill(); ctx.shadowBlur=0;
+    ctx.strokeStyle='rgba(57,255,106,0.15)';
+    ctx.beginPath(); ctx.arc(r.x,r.y,r.range,0,7); ctx.stroke();
+  });
+
+  bugs.forEach(b=>{
+    ctx.fillStyle='#ff3b5c'; ctx.shadowColor='#ff3b5c'; ctx.shadowBlur=8;
+    ctx.beginPath(); ctx.arc(b.x,b.y,9,0,7); ctx.fill(); ctx.shadowBlur=0;
+  });
+}
+
+let last=performance.now();
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
+window.addEventListener('keydown',e=>{
+  if(e.key==='r'||e.key==='R'){ reset(); running=true; document.getElementById('msg').textContent='click a lane to grow a root node — defend the seed core'; }
+});
+document.getElementById('startBtn').addEventListener('click',()=>{
+  document.getElementById('overlay').style.display='none';
+  reset(); running=true;
+});
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

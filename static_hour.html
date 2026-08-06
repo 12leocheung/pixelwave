@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STATIC HOUR</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#0a0006;color:#ffd7ec;font-family:'VT323',monospace;
+    display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:20px;}
+  h1{font-family:'Press Start 2P',cursive;color:#fff;font-size:1.2rem;
+    text-shadow:0 0 8px #ff2bd6,0 0 20px #ff2bd6;letter-spacing:2px;}
+  #hud{display:flex;gap:30px;font-size:1.3rem;color:#00fff2;margin-bottom:10px;}
+  canvas{background:#0d0210;border:2px solid #ff2bd6;box-shadow:0 0 24px rgba(255,43,214,.4);}
+  #msg{font-size:1.2rem;color:#ffe14d;margin-top:10px;text-align:center;max-width:600px;}
+  #overlay{position:fixed;inset:0;background:rgba(10,0,6,.94);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:16px;text-align:center;z-index:5;}
+  #overlay h2{font-family:'Press Start 2P',cursive;color:#ff2bd6;font-size:1.1rem;}
+  button{font-family:'Press Start 2P',cursive;font-size:.7rem;background:#ffe14d;color:#04000a;
+    border:none;padding:14px 20px;cursor:pointer;box-shadow:3px 3px 0 rgba(0,0,0,.5);}
+  a.back{color:#00fff2;font-size:1.1rem;text-decoration:none;margin-top:6px;}
+</style>
+</head>
+<body>
+<h1>STATIC HOUR</h1>
+<div id="hud"><span>SURVIVED: <span id="time">0</span>s</span><span>BEST: <span id="best">0</span>s</span></div>
+<canvas id="c" width="600" height="300"></canvas>
+<div id="msg">the needle sweeps the dial — press SPACE only while it's in the green to tune out the static</div>
+<div id="overlay">
+  <h2>STATIC HOUR</h2>
+  <p style="max-width:420px;">You're alone on the night shift, keeping a dying radio signal alive.<br>
+  Tune the dial in rhythm. Let the static win, and something in the noise starts listening back.</p>
+  <button id="startBtn">GO ON AIR ▶</button>
+  <a class="back" href="index.html">← back to arcade</a>
+</div>
+<script>
+const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+const W=canvas.width,H=canvas.height;
+let running=false, t0=0, elapsed=0, best=+(localStorage.getItem('statichour_best')||0);
+let staticLevel=0, needleAngle=0, needleSpeed=2.2, zoneCenter=0, zoneWidth=0.55, difficultyT=0;
+document.getElementById('best').textContent=best.toFixed(1);
+
+function newZone(){
+  zoneCenter = Math.random()*Math.PI*2;
+  zoneWidth = Math.max(0.28, 0.55 - difficultyT*0.05);
+}
+function reset(){
+  elapsed=0; staticLevel=10; needleAngle=0; difficultyT=0; needleSpeed=2.2;
+  newZone();
+  t0=performance.now();
+}
+
+function angDist(a,b){
+  let d=Math.abs(a-b)%(Math.PI*2);
+  return d>Math.PI ? Math.PI*2-d : d;
+}
+
+function tune(){
+  if(!running) return;
+  if(angDist(needleAngle,zoneCenter) < zoneWidth/2){
+    staticLevel = Math.max(0, staticLevel-22);
+    newZone();
+    needleSpeed += 0.06;
+  } else {
+    staticLevel = Math.min(100, staticLevel+14);
+  }
+}
+
+function update(dt){
+  if(!running) return;
+  elapsed += dt;
+  difficultyT += dt;
+  needleAngle += needleSpeed*dt;
+  staticLevel = Math.min(100, staticLevel + dt*3.2);
+  document.getElementById('time').textContent = elapsed.toFixed(1);
+  if(staticLevel>=100){
+    running=false;
+    if(elapsed>best){ best=elapsed; localStorage.setItem('statichour_best',best.toFixed(1)); document.getElementById('best').textContent=best.toFixed(1); }
+    document.getElementById('msg').textContent='THE STATIC TOOK THE SIGNAL. Press SPACE to try again.';
+  }
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0d0210'; ctx.fillRect(0,0,W,H);
+
+  // static noise overlay intensity
+  const noiseAlpha = staticLevel/100*0.5;
+  if(noiseAlpha>0.02){
+    for(let i=0;i<staticLevel*4;i++){
+      ctx.fillStyle = Math.random()>0.5 ? 'rgba(255,255,255,'+ (Math.random()*noiseAlpha) +')' : 'rgba(255,43,214,'+(Math.random()*noiseAlpha)+')';
+      ctx.fillRect(Math.random()*W, Math.random()*H, 2, 2);
+    }
+  }
+
+  // dial
+  const cx=W/2, cy=H/2+30, r=110;
+  ctx.strokeStyle='rgba(0,255,242,0.5)'; ctx.lineWidth=6;
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
+
+  // green zone
+  ctx.strokeStyle='#39ff6a'; ctx.lineWidth=10; ctx.shadowColor='#39ff6a'; ctx.shadowBlur=14;
+  ctx.beginPath(); ctx.arc(cx,cy,r, zoneCenter-zoneWidth/2, zoneCenter+zoneWidth/2); ctx.stroke();
+  ctx.shadowBlur=0;
+
+  // needle
+  ctx.strokeStyle='#ffe14d'; ctx.lineWidth=4; ctx.shadowColor='#ffe14d'; ctx.shadowBlur=10;
+  ctx.beginPath(); ctx.moveTo(cx,cy);
+  ctx.lineTo(cx+Math.cos(needleAngle)*r, cy+Math.sin(needleAngle)*r);
+  ctx.stroke(); ctx.shadowBlur=0;
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(cx,cy,6,0,7); ctx.fill();
+
+  // static meter
+  ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.fillRect(20,H-30,W-40,14);
+  ctx.fillStyle = staticLevel>75 ? '#ff2b2b' : '#ff2bd6';
+  ctx.fillRect(20,H-30,(W-40)*(staticLevel/100),14);
+  ctx.strokeStyle='#fff'; ctx.strokeRect(20,H-30,W-40,14);
+}
+
+let last=performance.now();
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
+
+window.addEventListener('keydown',e=>{
+  if(e.code==='Space'){
+    e.preventDefault();
+    if(!running){
+      document.getElementById('overlay').style.display='none';
+      reset(); running=true;
+      document.getElementById('msg').textContent="the needle sweeps the dial — press SPACE only while it's in the green";
+    } else {
+      tune();
+    }
+  }
+});
+document.getElementById('startBtn').addEventListener('click',()=>{
+  document.getElementById('overlay').style.display='none';
+  reset(); running=true;
+});
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
