@@ -180,7 +180,7 @@ The site is publicly viewable and playable, but the source code is **not license
 
 ## 👤 About the Developer
 
-Built entirely by **Leo** — a multi-disciplinary engineer with ~9 years of experience at the intersection of software and hardware.
+Built entirely by **Leo** — a multi-disciplinary engineer with ~5 years of experience at the intersection of software and hardware.
 
 - 🌐 Web: HTML5 / CSS3 / JavaScript — every file built by hand
 - ⚙️ Systems: Python & C# — neural networks, Unity, simulations  
