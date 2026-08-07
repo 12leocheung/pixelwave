@@ -325,6 +325,105 @@
   @media (max-width:600px){
     nav.tabs button{font-size:.55rem; padding:12px 12px;}
   }
+
+  /* ---------- steam banner ---------- */
+  .steam-banner{
+    position:relative; z-index:10;
+    background:linear-gradient(135deg, #0d0020 0%, #1a003a 40%, #0d0020 100%);
+    border-bottom:3px solid var(--pink);
+    box-shadow:0 0 40px rgba(255,43,214,0.5), 0 4px 60px rgba(167,66,255,0.4);
+    padding:22px 24px;
+    text-align:center;
+    overflow:hidden;
+  }
+  .steam-banner::before{
+    content:'';
+    position:absolute; inset:0;
+    background:repeating-linear-gradient(
+      90deg,
+      rgba(255,43,214,0.04) 0px, rgba(255,43,214,0.04) 1px,
+      transparent 1px, transparent 60px
+    );
+    pointer-events:none;
+  }
+  .steam-banner-inner{
+    max-width:900px; margin:0 auto;
+    display:flex; align-items:center; justify-content:center;
+    flex-wrap:wrap; gap:18px;
+  }
+  .steam-banner-text{
+    flex:1; min-width:240px; text-align:left;
+  }
+  .steam-label{
+    font-family:'Press Start 2P', cursive;
+    font-size:.55rem;
+    letter-spacing:2px;
+    color:var(--yellow);
+    text-shadow:0 0 8px var(--yellow);
+    margin-bottom:6px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .steam-label .steam-dot{
+    width:8px; height:8px; border-radius:50%;
+    background:var(--yellow);
+    box-shadow:0 0 8px var(--yellow);
+    animation:pulse-dot 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse-dot{
+    0%,100%{opacity:1; transform:scale(1);}
+    50%{opacity:0.4; transform:scale(0.7);}
+  }
+  .steam-title{
+    font-family:'Press Start 2P', cursive;
+    font-size:clamp(.75rem, 2.2vw, 1.1rem);
+    color:#fff;
+    text-shadow:0 0 12px var(--pink), 0 0 28px var(--purple);
+    line-height:1.5;
+    margin:0;
+  }
+  .steam-sub{
+    color:var(--dim);
+    font-size:1.1rem;
+    margin-top:6px;
+  }
+  .steam-actions{
+    display:flex; gap:14px; flex-wrap:wrap; align-items:center; justify-content:center;
+  }
+  .steam-donate-btn{
+    font-family:'Press Start 2P', cursive;
+    font-size:.7rem;
+    background:linear-gradient(135deg, var(--pink), #c800a0);
+    color:#fff;
+    padding:16px 22px;
+    text-decoration:none;
+    border:2px solid var(--pink);
+    box-shadow:0 0 20px rgba(255,43,214,0.6), 4px 4px 0 rgba(0,0,0,0.5);
+    transition:transform .12s ease, box-shadow .12s ease;
+    letter-spacing:1px;
+    display:inline-flex; align-items:center; gap:8px;
+    white-space:nowrap;
+    animation:glow-pulse 2s ease-in-out infinite;
+  }
+  @keyframes glow-pulse{
+    0%,100%{box-shadow:0 0 20px rgba(255,43,214,0.6), 4px 4px 0 rgba(0,0,0,0.5);}
+    50%{box-shadow:0 0 40px rgba(255,43,214,0.9), 0 0 60px rgba(167,66,255,0.4), 4px 4px 0 rgba(0,0,0,0.5);}
+  }
+  .steam-donate-btn:hover{transform:translateY(-3px) scale(1.03); animation:none; box-shadow:0 0 50px rgba(255,43,214,1), 4px 4px 0 rgba(0,0,0,0.5);}
+  .steam-try-btn{
+    font-family:'Press Start 2P', cursive;
+    font-size:.7rem;
+    background:transparent;
+    color:var(--cyan);
+    padding:14px 20px;
+    text-decoration:none;
+    border:2px solid var(--cyan);
+    box-shadow:0 0 14px rgba(0,255,242,0.35), 4px 4px 0 rgba(0,0,0,0.4);
+    transition:all .12s ease;
+    letter-spacing:1px;
+    display:inline-flex; align-items:center; gap:8px;
+    white-space:nowrap;
+  }
+  .steam-try-btn:hover{background:var(--cyan); color:#04000a; box-shadow:0 0 30px rgba(0,255,242,0.7), 4px 4px 0 rgba(0,0,0,0.4); transform:translateY(-3px);}
 </style>
 </head>
 <body>
@@ -334,6 +433,21 @@
 <div class="grid-floor"></div>
 <div class="scanlines"></div>
 <div class="vignette"></div>
+
+<!-- STEAM FUNDING BANNER -->
+<div class="steam-banner">
+  <div class="steam-banner-inner">
+    <div class="steam-banner-text">
+      <div class="steam-label"><span class="steam-dot"></span> HELP US LAUNCH ON STEAM</div>
+      <p class="steam-title">🎮 CONWAY'S DUNGEON — COMING TO STEAM</p>
+      <div class="steam-sub">Support the full release of Conway's Dungeon — a Unity roguelike built from scratch. Every donation counts!</div>
+    </div>
+    <div class="steam-actions">
+      <a class="steam-donate-btn" href="https://ko-fi.com/leocheung314159" target="_blank" rel="noopener">☕ DONATE NOW</a>
+      <a class="steam-try-btn" href="conways-dungeon/index.html">▶ TRY IT OUT</a>
+    </div>
+  </div>
+</div>
 
 <header>
   <h1 class="logo">PIXEL<span>WAVE</span> ARCADE</h1>
