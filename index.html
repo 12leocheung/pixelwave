@@ -328,13 +328,41 @@
 
   /* ---------- steam banner ---------- */
   .steam-banner{
-    position:relative; z-index:10;
+    position:sticky; top:0; z-index:100;
     background:linear-gradient(135deg, #0d0020 0%, #1a003a 40%, #0d0020 100%);
     border-bottom:3px solid var(--pink);
     box-shadow:0 0 40px rgba(255,43,214,0.5), 0 4px 60px rgba(167,66,255,0.4);
-    padding:22px 24px;
+    padding:18px 24px;
     text-align:center;
     overflow:hidden;
+  }
+  /* compact progress bar inside the banner */
+  .steam-progress-row{
+    display:flex; align-items:center; gap:10px;
+    margin-top:8px;
+  }
+  .steam-progress-outer{
+    flex:1;
+    height:10px;
+    background:#04000a;
+    border:1px solid rgba(0,255,242,0.4);
+    border-radius:2px;
+    overflow:hidden;
+    box-shadow:inset 0 0 6px rgba(0,255,242,0.2);
+  }
+  .steam-progress-inner{
+    height:100%;
+    width:0%;
+    background:repeating-linear-gradient(45deg, var(--pink) 0 6px, var(--purple) 6px 12px);
+    box-shadow:0 0 8px var(--pink);
+    transition:width 1.2s ease;
+    border-radius:2px;
+  }
+  .steam-progress-label{
+    font-family:'Press Start 2P', cursive;
+    font-size:.5rem;
+    color:var(--cyan);
+    white-space:nowrap;
   }
   .steam-banner::before{
     content:'';
@@ -441,10 +469,16 @@
       <div class="steam-label"><span class="steam-dot"></span> HELP US LAUNCH ON STEAM</div>
       <p class="steam-title">🎮 CONWAY'S DUNGEON — COMING TO STEAM</p>
       <div class="steam-sub">Support the full release of Conway's Dungeon — a Unity roguelike built from scratch. Every donation counts!</div>
+      <div class="steam-progress-row">
+        <div class="steam-progress-outer">
+          <div class="steam-progress-inner" id="banner-bar"></div>
+        </div>
+        <div class="steam-progress-label" id="banner-pct">0% FUNDED</div>
+      </div>
     </div>
     <div class="steam-actions">
       <a class="steam-donate-btn" href="https://ko-fi.com/leocheung314159" target="_blank" rel="noopener">☕ DONATE NOW</a>
-      <a class="steam-try-btn" href="conways-dungeon/index.html">▶ TRY IT OUT</a>
+      <a class="steam-try-btn" href="conways-dungeon/index.html">▶ TRY THE DEMO</a>
     </div>
   </div>
 </div>
@@ -588,6 +622,9 @@
   document.getElementById('donate-bar').style.width = pct + '%';
   document.getElementById('donate-pct').textContent = pct.toFixed(0) + '% funded';
   document.getElementById('donate-raised').textContent = '£' + CURRENT_DONATED;
+  // also update the sticky banner progress bar
+  document.getElementById('banner-bar').style.width = pct + '%';
+  document.getElementById('banner-pct').textContent = pct.toFixed(0) + '% FUNDED';
 
   // ---------------- game / tool data ----------------
   const games = [
