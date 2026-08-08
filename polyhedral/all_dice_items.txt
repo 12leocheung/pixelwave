@@ -1,0 +1,193 @@
+[n];
+  return `${n}_OF_A_KIND`;
+}
+
+function makeDie(sides, material = 'stone') {
+  return { v: null, held: false, sides, material, woodenBonus: 0, shattered: false };
+}
+
+const MATERIALS = {
+  stone: { name: 'STONE', label: 'STN', desc: 'Standard die. No special effect.', color: '#39ff14' },
+  gold: { name: 'GOLD', label: 'GLD', desc: '+3 chips flat whenever this die is rolled.', color: '#ffd700' },
+  fire: { name: 'FIRE', label: 'FIR', desc: '+1.2 Mult if this die rolls its maximum face.', color: '#ff6a00' },
+  cursed: { name: 'CURSED', label: 'CRS', desc: '+6 chips if this die rolls a 1.', color: '#d080ff' },
+  glass: { name: 'GLASS', label: 'GLS', desc: 'x2 score if not rerolled this round. Shatters if rerolled.', color: '#c8f0ff' },
+  steel: { name: 'STEEL', label: 'STL', desc: '+1.2 Mult for each steel die you hold.', color: '#aabbcc' },
+  bronze: { name: 'BRONZE', label: 'BRZ', desc: 'Acts as a wild — counts as any value for hand detection.', color: '#e09040' },
+  crystal: { name: 'CRYSTAL', label: 'CRY', desc: 'Its pip value counts twice toward chips.', color: '#ff99ff' },
+  obsidian: { name: 'OBSIDIAN', label: 'OBS', desc: '+0.25 Mult per die in your pool (scales with pool size).', color: '#ff6633' },
+  wooden: { name: 'WOODEN', label: 'WOD', desc: 'Gains +1 to max face permanently each round.', color: '#c8854a' },
+  silver: { name: 'SILVER', label: 'SLV', desc: 'Gains +1 chip per round. High consistency.', color: '#e8e8e8' },
+  emerald: { name: 'EMERALD', label: 'EMR', desc: '+1.3x multiplier. Most powerful material.', color: '#00ff88' },
+  ruby: { name: 'RUBY', label: 'RBY', desc: 'Gains +2 chips for each other ruby die held.', color: '#ff1744' },
+  sapphire: { name: 'SAPPHIRE', label: 'SAP', desc: '+2 chips per die showing same value as this one.', color: '#0080ff' },
+  diamond: { name: 'DIAMOND', label: 'DIA', desc: '+4 Mult if hand has 5-of-a-kind.', color: '#ffffff' },
+  plutonium: { name: 'PLUTONIUM', label: 'PLU', desc: 'Starts glowing. +0.15x Mult per other plutonium die.', color: '#88ff00' },
+  void: { name: 'VOID', label: 'VOD', desc: 'Gains value equal to reroll count each round.', color: '#4a0080' },
+  titanium: { name: 'TITANIUM', label: 'TIT', desc: '+1.1 Mult per hand level. Synergizes with upgrades.', color: '#cccccc' },
+};
+
+function initGame() {
+  g.dice = [
+    makeDie([1, 2, 3, 4, 5, 6], 'stone'),
+    makeDie([1, 2, 3, 4, 5, 6], 'stone'),
+    makeDie([1, 2, 3, 4, 5, 6], 'stone'),
+    makeDie([1, 2, 3, 4, 5, 6], 'stone'),
+    makeDie([1, 2, 3, 4, 5, 6], 'stone'),
+  ];
+  g.target = getQuota(g.ante, g.round);
+  updateUI(); initBoard();
+  buildAntePips();
+}
+
+function initBoard() {
+  const box = document.getElementById('dice-box');
+  box.innerHTML = '';
+  g.dice.forEach((d, i) => {
+    const div = document.createElement('div');
+    const mat = d.material || 'stone';
+    const matDef = MATERIALS[mat] || MATERIALS.stone;
+    const isBlank = d.v === null;
+    const isShattered = d.shattered;
+    div.className = [
+      'die',
+      isBlank ? 'blank' : '',
+      d.held ? 'held' : '',
+      `mat-${mat}`,
+      isShattered ? 'shattered' : '',
+    ].filter(Boolean).join(' ');
+    div.title = `${matDef.name}: ${matDef.desc}`;
+    const sideRange = d.sides[0] + '–' + d.sides[d.sides.length - 1];
+    div.innerHTML = `
+      <span class="die-val">${isBlank ? '' : d.v}</span>
+      <span class="die-label">${matDef.label} · ${sideRange}</span>
+    `;
+    div.onclick = () => {
+      if (isShattered) return;
+      if (g.firstRollDone && d.v !== null) {
+        d.held = !d.held;
+        initBoard();
+        calculateScore();
+      }
+    };
+    box.appendChild(div);
+  });
+  calculateScore();
+  updateCons();
+}
+
+function runRoll(free = false) {
+  if (g.rerolls <= 0 && g.firstRollDone && !free) return;
+  if (!g.firstRollDone) {
+    g.firstRollDone = true;
+    document.getElementById('cash-btn').disabled = false;
+  } else if (!free) {
+    g.rerolls--;
+    g.glassRerolled = true;
+  }
+
+  const box = document.getElementById('dice-box');
+  const divs = box.querySelectorAll('.die');
+
+  g.dice.forEach((d, i) => {
+    if (!d.held) {
+      if (d.material === 'glass' && g.firstRollDone && !free && !g.glassShatterProof) {
+        d.shattered = true;
+        d.v = null;
+        notify('GLASS DIE SHATTERED!', 'bad');
+        return;
+      }
+      d.v = d.sides[Math.floor(Math.random() * d.sides.length)];
+      divs[i]?.classList.add('rolling');
+      setTimeout(() => divs[i]?.classList.remove('rolling'), 450);
+    }
+  });
+
+  triggerJokerEvent('onRoll');
+  shake('sm');
+  document.getElementById('rerolls-ui').innerText = g.rerolls;
+  if (g.rerolls <= 0) document.getElementById('roll-btn').disabled = true;
+  setTimeout(() => { initBoard(); }, 80);
+}
+
+function getHandInfo() {
+  const bronzeDice = g.dice.filter(d => d.material === 'bronze' && d.v !== null && !d.shattered);
+  const normalDice = g.dice.filter(d => d.material !== 'bronze' && d.v !== null && !d.shattered);
+  const vals = normalDice.map(d => d.v).sort((a, b) => a - b);
+  const wildCount = bronzeDice.length;
+  if (!vals.length && !wildCount) return { key: 'HIGH_CARD', handName: '–', chips: 0, mult: 0, vals: [] };
+  let counts = {};
+  vals.forEach(v => counts[v] = (counts[v] || 0) + 1);
+  const cArr = Object.values(counts).sort((a, b) => b - a);
+  const topCount = (cArr[0] || 0) + wildCount;
+  const secondCount = cArr[1] || 0;
+  const uniq = [...new Set(vals)];
+  const totalDice = vals.length + wildCount;
+  const isStraight = uniq.length >= 4 && uniq.every((v, i) => i === 0 || v === uniq[i - 1] + 1);
+  let key;
+  if (topCount >= 2) {
+    if (isStraight && totalDice >= 4 && topCount < 4) key = 'STRAIGHT';
+    else if (topCount >= 4 && secondCount >= 2 && topCount < totalDice) key = topCount >= 3 && secondCount >= 2 ? 'FULL_HOUSE' : getNOfAKindKey(topCount);
+    else if (topCount === 3 && secondCount === 2) key = 'FULL_HOUSE';
+    else if (topCount >= 2 && secondCount >= 2 && topCount < 3) key = 'TWO_PAIR';
+    else key = getNOfAKindKey(topCount);
+  } else if (isStraight && totalDice >= 4) key = 'STRAIGHT';
+  else key = 'HIGH_CARD';
+  const def = getHandDef(key);
+  const lv = g.handLevels[key] || 1;
+  const allVals = [...vals, ...bronzeDice.map(d => d.v)];
+  return {
+    key, vals: allVals,
+    handName: def.n + (lv > 1 ? ` LV${lv}` : '') + (wildCount > 0 ? ` [${wildCount}✦]` : ''),
+    chips: def.c + (lv - 1) * 8,
+    mult: def.m + (lv - 1) * 0.4,
+  };
+}
+
+function applyJoker(j, handKey, vals, chips, mult) {
+  let desc = '';
+  switch (j.id) {
+    case 'SNIPER': if (vals.includes(6)) { mult += 1.2; desc = '+1.2M on 6'; } break;
+    case 'GAMBLER': if (vals.includes(1)) { chips += 6; desc = '+6C on 1'; } break;
+    case 'DOUBLER': if (['PAIR', 'TWO_PAIR'].includes(handKey)) { mult += 1.6; desc = '+1.6M pairs'; } break;
+    case 'TRIPWIRE': if (handKey === 'THREE_OF_A_KIND' || handKey === 'FULL_HOUSE') { mult += 2.0; desc = '+2.0M trips'; } break;
+    case 'STRAIGHTER': if (handKey === 'STRAIGHT') { chips += 10; desc = '+10C straight'; } break;
+    case 'BANKER': chips += Math.floor(g.bank / 6); desc = `+${Math.floor(g.bank / 6)}C bank`; break;
+    case 'OVERCLOCK': mult += 0.6; desc = '+0.6M always'; break;
+    case 'VALIDATOR': if (vals.every(v => v % 2 === 0)) { mult += 2.0; desc = '+2.0M all even'; } break;
+    case 'PRIME': if (vals.every(v => [2, 3, 5, 7, 11, 13, 17, 19, 23].includes(v))) { chips += 8; mult += 1.2; desc = 'prime bonus'; } break;
+    case 'HIGHROLLER': { const max = Math.max(...vals); chips += max; desc = `+${max}C max`; } break;
+    case 'ALLIN': { const n = parseInt(handKey); if (handKey === 'FOUR_OF_A_KIND' || handKey === 'FIVE_OF_A_KIND' || handKey === 'SIX_OF_A_KIND' || (!isNaN(n) && n >= 4)) { mult *= 1.8; desc = 'x1.8M quads+'; } } break;
+    case 'HEDGER': chips += vals.length * 1; desc = `+${vals.length}C per die`; break;
+    case 'DEBUGGER': if (g.rerolls === g.maxRerolls) { mult += 0.8; desc = '+0.8M full rerolls'; } break;
+    case 'SYMMETRY': if (vals.every((v, i, a) => i === 0 || a[i - 1] <= v)) { chips += 5; desc = '+5C sorted'; } break;
+    case 'FIREWALL': mult += Math.floor(g.jokers.length * 0.25); desc = `+${Math.floor(g.jokers.length * 0.25)}M per joker`; break;
+    case 'ENTROPY': { const bonus = Math.floor(Math.random() * 4); chips += bonus; desc = `+${bonus}C chaos`; } break;
+    case 'OVERKILL': if (g.roundScore > g.target * 0.5) { mult += 1.2; desc = '+1.2M halfway'; } break;
+    case 'MIRRORDICE': { const n = parseInt(handKey); const isNoak = ['FIVE_OF_A_KIND', 'SIX_OF_A_KIND'].includes(handKey) || (!isNaN(n) && n >= 5); if (isNoak || new Set(vals).size === 1) { mult += 3.2; desc = '+3.2M all same!'; } } break;
+    case 'LOWBALL': { const lowCount = vals.filter(v => v <= 3).length; chips += lowCount; desc = lowCount ? `+${lowCount}C low` : ''; } break;
+    case 'COUNTER': { const unique = new Set(vals).size; mult += unique * 0.8; desc = `+${(unique * 0.8).toFixed(1)}M unique`; } break;
+    case 'ECHO': { let counts = {}; vals.forEach(v => counts[v] = (counts[v] || 0) + 1); const pairs = Object.values(counts).filter(c => c >= 2).length; if (pairs > 0) { chips += pairs * 2; desc = `+${pairs * 2}C pairs`; } } break;
+    case 'SCAVENGER': { const free = g.dice.filter(d => d.v !== null && !d.held && !d.shattered).length; if (free > 0) { chips += free * 2; desc = `+${free * 2}C free dice`; } } break;
+    case 'ACCUMULATOR': { const used = g.maxRerolls - g.rerolls; if (used > 0) { mult += used * 0.4; desc = `+${(used * 0.4).toFixed(1)}M`; } } break;
+    case 'TWINPEAK': { if (vals.length > 1) { const spread = Math.max(...vals) - Math.min(...vals); if (spread <= 1) { mult += 2.4; desc = '+2.4M tight'; } } } break;
+    case 'PALINDROME': { const str = vals.join(''); if (str === str.split('').reverse().join('') && vals.length > 1) { chips += 3; desc = '+3C palindrome'; } } break;
+    case 'MATERIALIZER': { const mats = new Set(g.dice.filter(d => d.v !== null).map(d => d.material)).size; chips += mats; desc = `+${mats}C materials`; } break;
+    case 'THRESHOLD': { if (chips > 30) { mult += 1.6; desc = '+1.6M chips>30'; } } break;
+    case 'GODMODE': { mult += Math.floor(g.roundScore * 0.08); desc = `+${Math.floor(g.roundScore * 0.08)}M banked`; } break;
+  }
+  return { chips, mult, desc };
+}
+
+function calculateScore(commit = false) {
+  if (!g.firstRollDone) {
+    document.getElementById('hand-name').innerText = '–';
+    document.getElementById('score-total').innerText = 0;
+    document.getElementById('score-chips').innerHTML = '';
+    return 0;
+  }
+  const { key, vals, handName, chips: baseChips, mult: baseMult } = getHandInfo();
+  const sumVals = vals.reduce((a, b) => a + b, 0);
+  let chips = baseChips + sumVals + g.baseChips;
+  let mult = baseMult + g.baseMult - 1.0;
+  let jokerDesc = []

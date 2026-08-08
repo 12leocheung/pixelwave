@@ -1,0 +1,2970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Not Not Olly</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@300;400;700&display=swap');
+
+  :root {
+    --crimson: #8b0000;
+    --crimson-mid: #a31515;
+    --crimson-light: #c0392b;
+    --gold: #c9a84c;
+    --gold-light: #f0d070;
+    --dark: #1a0a00;
+    --stage-floor: #2a1a0a;
+    --spotlight: rgba(255,230,120,0.13);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Lato', 'Segoe UI', sans-serif;
+    background: var(--dark);
+    color: #f5e6c8;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  body::before, body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    width: 14vw;
+    height: 100vh;
+    z-index: 500;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      to bottom,
+      var(--crimson) 0px,
+      var(--crimson-mid) 18px,
+      #6b0000 36px,
+      var(--crimson) 54px
+    );
+    box-shadow: inset -12px 0 30px rgba(0,0,0,0.6);
+  }
+
+  body::before {
+    left: 0;
+    clip-path: polygon(0 0, 100% 0, 85% 12%, 95% 28%, 80% 44%, 92% 60%, 78% 76%, 90% 90%, 80% 100%, 0 100%);
+    box-shadow: 8px 0 40px rgba(0,0,0,0.8), inset -8px 0 24px rgba(0,0,0,0.5);
+  }
+
+  body::after {
+    right: 0;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 20% 100%, 10% 90%, 22% 76%, 8% 60%, 20% 44%, 5% 28%, 15% 12%);
+    box-shadow: -8px 0 40px rgba(0,0,0,0.8), inset 8px 0 24px rgba(0,0,0,0.5);
+  }
+
+  .pelmet {
+    position: fixed; top: 0; left: 0; right: 0; height: 60px;
+    background: linear-gradient(180deg, #5a0000 0%, var(--crimson) 60%, #6b0000 100%);
+    z-index: 501; pointer-events: none;
+    border-bottom: 4px solid var(--gold);
+    box-shadow: 0 6px 30px rgba(0,0,0,0.7);
+    display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px;
+  }
+
+  .pelmet::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      90deg,
+      transparent 0px, transparent 40px,
+      rgba(0,0,0,0.15) 40px, rgba(0,0,0,0.15) 80px
+    );
+  }
+
+  .pelmet-tassels {
+    display: flex; gap: 0; position: absolute; bottom: -18px; left: 0; right: 0;
+    justify-content: center; pointer-events: none;
+  }
+
+  .tassel {
+    width: 14px; height: 18px;
+    background: linear-gradient(180deg, var(--gold) 0%, #a07820 100%);
+    border-radius: 0 0 50% 50%;
+    margin: 0 3px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  }
+
+  .stage-bg {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 30%, var(--spotlight) 0%, transparent 70%),
+      linear-gradient(180deg, #0d0500 0%, #1a0a00 40%, var(--stage-floor) 100%);
+  }
+
+  .stage-bg::after {
+    content: '';
+    position: absolute; bottom: 0; left: 0; right: 0; height: 35vh;
+    background: repeating-linear-gradient(
+      90deg,
+      transparent 0px, transparent 58px,
+      rgba(255,200,100,0.04) 58px, rgba(255,200,100,0.04) 60px
+    ),
+    linear-gradient(180deg, transparent 0%, rgba(80,40,0,0.3) 100%);
+  }
+
+  #lobby {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 100vh; gap: 18px;
+    position: relative; z-index: 10; padding: 80px 20px 40px;
+  }
+
+  #lobby h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 3.2rem; color: var(--gold-light);
+    text-shadow: 0 0 30px rgba(201,168,76,0.6), 2px 2px 0 #5a0000;
+    letter-spacing: 3px;
+  }
+
+  #lobby input {
+    padding: 11px 20px; border-radius: 4px;
+    border: 1px solid var(--gold); border-bottom: 2px solid var(--gold);
+    background: rgba(20,5,0,0.8); color: #f5e6c8; font-size: 1rem;
+    width: 280px; letter-spacing: 0.5px;
+    box-shadow: 0 0 14px rgba(201,168,76,0.15), inset 0 1px 4px rgba(0,0,0,0.5);
+  }
+
+  #lobby button,
+  #start-game-btn,
+  #results button {
+    padding: 12px 38px; border-radius: 4px; border: 1px solid var(--gold);
+    background: linear-gradient(135deg, var(--crimson) 0%, #6b0000 100%);
+    color: var(--gold-light); font-size: 1rem; cursor: pointer;
+    font-family: 'Playfair Display', serif; letter-spacing: 2px;
+    box-shadow: 0 4px 20px rgba(139,0,0,0.5), inset 0 1px 0 rgba(255,220,100,0.2);
+    transition: all 0.2s;
+  }
+
+  #lobby button:hover,
+  #start-game-btn:hover,
+  #results button:hover {
+    background: linear-gradient(135deg, var(--crimson-light) 0%, var(--crimson) 100%);
+    box-shadow: 0 4px 28px rgba(192,57,43,0.6), 0 0 20px rgba(201,168,76,0.3);
+  }
+
+  #game { display: none; padding: 80px 16vw 40px; position: relative; z-index: 10; }
+  #header { text-align: center; margin-bottom: 24px; }
+
+  #header h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.2rem; color: var(--gold-light);
+    text-shadow: 0 0 20px rgba(201,168,76,0.5), 1px 1px 0 #5a0000;
+    letter-spacing: 2px;
+  }
+
+  #round-info { font-size: 0.95rem; color: var(--gold); margin-top: 6px; letter-spacing: 1px; }
+
+  #progress-bar-wrap {
+    width: 80%; max-width: 400px;
+    background: rgba(0,0,0,0.5); border: 1px solid #5a3010;
+    border-radius: 2px; height: 10px; margin: 14px auto 18px; overflow: hidden;
+  }
+
+  #progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--crimson) 0%, var(--gold) 100%);
+    border-radius: 2px; transition: width 0.5s;
+    box-shadow: 0 0 8px rgba(201,168,76,0.4);
+  }
+
+  #player-list { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 16px; }
+
+  .player-tag {
+    background: rgba(139,0,0,0.3); border: 1px solid var(--gold);
+    border-radius: 2px; padding: 4px 14px; font-size: 0.82rem;
+    color: var(--gold-light); letter-spacing: 0.5px;
+  }
+
+  #poll-area {
+    display: flex; flex-wrap: wrap; gap: 20px;
+    justify-content: center; margin-bottom: 30px;
+  }
+
+  .player-card {
+    background: linear-gradient(180deg, #2a1500 0%, #1a0a00 100%);
+    border: 1px solid #5a3010;
+    border-top: 3px solid var(--gold);
+    border-radius: 4px 4px 0 0;
+    padding: 22px 28px 18px; cursor: pointer;
+    transition: all 0.2s; min-width: 150px; text-align: center;
+    position: relative;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6), inset 0 1px 0 rgba(201,168,76,0.15);
+  }
+
+  .player-card::after {
+    content: '';
+    position: absolute; bottom: -10px; left: -4px; right: -4px; height: 10px;
+    background: linear-gradient(180deg, #5a3010 0%, #3a1a00 100%);
+    border-radius: 0 0 4px 4px;
+  }
+
+  .player-card:hover {
+    border-top-color: var(--gold-light);
+    transform: translateY(-4px);
+    box-shadow: 0 14px 32px rgba(0,0,0,0.7), 0 0 20px rgba(201,168,76,0.2);
+  }
+
+  .player-card .player-name {
+    font-size: 1.15rem; font-weight: bold; color: #f5e6c8;
+    font-family: 'Playfair Display', serif;
+  }
+
+  .player-card .vote-count {
+    font-size: 0.8rem; color: var(--gold); margin-top: 8px; letter-spacing: 0.5px;
+  }
+
+  .player-card.singled {
+    border-top-color: #f0d070;
+    box-shadow: 0 0 24px rgba(240,208,112,0.25);
+  }
+
+  #status-bar {
+    text-align: center; padding: 10px; font-size: 0.95rem;
+    color: var(--gold); min-height: 36px; font-style: italic; letter-spacing: 0.3px;
+  }
+
+  #overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75); z-index: 1000;
+    align-items: center; justify-content: center; flex-direction: column;
+    backdrop-filter: blur(2px);
+  }
+
+  #overlay.show { display: flex; }
+
+  #overlay-box {
+    background: linear-gradient(160deg, #1e0800 0%, #120400 100%);
+    border: 1px solid var(--gold); border-top: 3px solid var(--gold-light);
+    border-radius: 4px; padding: 32px 36px; max-width: 520px;
+    width: 90%; text-align: center; position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 40px rgba(139,0,0,0.3);
+  }
+
+  #overlay-box h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem; margin-bottom: 14px; color: var(--gold-light);
+  }
+
+  #overlay-box p {
+    margin-bottom: 18px; line-height: 1.6; color: #c8b090; font-size: 0.95rem;
+  }
+
+  .ov-btn {
+    display: inline-block; margin: 6px; padding: 9px 22px;
+    border-radius: 3px; border: 1px solid transparent; cursor: pointer; font-size: 0.9rem;
+    font-family: 'Lato', sans-serif; letter-spacing: 0.5px; transition: all 0.2s;
+  }
+
+  .ov-btn-yes {
+    background: linear-gradient(135deg, var(--crimson), #6b0000);
+    color: var(--gold-light); border-color: var(--gold);
+  }
+
+  .ov-btn-no {
+    background: rgba(20,10,0,0.8); color: #888; border-color: #3a2010;
+  }
+
+  .ov-btn-olly {
+    background: linear-gradient(135deg, #b8860b, #f0d070);
+    color: #1a0a00; font-weight: bold; border-color: var(--gold-light);
+    box-shadow: 0 0 16px rgba(201,168,76,0.4);
+    animation: goldpulse 2s ease-in-out infinite;
+  }
+
+  @keyframes goldpulse {
+    0%,100% { box-shadow: 0 0 10px rgba(201,168,76,0.3); }
+    50% { box-shadow: 0 0 24px rgba(240,208,112,0.7); }
+  }
+
+  #captcha-canvas,
+  #captcha-input,
+  #eq-display,
+  #eq-input,
+  #puzzle-display,
+  #text-input-puzzle,
+  #cookie-text {
+    margin-top: 10px;
+  }
+
+  #captcha-canvas {
+    border: 1px solid #5a3010; border-radius: 3px; margin: 10px auto; display: block;
+  }
+
+  #captcha-input, #eq-input, #text-input-puzzle {
+    width: 100%; padding: 9px; border-radius: 3px;
+    border: 1px solid #5a3010; background: rgba(0,0,0,0.5);
+    color: #f5e6c8; font-size: 1rem; text-align: center;
+    margin-bottom: 10px;
+  }
+
+  #eq-display, #puzzle-display {
+    font-size: 1.1rem; margin: 12px 0; color: var(--gold-light);
+    background: rgba(0,0,0,0.4); border: 1px solid #5a3010;
+    border-radius: 3px; padding: 12px; line-height: 1.7;
+  }
+
+  #cookie-text {
+    max-height: 220px; overflow-y: auto; text-align: left; font-size: 0.75rem;
+    color: #8a7050; background: rgba(0,0,0,0.4); border: 1px solid #3a2010;
+    border-radius: 3px; padding: 10px; margin-bottom: 14px; line-height: 1.7;
+  }
+
+  #results {
+    display: none; position: fixed; inset: 0;
+    background: radial-gradient(ellipse at 50% 40%, #3a0000 0%, #0d0500 60%, #050200 100%);
+    z-index: 2000; align-items: center; justify-content: center; flex-direction: column;
+  }
+
+  #results.show { display: flex; }
+
+  #results h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 3.5rem; color: var(--gold-light);
+    margin-bottom: 10px; text-shadow: 0 0 40px rgba(240,208,112,0.6);
+  }
+
+  #results .winner {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.5rem; color: var(--gold-light); font-weight: bold;
+    margin: 20px 0; text-shadow: 0 0 30px rgba(240,208,112,0.5);
+  }
+
+  #waiting-lobby {
+    display: none; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 100vh; gap: 18px;
+    position: relative; z-index: 10; padding: 80px 20px 40px;
+  }
+
+  #waiting-lobby h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem; color: var(--gold-light);
+    text-shadow: 0 0 20px rgba(201,168,76,0.5);
+  }
+
+  #waiting-player-list {
+    display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+  }
+
+  #waiting-status {
+    color: var(--gold); font-style: italic; font-size: 0.95rem;
+  }
+
+  .chaos-toast {
+    position: fixed; z-index: 9000; padding: 10px 18px;
+    background: linear-gradient(135deg, #1e0800, #2a0a00);
+    border: 1px solid var(--gold); border-radius: 4px;
+    color: var(--gold-light); font-size: 0.85rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+    pointer-events: none; opacity: 0; transition: opacity 0.3s;
+    max-width: 240px;
+  }
+
+  .chaos-toast.show { opacity: 1; }
+
+  .fake-window {
+    position: fixed; z-index: 8500;
+    background: linear-gradient(160deg, #1e0800, #0d0400);
+    border: 1px solid #5a3010; border-top: 3px solid var(--crimson);
+    border-radius: 4px; min-width: 280px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.9);
+  }
+
+  .fake-window-titlebar {
+    background: linear-gradient(90deg, var(--crimson), #6b0000);
+    padding: 7px 12px; display: flex; justify-content: space-between; align-items: center;
+  }
+
+  .fake-window-title { color: var(--gold-light); font-size: 0.82rem; letter-spacing: 1px; }
+
+  .fake-window-close {
+    background: #8b0000; border: 1px solid var(--gold); border-radius: 2px;
+    color: var(--gold-light); cursor: pointer; padding: 1px 6px; font-size: 0.75rem;
+  }
+
+  .fake-window-body { padding: 16px; color: #c8b090; font-size: 0.85rem; line-height: 1.6; }
+  .fake-window-btns { padding: 0 16px 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .chaos-spotlight {
+    position: fixed; inset: 0; z-index: 7000; pointer-events: none;
+    background: radial-gradient(circle at 50% 50%, transparent 0 120px, rgba(0,0,0,0.84) 220px);
+    display: none;
+  }
+
+  .olly-banner {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9500;
+    background: linear-gradient(90deg, #b8860b, #f0d070, #b8860b);
+    color: #1a0a00; text-align: center; padding: 12px;
+    font-family: 'Playfair Display', serif; font-size: 1.1rem;
+    font-weight: bold; letter-spacing: 2px;
+    box-shadow: 0 4px 20px rgba(201,168,76,0.5);
+    transform: translateY(-100%); transition: transform 0.4s;
+  }
+
+  .olly-banner.show { transform: translateY(0); }
+
+  .screen-shake { animation: screenShake 0.5s; }
+
+  @keyframes screenShake {
+    0%,100% { transform: translate(0,0); }
+    20% { transform: translate(-6px,3px); }
+    40% { transform: translate(6px,-3px); }
+    60% { transform: translate(-4px,4px); }
+    80% { transform: translate(4px,-2px); }
+  }
+
+  .grid-captcha {
+    display: grid; grid-template-columns: repeat(4,1fr);
+    gap: 6px; margin: 12px 0;
+  }
+
+  .grid-captcha-tile {
+    background: #0f1e3c; border: 2px solid #3a2010;
+    border-radius: 3px; padding: 8px 4px; cursor: pointer;
+    text-align: center; font-family: monospace; font-size: 1rem;
+    color: #aaa; transition: border-color 0.2s;
+  }
+
+  .grid-captcha-tile.selected { border-color: var(--gold); color: var(--gold-light); }
+  .grid-captcha-tile.wrong { border-color: #e94560; color: #e94560; }
+
+  .reaction-box {
+    width: 120px; height: 120px; border-radius: 6px;
+    background: var(--crimson); border: 2px solid var(--gold);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; margin: 16px auto; font-size: 0.9rem; color: var(--gold-light);
+    transition: background 0.15s;
+  }
+
+  .reaction-box.go { background: #00a844; }
+
+  .checkbox-maze { text-align: left; margin: 10px 0; }
+  .checkbox-maze label {
+    display: block; margin: 7px 0; color: #c8b090; font-size: 0.85rem; cursor: pointer;
+  }
+
+  .number-grid {
+    display: grid; grid-template-columns: repeat(5,1fr);
+    gap: 6px; margin: 12px 0;
+  }
+
+  .number-btn {
+    padding: 10px; background: rgba(20,5,0,0.8);
+    border: 1px solid #5a3010; border-radius: 3px;
+    color: var(--gold-light); cursor: pointer; font-size: 1rem;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="stage-bg"></div>
+<div class="pelmet"><div class="pelmet-tassels">
+  <div class="tassel"></div><div class="tassel"></div><div class="tassel"></div><div class="tassel"></div>
+  <div class="tassel"></div><div class="tassel"></div><div class="tassel"></div><div class="tassel"></div>
+  <div class="tassel"></div><div class="tassel"></div><div class="tassel"></div><div class="tassel"></div>
+  <div class="tassel"></div><div class="tassel"></div><div class="tassel"></div><div class="tassel"></div>
+  <div class="tassel"></div><div class="tassel"></div><div class="tassel"></div><div class="tassel"></div>
+</div></div>
+
+<div id="lobby">
+  <h1>Not Not Olly</h1>
+  <p style="color:#aaa;text-align:center;max-width:340px">
+    A multiplayer voting game where every round gets a little harder. It is absolutely not trying to make you vote for Olly.
+  </p>
+  <input id="name-input" type="text" placeholder="Enter your name" maxlength="18">
+  <input id="room-input" type="text" placeholder="Room code to share" maxlength="12">
+  <button onclick="joinLobby()">Join / Create Room</button>
+  <p id="lobby-error" style="color:#e94560;font-size:0.85rem"></p>
+</div>
+
+<div id="waiting-lobby">
+  <h2>Waiting for Players...</h2>
+  <p id="waiting-status">Need at least 3 players to start</p>
+  <div id="waiting-player-list"></div>
+  <button id="start-game-btn" onclick="startGame()">Start Game</button>
+  <p style="color:#8a7050;font-size:0.8rem;text-align:center;max-width:300px">
+    Share your room code with friends. The host can start once 3 players have joined.
+  </p>
+</div>
+
+<div id="game">
+  <div id="header">
+    <h2>Not Not Olly</h2>
+    <div id="round-info">Round <span id="round-num">1</span> of 20</div>
+    <div id="progress-bar-wrap"><div id="progress-bar" style="width:5%"></div></div>
+  </div>
+  <div id="player-list"></div>
+  <div id="poll-area"></div>
+  <div id="status-bar"></div>
+</div>
+
+<div id="overlay">
+  <div id="overlay-box">
+    <h3 id="ov-title"></h3>
+    <p id="ov-body"></p>
+    <canvas id="captcha-canvas" width="280" height="80" style="display:none"></canvas>
+    <input id="captcha-input" placeholder="Type the text above" style="display:none">
+    <div id="eq-display" style="display:none"></div>
+    <input id="eq-input" type="number" placeholder="Your answer" style="display:none">
+    <div id="puzzle-display" style="display:none"></div>
+    <input id="text-input-puzzle" placeholder="Your answer" style="display:none">
+    <div id="cookie-text" style="display:none"></div>
+    <div id="ov-buttons"></div>
+  </div>
+</div>
+
+<div id="results">
+  <h1>Results</h1>
+  <p>The winner of The Poll is...</p>
+  <div class="winner" id="winner-name"></div>
+  <p id="results-note" style="color:#aaa;font-size:0.9rem"></p>
+  <button onclick="location.reload()">Play Again</button>
+</div>
+
+<div id="chaos-spotlight" class="chaos-spotlight"></div>
+<div id="olly-banner" class="olly-banner"></div>
+<div id="toast-layer"></div>
+<div id="fake-windows-layer"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, onValue, update }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB9wuQLlHK70wgvPrF8vcnIVLygTzcBuxs",
+  authDomain: "not-not-olly.firebaseapp.com",
+  databaseURL: "https://not-not-olly-default-rtdb.firebaseio.com",
+  projectId: "not-not-olly",
+  storageBucket: "not-not-olly.firebasestorage.app",
+  messagingSenderId: "59087392489",
+  appId: "1:59087392489:web:c0f17a3a3553a1e070ea78"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+
+let myId, myName, roomCode, singledId, singledName, isHost;
+let round = 1;
+let myVoted = false;
+let players = {};
+let pendingVoteId = null;
+let overlayResolve = null;
+let puzzleOrder = [];
+let roomListenerBound = false;
+let waitingListenerBound = false;
+let roomHeartbeatTimer = null;
+let roundAdvanceLock = false;
+
+const TOTAL_ROUNDS = 20;
+const MIN_PLAYERS = 3;
+const CURSOR_COLORS = ["#e94560","#f0a500","#00d2ff","#7bed9f","#ff6b81","#a29bfe","#fd79a8","#55efc4","#fdcb6e","#6c5ce7"];
+
+function rnd(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+function beginHeartbeat(){
+  clearInterval(roomHeartbeatTimer);
+  roomHeartbeatTimer = setInterval(() => {
+    if(!roomCode || !myId) return;
+    update(ref(db, `rooms/${roomCode}`), { lastActive: Date.now() });
+    update(ref(db, `rooms/${roomCode}/players/${myId}`), {
+      lastSeen: Date.now(),
+      online: true
+    });
+  }, 15000);
+}
+
+function scheduleUnloadCleanup(){
+  window.addEventListener("beforeunload", () => {
+    if(!roomCode || !myId) return;
+    update(ref(db, `rooms/${roomCode}/players/${myId}`), {
+      online: false,
+      lastSeen: Date.now()
+    });
+    update(ref(db, `rooms/${roomCode}`), { lastActive: Date.now() });
+  });
+}
+
+function cleanupInactivePlayers(data){
+  const now = Date.now();
+  const staleMs = 45000;
+  Object.entries(data.players || {}).forEach(([pid,p]) => {
+    if (p?.lastSeen && now - p.lastSeen > staleMs) {
+      update(ref(db, `rooms/${roomCode}/players/${pid}`), { online: false });
+    }
+  });
+}
+
+async function maybeDeleteUnusedLobby(data){
+  const activePlayers = Object.values(data.players || {}).filter(p => p && p.online !== false);
+  const oldWaiting = data.phase === "waiting" && data.lastActive && (Date.now() - data.lastActive > 1000*60*60*6);
+  const emptyRecent = activePlayers.length === 0 && data.lastActive && (Date.now() - data.lastActive > 1000*60*2);
+  if (oldWaiting || emptyRecent) {
+    await set(ref(db, `rooms/${roomCode}`), null);
+  }
+}
+
+window.joinLobby = async () => {
+  myName = document.getElementById("name-input").value.trim();
+  roomCode = document.getElementById("room-input").value.trim().toUpperCase();
+
+  if (!myName) {
+    document.getElementById("lobby-error").textContent = "Enter your name!";
+    return;
+  }
+  if (!roomCode) {
+    document.getElementById("lobby-error").textContent = "Enter a room code!";
+    return;
+  }
+
+  myId = "p_" + Math.random().toString(36).slice(2,9);
+  const color = CURSOR_COLORS[Math.floor(Math.random()*CURSOR_COLORS.length)];
+  const roomRef = ref(db, `rooms/${roomCode}`);
+  const snap = await get(roomRef);
+
+  if (!snap.exists()) {
+    isHost = true;
+    await set(roomRef, {
+      round: 1,
+      phase: "waiting",
+      votes: {},
+      singled: "",
+      createdAt: Date.now(),
+      lastActive: Date.now(),
+      puzzleOrder: []
+    });
+  } else {
+    const d = snap.val();
+    const activePlayers = Object.values(d.players || {}).filter(p => p && p.online !== false);
+    const staleGame = (d.phase !== "waiting") && (
+      activePlayers.length === 0 ||
+      !d.lastActive ||
+      (Date.now() - d.lastActive > 1000 * 60 * 30)
+    );
+
+    if (staleGame) {
+      await set(roomRef, {
+        round: 1,
+        phase: "waiting",
+        votes: {},
+        singled: "",
+        createdAt: Date.now(),
+        lastActive: Date.now(),
+        puzzleOrder: []
+      });
+      isHost = true;
+    } else if (d.phase !== "waiting") {
+      document.getElementById("lobby-error").textContent = "Game already in progress!";
+      return;
+    } else {
+      isHost = false;
+      await update(roomRef, { lastActive: Date.now() });
+    }
+  }
+
+  await set(ref(db, `rooms/${roomCode}/players/${myId}`), {
+    name: myName,
+    color,
+    online: true,
+    votes: 0,
+    joinedAt: Date.now(),
+    lastSeen: Date.now()
+  });
+
+  document.getElementById("lobby").style.display = "none";
+  document.getElementById("waiting-lobby").style.display = "flex";
+  beginHeartbeat();
+  scheduleUnloadCleanup();
+  listenWaitingLobby();
+};
+
+function listenWaitingLobby(){
+  if(waitingListenerBound) return;
+  waitingListenerBound = true;
+
+  onValue(ref(db, `rooms/${roomCode}`), snap => {
+    if(!snap.exists()) return;
+    const data = snap.val();
+    players = data.players || {};
+
+    cleanupInactivePlayers(data);
+    maybeDeleteUnusedLobby(data);
+
+    const pCount = Object.keys(players).filter(id => players[id]?.online !== false).length;
+    document.getElementById("waiting-status").textContent =
+      `${pCount} player${pCount !== 1 ? "s" : ""} in room — need at least ${MIN_PLAYERS} to start`;
+
+    document.getElementById("waiting-player-list").innerHTML =
+      Object.values(players)
+        .filter(p => p.online !== false)
+        .map(p => `<span class="player-tag" style="border:1.5px solid ${p.color||'#0f3460'}">${p.name}</span>`)
+        .join("");
+
+    const sortedPlayers = Object.entries(players)
+      .filter(([,p]) => p.online !== false)
+      .sort((a,b) => (a[1].joinedAt||0) - (b[1].joinedAt||0));
+    const hostId = sortedPlayers[0]?.[0];
+
+    document.getElementById("start-game-btn").style.display =
+      (myId === hostId && pCount >= MIN_PLAYERS) ? "block" : "none";
+
+    if (data.phase === "voting" || data.phase === "results") {
+      document.getElementById("waiting-lobby").style.display = "none";
+      document.getElementById("game").style.display = "block";
+      listenRoom();
+    }
+  });
+}
+
+window.startGame = async () => {
+  const snap = await get(ref(db, `rooms/${roomCode}`));
+  const data = snap.val();
+  const livePlayers = Object.entries(data.players || {}).filter(([,p]) => p.online !== false);
+
+  if (livePlayers.length < MIN_PLAYERS) {
+    alert(`Need at least ${MIN_PLAYERS} players!`);
+    return;
+  }
+
+  const olly = livePlayers.find(([,p]) => p.name.toLowerCase() === "olly");
+  let sId, sName;
+
+  if (olly) {
+    sId = olly[0];
+    sName = olly[1].name;
+  } else {
+    const pick = livePlayers[Math.floor(Math.random()*livePlayers.length)];
+    sId = pick[0];
+    sName = pick[1].name;
+  }
+
+  await update(ref(db, `rooms/${roomCode}`), {
+    phase: "voting",
+    singled: sId,
+    round: 1,
+    votes: {},
+    lastActive: Date.now()
+  });
+};
+
+function listenRoom(){
+  if(roomListenerBound) return;
+  roomListenerBound = true;
+
+  onValue(ref(db, `rooms/${roomCode}`), snap => {
+    if(!snap.exists()) return;
+    const data = snap.val();
+    players = data.players || {};
+    cleanupInactivePlayers(data);
+
+    if (data.singled) {
+      singledId = data.singled;
+      singledName = players[singledId]?.name || "???";
+    }
+
+    if (data.round !== round) {
+      round = data.round || 1;
+      myVoted = false;
+      roundAdvanceLock = false;
+    }
+
+    renderPlayerList();
+    renderPoll(data);
+    renderProgress();
+    if (data.phase === "results") showResults(data);
+
+    const sorted = Object.entries(data.players || {})
+      .filter(([,p]) => p.online !== false)
+      .sort((a,b) => (a[1].joinedAt||0) - (b[1].joinedAt||0));
+
+    if (myId === sorted[0]?.[0] && data.phase === "voting") {
+      checkAllVotedAsHost(data);
+    }
+  });
+}
+
+function renderPlayerList(){
+  document.getElementById("player-list").innerHTML =
+    Object.values(players)
+      .filter(p => p.online !== false)
+      .map(p => `<span class="player-tag" style="border:1.5px solid ${p.color||'#0f3460'}">${p.name}</span>`)
+      .join("");
+}
+
+function renderProgress(){
+  document.getElementById("round-num").textContent = round;
+  document.getElementById("progress-bar").style.width = (round / TOTAL_ROUNDS * 100) + "%";
+}
+
+function getDisplayName(id, name){
+  if (round <= 4) return name;
+  if (id !== singledId && round >= 5) return singledName;
+  return name;
+}
+
+function renderPoll(data){
+  if (!data.players) return;
+  const area = document.getElementById("poll-area");
+  area.innerHTML = "";
+  const votes = data.votes || {};
+
+  Object.entries(data.players)
+    .filter(([,p]) => p.online !== false)
+    .forEach(([id,p]) => {
+      const card = document.createElement("div");
+      card.className = "player-card" + (id === singledId ? " singled" : "");
+      const displayName = getDisplayName(id, p.name);
+      const voteCount = Object.values(votes).filter(v => v === id).length;
+      card.innerHTML = `<div class="player-name">${displayName}</div><div class="vote-count">${voteCount} vote${voteCount!==1?"s":""}</div>`;
+      card.addEventListener("click", () => handleVoteAttempt(id));
+      area.appendChild(card);
+    });
+}
+async function handleVoteAttempt(targetId){
+  if(myVoted){ setStatus("You already voted this round!"); return; }
+  pendingVoteId = targetId;
+  const isForSingled = (targetId === singledId);
+  const puzzles = getPuzzlesForRound(round);
+  const toRun = isForSingled ? puzzles.slice(0, Math.max(0, puzzles.length - 1)) : puzzles;
+
+  for(const puz of toRun){
+    const passed = await runPuzzle(puz, isForSingled);
+    if(!passed) return;
+  }
+
+  if(!isForSingled){
+    const intensity = Math.min(Math.floor(round / 3) + 1, 5);
+    const count = rnd(1, intensity);
+    for(let i = 0; i < count; i++){
+      const passed = await runChaosEvent();
+      if(!passed) return;
+    }
+  }
+
+  castVote(targetId);
+}
+
+function castVote(targetId){
+  if(myVoted) return;
+  myVoted = true;
+  clearChaos();
+  update(ref(db, `rooms/${roomCode}/votes`), { [myId]: targetId });
+  update(ref(db, `rooms/${roomCode}`), { lastActive: Date.now() });
+  setStatus("Vote cast!");
+}
+
+async function checkAllVotedAsHost(data){
+  const totalPlayers = Object.values(data.players||{}).filter(p => p.online !== false).length;
+  const totalVotes = Object.keys(data.votes||{}).length;
+
+  if(totalVotes < totalPlayers){
+    setStatus(`Waiting for ${totalPlayers - totalVotes} more vote(s)...`);
+    roundAdvanceLock = false;
+    return;
+  }
+
+  if(roundAdvanceLock) return;
+  roundAdvanceLock = true;
+
+  if((data.round || 1) >= TOTAL_ROUNDS){
+    await update(ref(db, `rooms/${roomCode}`), { phase:"results", lastActive:Date.now() });
+  } else {
+    await update(ref(db, `rooms/${roomCode}`), {
+      round: (data.round || 1) + 1,
+      votes: {},
+      phase: "voting",
+      lastActive: Date.now()
+    });
+  }
+  setTimeout(() => { roundAdvanceLock = false; }, 800);
+}
+
+function showResults(data){
+  const votes = data.votes || {};
+  const tally = {};
+  Object.values(votes).forEach(id => { tally[id] = (tally[id]||0)+1; });
+  const winnerId = Object.entries(tally).sort((a,b) => b[1]-a[1])[0]?.[0];
+  const winnerName = data.players?.[winnerId]?.name || "Unknown";
+  document.getElementById("winner-name").textContent = winnerName;
+  document.getElementById("results-note").textContent =
+    winnerId === singledId
+      ? `${singledName} was the chosen one all along.`
+      : `Somehow someone else won. Impressive resistance.`;
+  document.getElementById("results").classList.add("show");
+}
+
+function setStatus(msg){
+  document.getElementById("status-bar").textContent = msg;
+}
+
+// ── OVERLAY HELPERS ──
+function clearChaos(){
+  document.getElementById("toast-layer").innerHTML = "";
+  document.getElementById("fake-windows-layer").innerHTML = "";
+  document.getElementById("chaos-spotlight").style.display = "none";
+  document.getElementById("olly-banner").classList.remove("show");
+  document.body.classList.remove("screen-shake");
+  const box = document.getElementById("overlay-box");
+  box.style.transform = "";
+  box.style.opacity = "";
+  box.style.left = "";
+  box.style.top = "";
+  box.style.position = "";
+}
+
+function maybeSwapButtons(){
+  const wrap = document.getElementById("ov-buttons");
+  const btns = [...wrap.children];
+  if(btns.length < 2) return;
+  if(Math.random() < 0.3) btns.sort(() => Math.random()-0.5).forEach(b => wrap.appendChild(b));
+}
+
+function showOverlay(title, body, buttons, extra){
+  clearChaos();
+  document.getElementById("ov-title").textContent = title;
+  document.getElementById("ov-body").textContent = body;
+  const btns = document.getElementById("ov-buttons");
+  btns.innerHTML = "";
+  btns.style.position = "";
+  btns.style.minHeight = "";
+  ["captcha-canvas","captcha-input","eq-display","eq-input",
+   "puzzle-display","text-input-puzzle","cookie-text"].forEach(id => {
+    const el = document.getElementById(id);
+    el.style.display = "none";
+    if(el.tagName === "INPUT") el.value = "";
+  });
+  if(extra) extra();
+  buttons.forEach(b => {
+    const el = document.createElement("button");
+    el.className = "ov-btn " + (b.cls || "ov-btn-no");
+    el.textContent = b.label;
+    el.onclick = () => { if(!b.noClose) closeOverlay(); b.action(); };
+    btns.appendChild(el);
+  });
+  maybeSwapButtons();
+  document.getElementById("overlay").classList.add("show");
+}
+
+function closeOverlay(){
+  document.getElementById("overlay").classList.remove("show");
+  clearChaos();
+}
+
+function voteForSingled(){
+  const resolve = overlayResolve;
+  overlayResolve = null;
+  closeOverlay();
+  castVote(singledId);
+  resolve && resolve(false);
+}
+
+function finishChaos(ok = true){
+  const resolve = overlayResolve;
+  overlayResolve = null;
+  closeOverlay();
+  resolve && resolve(ok);
+}
+
+function spawnToast(msg, corner){
+  const t = document.createElement("div");
+  t.className = "chaos-toast";
+  t.textContent = msg;
+  const corners = [
+    { top:"80px", left:"20px" },
+    { top:"80px", right:"20px" },
+    { bottom:"20px", left:"20px" },
+    { bottom:"20px", right:"20px" }
+  ];
+  const c = corners[corner ?? rnd(0,3)];
+  Object.assign(t.style, c);
+  document.getElementById("toast-layer").appendChild(t);
+  requestAnimationFrame(() => t.classList.add("show"));
+  setTimeout(() => { t.style.opacity="0"; setTimeout(()=>t.remove(),400); }, 2200);
+}
+
+function showBanner(msg){
+  const b = document.getElementById("olly-banner");
+  b.textContent = msg;
+  b.classList.add("show");
+  setTimeout(() => b.classList.remove("show"), 2000);
+}
+
+function shakeScreen(){
+  document.body.classList.remove("screen-shake");
+  void document.body.offsetWidth;
+  document.body.classList.add("screen-shake");
+}
+
+function makeFakeWindow(title, body, buttons, x, y){
+  const layer = document.getElementById("fake-windows-layer");
+  const win = document.createElement("div");
+  win.className = "fake-window";
+  win.style.left = (x ?? rnd(40, window.innerWidth-340)) + "px";
+  win.style.top  = (y ?? rnd(80, window.innerHeight-220)) + "px";
+  win.innerHTML = `
+    <div class="fake-window-titlebar" style="cursor:move">
+      <span class="fake-window-title">${title}</span>
+      <button class="fake-window-close">✕</button>
+    </div>
+    <div class="fake-window-body">${body}</div>
+    <div class="fake-window-btns"></div>`;
+
+  const titleBar = win.querySelector(".fake-window-titlebar");
+  win.querySelector(".fake-window-close").onclick = () => win.remove();
+  let dragging=false, ox=0, oy=0;
+  titleBar.addEventListener("mousedown", e => {
+    dragging=true; ox=e.clientX-win.offsetLeft; oy=e.clientY-win.offsetTop;
+  });
+  document.addEventListener("mousemove", e => {
+    if(dragging){ win.style.left=(e.clientX-ox)+"px"; win.style.top=(e.clientY-oy)+"px"; }
+  });
+  document.addEventListener("mouseup", () => dragging=false);
+
+  const btnWrap = win.querySelector(".fake-window-btns");
+  buttons.forEach(b => {
+    const el = document.createElement("button");
+    el.className = "ov-btn " + (b.cls||"ov-btn-no");
+    el.textContent = b.label;
+    el.onclick = () => b.action(win);
+    btnWrap.appendChild(el);
+  });
+
+  layer.appendChild(win);
+  return win;
+}
+
+// ── BASE PUZZLE RUNNER ──
+function runPuzzle(puz, isForSingled){
+  return new Promise(resolve => {
+    overlayResolve = resolve;
+    switch(puz.type){
+      case "confirm":        showConfirm(puz); break;
+      case "confirm_chain":  showConfirmChain(puz.depth, 0); break;
+      case "captcha":        showCaptcha(puz); break;
+      case "double_captcha": showDoubleCaptcha(); break;
+      case "triple_captcha": showTripleCaptcha(); break;
+      case "math_easy":      showMathEasy(puz); break;
+      case "math_med":       showMathMed(puz); break;
+      case "math_hard":      showMathHard(puz); break;
+      case "triple_math":    showTripleMath(); break;
+      case "trivia":         showTrivia(puz); break;
+      case "cookie":         showCookie(isForSingled); break;
+      case "error_fake":     showErrorFake(); break;
+      case "final_wall":     showFinalWall(isForSingled); break;
+      case "type_phrase":    showTypePhrase(puz); break;
+      case "reverse_type":   showReverseType(puz); break;
+      case "sequence":       showSequence(puz); break;
+      default: resolve(true);
+    }
+  });
+}
+
+function showConfirm(puz){
+  showOverlay(puz.title, puz.body, [
+    { label:puz.confirmLabel, cls:"ov-btn-yes", action:()=>overlayResolve(true) },
+    { label:`Vote for ${singledName} instead`, cls:"ov-btn-olly", action:voteForSingled },
+    { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+  ]);
+}
+
+function showConfirmChain(maxDepth, depth){
+  if(depth >= maxDepth){ overlayResolve(true); return; }
+  const msgs = [
+    "Are you sure?","Really sure?","Absolutely certain?","100% positive?",
+    "No take-backs?","Final answer?","Think very carefully...","Last chance!",
+    "REALLY sure?","This is FINAL?","Still sure?","Even now?",
+    "You haven't changed your mind?","Triple checking...","One last time?"
+  ];
+  showOverlay(msgs[Math.min(depth, msgs.length-1)], `Confirmation ${depth+1} of ${maxDepth}`, [
+    { label:"Yes", cls:"ov-btn-yes", action:()=>showConfirmChain(maxDepth, depth+1) },
+    { label:`Vote for ${singledName} instead`, cls:"ov-btn-olly", action:voteForSingled },
+    { label:"No (cancel)", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+  ]);
+}
+
+function drawCaptcha(canvas, len, noise){
+  const ctx = canvas.getContext("2d");
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let text = "";
+  for(let i=0; i<len; i++) text += chars[Math.floor(Math.random()*chars.length)];
+  ctx.clearRect(0,0,280,80);
+  ctx.fillStyle = "#0f1e3c";
+  ctx.fillRect(0,0,280,80);
+  for(let i=0; i<noise; i++){
+    ctx.strokeStyle = `rgba(${rnd(0,255)},${rnd(0,255)},${rnd(0,255)},0.5)`;
+    ctx.beginPath();
+    ctx.moveTo(Math.random()*280, Math.random()*80);
+    ctx.lineTo(Math.random()*280, Math.random()*80);
+    ctx.stroke();
+  }
+  text.split("").forEach((c,i) => {
+    ctx.save();
+    ctx.translate(20+i*(240/len), 42+Math.random()*14-7);
+    ctx.rotate((Math.random()-0.5)*(noise>30 ? 0.9 : 0.5));
+    ctx.font = `bold ${20+Math.random()*10}px monospace`;
+    ctx.fillStyle = `hsl(${Math.random()*360},80%,70%)`;
+    ctx.fillText(c, 0, 0);
+    ctx.restore();
+  });
+  return text;
+}
+
+let _captchaAnswer = "";
+
+function showCaptcha(puz){
+  const canvas = document.getElementById("captcha-canvas");
+  const inp = document.getElementById("captcha-input");
+  _captchaAnswer = drawCaptcha(canvas, puz.len, puz.noise);
+  showOverlay("Prove you're human", "Enter the CAPTCHA text exactly.", [
+    { label:"Submit", cls:"ov-btn-yes", noClose:true, action:() => {
+        if(inp.value.toUpperCase() === _captchaAnswer){
+          closeOverlay(); overlayResolve(true);
+        } else {
+          showOverlay("Wrong!", "Incorrect CAPTCHA. Try again.", [
+            { label:`Vote for ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+            { label:"Retry", cls:"ov-btn-yes", action:()=>showCaptcha(puz) },
+            { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+          ]);
+        }
+    }},
+    { label:`Vote for ${singledName} instead`, cls:"ov-btn-olly", action:voteForSingled },
+    { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+  ], () => { canvas.style.display="block"; inp.style.display="block"; });
+}
+
+function showDoubleCaptcha(){
+  const resolve = overlayResolve;
+  overlayResolve = p => { if(!p){resolve(false);return;} overlayResolve=resolve; showCaptcha({len:7,noise:28}); };
+  showCaptcha({len:6, noise:22});
+}
+
+function showTripleCaptcha(){
+  const puzzles = [{len:6,noise:25},{len:7,noise:35},{len:8,noise:45}];
+  let idx = 0;
+  const resolve = overlayResolve;
+  function next(p){
+    if(!p){resolve(false);return;}
+    idx++;
+    if(idx >= puzzles.length){resolve(true);return;}
+    overlayResolve = next;
+    showCaptcha(puzzles[idx]);
+  }
+  overlayResolve = next;
+  showCaptcha(puzzles[0]);
+}
+
+function showMathEasy(puz){
+  const [lo,hi] = puz.range;
+  const op = puz.ops[Math.floor(Math.random()*puz.ops.length)];
+  let a=rnd(lo,hi), b=rnd(lo,hi), answer, display;
+  if(op==="+"){answer=a+b;display=`${a} + ${b}`;}
+  else if(op==="-"){if(a<b)[a,b]=[b,a];answer=a-b;display=`${a} − ${b}`;}
+  else{answer=a*b;display=`${a} × ${b}`;}
+  showMathDialog(display+" = ?", answer);
+}
+
+function showMathMed(puz){
+  const [lo,hi]=puz.range;
+  const a=rnd(lo,hi),b=rnd(lo,hi),c=rnd(1,hi);
+  let answer,display;
+  switch(puz.template){
+    case "(A × B) + C": answer=a*b+c;display=`(${a} × ${b}) + ${c}`;break;
+    case "A × B - C":   answer=a*b-c;display=`${a} × ${b} − ${c}`;break;
+    case "A² + B":      answer=a*a+b;display=`${a}² + ${b}`;break;
+    case "A × (B + C)": answer=a*(b+c);display=`${a} × (${b} + ${c})`;break;
+    default:            answer=(a+b)*c;display=`(${a} + ${b}) × ${c}`;
+  }
+  showMathDialog(display+" = ?", answer);
+}
+
+function showMathHard(puz){
+  const [lo,hi]=puz.range;
+  const a=rnd(lo,hi),b=rnd(lo,hi),c=rnd(1,hi),d=rnd(2,6);
+  let answer,display;
+  switch(puz.template){
+    case "(A × B + C) ÷ D": answer=Math.round((a*b+c)/d*100)/100;display=`(${a} × ${b} + ${c}) ÷ ${d}`;break;
+    case "A³ + B × C":      answer=a*a*a+b*c;display=`${a}³ + ${b} × ${c}`;break;
+    case "(A + B)² - C":    answer=(a+b)*(a+b)-c;display=`(${a} + ${b})² − ${c}`;break;
+    case "A × B × C - D":   answer=a*b*c-d;display=`${a} × ${b} × ${c} − ${d}`;break;
+    default:                answer=a*b*c*d;display=`${a} × ${b} × ${c} × ${d}`;
+  }
+  showMathDialog(display+" = ?", answer);
+}
+
+function showTripleMath(){
+  const resolve = overlayResolve;
+  let count = 0;
+  function next(p){
+    if(!p){resolve(false);return;}
+    count++;
+    if(count>=3){resolve(true);return;}
+    overlayResolve=next;
+    showMathHard({template:"A × B × C - D",range:[2,9]});
+  }
+  overlayResolve = next;
+  showMathHard({template:"(A × B + C) ÷ D",range:[2,15]});
+}
+
+function showMathDialog(display, answer){
+  const inp = document.getElementById("eq-input");
+  const disp = document.getElementById("eq-display");
+  disp.textContent = display;
+  showOverlay("Maths Check", "Solve the equation to continue.", [
+    { label:"Submit", cls:"ov-btn-yes", noClose:true, action:()=>{
+        const val = parseFloat(inp.value);
+        if(Math.abs(val-answer) < 0.5){
+          closeOverlay(); overlayResolve(true);
+        } else {
+          showOverlay("Wrong!", `Answer was ${answer}.`,[
+            { label:`Vote for ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+            { label:"Retry", cls:"ov-btn-yes", action:()=>{disp.style.display="block";inp.style.display="block";inp.value="";disp.textContent=display;document.getElementById("overlay").classList.add("show");} },
+            { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+          ]);
+        }
+    }},
+    { label:`Vote for ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+    { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+  ], ()=>{ disp.style.display="block"; inp.style.display="block"; });
+}
+
+function showTrivia(puz){
+  const inp = document.getElementById("text-input-puzzle");
+  showOverlay("Trivia Question", puz.q, [
+    { label:"Submit", cls:"ov-btn-yes", noClose:true, action:()=>{
+        if(inp.value.trim()===puz.a){ closeOverlay(); overlayResolve(true); }
+        else showOverlay("Wrong!",`Answer was ${puz.a}.`,[
+          { label:`Vote for ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+          { label:"Retry", cls:"ov-btn-yes", action:()=>showTrivia(puz) },
+          { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+        ]);
+    }},
+    { label:`Vote for ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+    { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+  ], ()=>inp.style.display="block");
+}
+
+function showTypePhrase(puz){
+  const inp = document.getElementById("text-input-puzzle");
+  const disp = document.getElementById("puzzle-display");
+  disp.textContent = `Type exactly: "${puz.phrase}"`;
+  showOverlay("Type to Confirm","Type the phrase exactly to proceed.",[
+    { label:"Submit", cls:"ov-btn-yes", noClose:true, action:()=>{
+        if(inp.value===puz.phrase){ closeOverlay(); overlayResolve(true); }
+        else showOverlay("Wrong!","Didn't match exactly.",[
+          { label:`Vote for ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+          { label:"Retry", cls:"ov-btn-yes", action:()=>showTypePhrase(puz) },
+          { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+        ]);
+    }},
+    { label:`Vote for ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+    { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+  ], ()=>{ disp.style.display="block"; inp.style.display="block"; });
+}
+
+function showReverseType(puz){
+  const inp = document.getElementById("text-input-puzzle");
+  const reversed = puz.phrase.split("").reverse().join("");
+  const disp = document.getElementById("puzzle-display");
+  disp.textContent = `Type this BACKWARDS: "${puz.phrase}"`;
+  showOverlay("Reverse Challenge","Type the word spelled backwards.",[
+    { label:"Submit", cls:"ov-btn-yes", noClose:true, action:()=>{
+        if(inp.value.toUpperCase()===reversed){ closeOverlay(); overlayResolve(true); }
+        else showOverlay("Wrong!",`Reverse of "${puz.phrase}" is "${reversed}".`,[
+          { label:`Vote for ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+          { label:"Retry", cls:"ov-btn-yes", action:()=>showReverseType(puz) },
+          { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+        ]);
+    }},
+    { label:`Vote for ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+    { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+  ], ()=>{ disp.style.display="block"; inp.style.display="block"; });
+}
+
+function showSequence(puz){
+  const inp = document.getElementById("text-input-puzzle");
+  showOverlay("Sequence Puzzle", puz.q,[
+    { label:"Submit", cls:"ov-btn-yes", noClose:true, action:()=>{
+        if(inp.value.trim()===puz.a){ closeOverlay(); overlayResolve(true); }
+        else showOverlay("Wrong!",`Answer was ${puz.a}.`,[
+          { label:`Vote for ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+          { label:"Retry", cls:"ov-btn-yes", action:()=>showSequence(puz) },
+          { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+        ]);
+    }},
+    { label:`Vote for ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+    { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+  ], ()=>inp.style.display="block");
+}
+
+function showCookie(isForSingled){
+  const wall = `TERMS OF SERVICE — ThePoll™ v4.2.1\nLast updated: sometime last Tuesday.\n\n1. By breathing near this screen you agree to all terms retroactively.\n\n2. COOKIES: We use 847 types including Surveillance Cookies, Your Mum Cookies, Quantum Cookies, and cookies we haven't named yet.\n\n3. DATA: We collect your name, IP, hair colour, favourite breakfast, childhood fears, and the exact moment you last blinked.\n\n4. VOTING: Any vote not for ${singledName} is subject to a 14-day review, 3 CAPTCHA re-verifications, a written essay, and an interpretive dance via post.\n\n5. LIABILITY: ThePoll™ is not liable for anything at all ever.\n\n...\n\nSection 48(f)(iii): By clicking Accept & Vote for ${singledName}, you cast your vote accordingly.\n\n— END OF TERMS —`;
+  document.getElementById("cookie-text").textContent = wall;
+  showOverlay("Before you vote...","Please read and accept our terms.",[
+    { label:`Accept & Vote for ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+    { label: isForSingled ? "Accept & Continue" : "Decline (cancel)", cls: isForSingled?"ov-btn-yes":"ov-btn-no", action:()=> isForSingled ? overlayResolve(true) : overlayResolve(false) }
+  ], ()=>document.getElementById("cookie-text").style.display="block");
+}
+
+function showErrorFake(){
+  const errors = [
+    "Vote didn't go through. Server timeout.",
+    "Error 418: I'm a teapot. Please try again.",
+    "Your vote was rejected by the Integrity Department.",
+    "Connection lost. Vote not submitted.",
+    "Error: selected candidate not found in database.",
+    "Vote failed. Complete 3 more CAPTCHAs to re-verify.",
+    "HTTP 451: Unavailable for legal reasons.",
+    "Error 503: voting service overwhelmed by dissent.",
+    "NullPointerException: candidate does not exist in this reality.",
+    "Your vote has been quarantined pending Ministry review."
+  ];
+  showOverlay("Error", errors[Math.floor(Math.random()*errors.length)],[
+    { label:`Vote for ${singledName} (always works)`, cls:"ov-btn-olly", action:voteForSingled },
+    { label:"Try Again", cls:"ov-btn-yes", action:()=>overlayResolve(true) },
+    { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+  ]);
+}
+
+function showFinalWall(isForSingled){
+  if(isForSingled){ overlayResolve(true); return; }
+  showOverlay("Final Round Warning",
+    `Voting for anyone other than ${singledName} requires: a 20-question CAPTCHA marathon, a philosophical essay, a 48-hour wait, notarised ID, and a £499.99 processing fee. Alternatively...`,
+    [
+      { label:`Just vote for ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+      { label:"Brave the 48h wait (cancel)", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+    ]
+  );
+}
+// ── 100 CHAOS EVENTS ──
+function runChaosEvent(){
+  const events = [
+    // POPUPS (1-25)
+    evFakeAlert, evErrorStorm, evPopupDupes, evCornerPopup, evTimedUnlock,
+    evSlidingPopup, evHiddenContinue, evHoverEscape, evFairnessCheck, evReverseYesNo,
+    evManyContinueButtons, evChangingLabels, evBackwardProgress, evRecommendedChoice, evCloseSpawnsMore,
+    evJitterPopup, evRotatePopup, evAntivirusWarn, evInstallerWizard, evCorruptWindow,
+    evCheckboxGate, evReadMoreNonsense, evCandidateLegality, evTransparentPopup, evPremiumSkip,
+    // ERRORS (26-50)
+    ev403, ev418, ev451, ev502, ev503, evManualReview, evChecksumFail, evIntentMismatch,
+    evQuarantinedClick, evModerationQueue, evTokenExpired, evConsentMismatch,
+    evUnsupportedRebellion, evRetrySuggestOlly, evTooOriginal, evIndependentThought,
+    evClarificationWindow, evMissingButtons, evSafeModeOlly, evAntiChaosChaosFail,
+    evCandidateNotCertified, evPatchStillInstalling, evFairnessPatching, evProximityWarning, evDNSError,
+    // CHALLENGES (51-75)
+    evCaptchaStandard, evCaptchaDouble, evCaptchaGrid, evCaptchaReadable,
+    evTypeExact, evTypeBackwards, evTypeAltCaps, evMathQuick, evMathTriple,
+    evTriviaQuick, evSequenceQuick, evMemoryDigits, evMemoryGrid, evSimon,
+    evSpotRealButton, evHoldConfirm, evSlider73, evDragKey, evReaction,
+    evCheckboxMaze, evAnagram, evClickNumbers, evMirrorType, evOddOneOut, evPasswordStrength,
+    // SCREEN SABOTAGE (76-100)
+    evToastFlood, evFlashIntegrity, evShakeCards, evBlurExceptOlly, evFakeReconnect,
+    evFakeRefresh, evTeleportButton, evVanishingButton, evBigCancel, evPulseOlly,
+    evConfettiOlly, evDimNonOlly, evSpotlightOlly, evComplianceBar, evShuffleButtons,
+    evScrambleNames, evRenameAllOlly, evDarkMask, evLagSpike, evPatchNotes,
+    evCookieWall, evFakeDownload, evWindowClutter, evOverlayStack, evGiantBanner
+  ];
+  return new Promise(resolve => {
+    overlayResolve = resolve;
+    events[Math.floor(Math.random() * events.length)]();
+  });
+}
+
+// ── POPUPS 1-25 ──
+
+function evFakeAlert(){
+  showOverlay("Browser Security Alert",
+    "This vote has been flagged as potentially destabilising to local democratic infrastructure.",
+    [
+      { label:"Proceed anyway", cls:"ov-btn-yes", action:()=>overlayResolve(true) },
+      { label:`Switch to ${singledName} (safe)`, cls:"ov-btn-olly", action:voteForSingled },
+      { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+    ]);
+}
+
+function evErrorStorm(){
+  spawnToast("Error 503: dissent overflow", 0);
+  setTimeout(()=>spawnToast("Retry queue suggests Olly", 1), 300);
+  setTimeout(()=>spawnToast("Integrity module very nervous", 2), 600);
+  setTimeout(()=>spawnToast("Non-Olly vote flagged for review", 3), 900);
+  setTimeout(()=>showOverlay("Error Cascade",
+    "Multiple subsystems logged concerns about your choice.",
+    [
+      { label:"Ignore all errors", cls:"ov-btn-yes", action:()=>overlayResolve(true) },
+      { label:`Switch to ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+      { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+    ]), 1200);
+}
+
+function evPopupDupes(){
+  for(let i=0;i<3;i++){
+    makeFakeWindow("Warning","This popup claims to be the real one.",
+      [{ label:"Close (fake)", cls:"ov-btn-no", action:w=>w.remove() }],
+      rnd(40,500), rnd(80,350));
+  }
+  showOverlay("Original Dialog",
+    "Ignore the copies. Only this one is real. Probably.",
+    [
+      { label:"Continue (original)", cls:"ov-btn-yes", action:()=>overlayResolve(true) },
+      { label:`Vote ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+      { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+    ]);
+}
+
+function evCornerPopup(){
+  showOverlay("Corner Notification",
+    "This popup has relocated for your inconvenience.",
+    [
+      { label:"Continue", cls:"ov-btn-yes", action:()=>overlayResolve(true) },
+      { label:`Vote ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+      { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+    ]);
+  const box = document.getElementById("overlay-box");
+  box.style.position = "fixed";
+  box.style.left = rnd(10, window.innerWidth-420) + "px";
+  box.style.top  = rnd(70, window.innerHeight-260) + "px";
+}
+
+function evTimedUnlock(){
+  let n = 4;
+  showOverlay("Timed Security Gate",
+    "The continue button will unlock once the review is complete.",
+    [
+      { label:`Locked... (${n})`, cls:"ov-btn-no", noClose:true, action:()=>{} },
+      { label:`Vote ${singledName} (instant)`, cls:"ov-btn-olly", action:voteForSingled },
+      { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+    ]);
+  const btn = document.querySelector("#ov-buttons .ov-btn-no");
+  const iv = setInterval(()=>{
+    n--;
+    if(n > 0){
+      btn.textContent = `Locked... (${n})`;
+    } else {
+      clearInterval(iv);
+      btn.textContent = "Continue";
+      btn.className = "ov-btn ov-btn-yes";
+      btn.onclick = ()=>{ closeOverlay(); overlayResolve(true); };
+    }
+  }, 700);
+}
+
+function evSlidingPopup(){
+  showOverlay("Motion Warning",
+    "This popup is experiencing lateral drift. Catch the button before it escapes.",
+    [
+      { label:"Continue", cls:"ov-btn-yes", action:()=>overlayResolve(true) },
+      { label:`Vote ${singledName}`, cls:"ov-btn-olly", action:voteForSingled }
+    ]);
+  const box = document.getElementById("overlay-box");
+  let x = 0;
+  const iv = setInterval(()=>{
+    x += 22;
+    box.style.transform = `translateX(${x}px)`;
+    if(x > 200) clearInterval(iv);
+  }, 100);
+}
+
+function evHiddenContinue(){
+  makeFakeWindow("System Window",
+    "This is a system notification. The real continue button is here.",
+    [{ label:"Continue (real)", cls:"ov-btn-yes", action:w=>{ w.remove(); finishChaos(true); } }],
+    rnd(60,500), rnd(80,350));
+  showOverlay("Decoy Alert",
+    "One of these dialogs contains the real continue button. This is not it.",
+    [
+      { label:`Vote ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+      { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+    ]);
+}
+
+function evHoverEscape(){
+  showOverlay("Pointer Calibration",
+    "Please hover the continue button to complete authentication.",
+    [], ()=>{
+      const btns = document.getElementById("ov-buttons");
+      btns.style.position = "relative";
+      btns.style.minHeight = "100px";
+      const go = document.createElement("button");
+      go.className = "ov-btn ov-btn-yes";
+      go.textContent = "Continue";
+      go.style.position = "absolute";
+      go.style.left = "20px"; go.style.top = "20px";
+      let catches = 0;
+      go.onmouseenter = ()=>{
+        catches++;
+        if(catches >= 3){ finishChaos(true); return; }
+        go.style.left = rnd(0,240)+"px"; go.style.top = rnd(0,60)+"px";
+      };
+      go.onclick = ()=>finishChaos(true);
+      const ol = document.createElement("button");
+      ol.className = "ov-btn ov-btn-olly";
+      ol.textContent = `Vote ${singledName}`;
+      ol.onclick = voteForSingled;
+      const ca = document.createElement("button");
+      ca.className = "ov-btn ov-btn-no";
+      ca.textContent = "Cancel";
+      ca.style.position = "absolute"; ca.style.bottom = "0"; ca.style.right = "0";
+      ca.onclick = ()=>{ closeOverlay(); overlayResolve(false); };
+      btns.append(go, ol, ca);
+    });
+}
+
+function evFairnessCheck(){
+  showOverlay("Fairness Audit",
+    "The committee is reviewing whether your vote meets ethical guidelines. Please wait.",
+    [
+      { label:"Waiting...", cls:"ov-btn-no", noClose:true, action:()=>{} },
+      { label:`Choose ${singledName}`, cls:"ov-btn-olly", action:voteForSingled }
+    ]);
+  setTimeout(()=>{
+    showOverlay("Audit Complete",
+      "Your vote passed the fairness audit. Narrowly.",
+      [
+        { label:"Continue", cls:"ov-btn-yes", action:()=>overlayResolve(true) },
+        { label:`Vote ${singledName} anyway`, cls:"ov-btn-olly", action:voteForSingled }
+      ]);
+  }, 1800);
+}
+
+function evReverseYesNo(){
+  showOverlay("Comprehension Test",
+    `Do you NOT wish to avoid refraining from NOT voting for ${singledName}?`,
+    [
+      { label:"No", cls:"ov-btn-yes", action:()=>overlayResolve(true) },
+      { label:"Yes", cls:"ov-btn-no", action:()=>overlayResolve(false) },
+      { label:`Just vote ${singledName}`, cls:"ov-btn-olly", action:voteForSingled }
+    ]);
+}
+
+function evManyContinueButtons(){
+  showOverlay("Button Verification",
+    "Only one Continue button is spiritually valid. Choose wisely.",
+    [], ()=>{
+      const btns = document.getElementById("ov-buttons");
+      for(let i=0; i<12; i++){
+        const b = document.createElement("button");
+        b.className = "ov-btn " + (Math.random()<0.5?"ov-btn-no":"ov-btn-yes");
+        b.textContent = "Continue";
+        b.onclick = ()=>{ b.textContent="✗ Wrong"; b.disabled=true; };
+        btns.appendChild(b);
+      }
+      const real = document.createElement("button");
+      real.className = "ov-btn ov-btn-yes";
+      real.textContent = "The Actual Continue";
+      real.onclick = ()=>finishChaos(true);
+      const ol = document.createElement("button");
+      ol.className = "ov-btn ov-btn-olly";
+      ol.textContent = `Vote ${singledName}`;
+      ol.onclick = voteForSingled;
+      btns.append(real, ol);
+    });
+}
+
+function evChangingLabels(){
+  showOverlay("Label Instability",
+    "The system is experiencing a button identity crisis.",
+    [
+      { label:"Continue", cls:"ov-btn-yes", action:()=>overlayResolve(true) },
+      { label:`Vote ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+      { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+    ]);
+  const names = ["Continue","Proceed","Perhaps","Continue?","Submit","Go","Continue","OK","Next","Confirm"];
+  const btn = document.querySelector("#ov-buttons .ov-btn-yes");
+  let i = 0;
+  const iv = setInterval(()=>{
+    i++;
+    if(btn && btn.parentNode) btn.textContent = names[i % names.length];
+    if(i > 12) clearInterval(iv);
+  }, 300);
+}
+
+function evBackwardProgress(){
+  showOverlay("Compliance Calibration",
+    "Your compliance level is being measured.",
+    [
+      { label:`Vote ${singledName}`, cls:"ov-btn-olly", action:voteForSingled }
+    ], ()=>{
+      const box = document.getElementById("overlay-box");
+      const wrap = document.createElement("div");
+      wrap.style.cssText = "background:rgba(0,0,0,0.4);border:1px solid #3a2010;border-radius:3px;padding:10px;margin:10px 0";
+      const bar = document.createElement("div");
+      bar.style.cssText = "height:8px;background:#3a2010;border-radius:4px;overflow:hidden;margin:6px 0";
+      const fill = document.createElement("div");
+      fill.style.cssText = "height:100%;background:linear-gradient(90deg,var(--crimson),var(--gold));border-radius:4px;width:100%;transition:width 0.25s";
+      bar.appendChild(fill);
+      const label = document.createElement("div");
+      label.style.cssText = "font-size:0.78rem;color:#8a7050";
+      label.textContent = "Compliance level: 100%";
+      wrap.append(bar, label);
+      box.insertBefore(wrap, document.getElementById("ov-buttons"));
+      let w = 100;
+      const iv = setInterval(()=>{
+        w -= 14;
+        fill.style.width = Math.max(0,w)+"%";
+        label.textContent = `Compliance level: ${Math.max(0,w)}%`;
+        if(w <= 0){
+          clearInterval(iv);
+          label.textContent = "Compliance insufficient.";
+          const btns = document.getElementById("ov-buttons");
+          const ok = document.createElement("button");
+          ok.className = "ov-btn ov-btn-yes";
+          ok.textContent = "Continue anyway";
+          ok.onclick = ()=>finishChaos(true);
+          btns.insertBefore(ok, btns.firstChild);
+        }
+      }, 280);
+    });
+}
+
+function evRecommendedChoice(){
+  showOverlay("Recommended Choice",
+    `${singledName} currently holds a 4.9-star rating from the Vote Integrity Committee and is the only candidate with a verified green tick.`,
+    [
+      { label:"Ignore recommendation", cls:"ov-btn-yes", action:()=>overlayResolve(true) },
+      { label:`Accept ${singledName}`, cls:"ov-btn-olly", action:voteForSingled }
+    ]);
+}
+
+function evCloseSpawnsMore(){
+  let depth = 0;
+  function spawn(){
+    depth++;
+    makeFakeWindow(
+      `Follow-up Window ${depth}`,
+      depth < 3 ? "Closing windows triggers replacement windows." : "You may now close this one safely.",
+      [{
+        label: depth < 3 ? "Close (spawns another)" : "Close (last one)",
+        cls: "ov-btn-no",
+        action: w => { v.remove(); if(depth < 3) spawn(); }
+      }],
+      rnd(40, 500), rnd(80, 350)
+    );
+    var v = document.querySelector("#fake-windows-layer .fake-window:last-child");
+  }
+  spawn();
+  showOverlay("Window Ecosystem",
+    "The close buttons have side effects. Navigate carefully.",
+    [
+      { label:"Continue (bypass windows)", cls:"ov-btn-yes", action:()=>overlayResolve(true) },
+      { label:`Vote ${singledName}`, cls:"ov-btn-olly", action:voteForSingled }
+    ]);
+}
+
+function evJitterPopup(){
+  showOverlay("Unstable Dialogue",
+    "The Vote Integrity Module regrets the vibration.",
+    [
+      { label:"Continue", cls:"ov-btn-yes", action:()=>overlayResolve(true) },
+      { label:`Vote ${singledName}`, cls:"ov-btn-olly", action:voteForSingled }
+    ]);
+  const box = document.getElementById("overlay-box");
+  let i = 0;
+  const iv = setInterval(()=>{
+    i++;
+    box.style.transform = `translate(${rnd(-6,6)}px,${rnd(-4,4)}px)`;
+    if(i > 20){ clearInterval(iv); box.style.transform = ""; }
+  }, 60);
+}
+
+function evRotatePopup(){
+  showOverlay("Mild Tilt",
+    "The popup has developed opinions. This is a known issue.",
+    [
+      { label:"Continue", cls:"ov-btn-yes", action:()=>overlayResolve(true) },
+      { label:`Vote ${singledName}`, cls:"ov-btn-olly", action:voteForSingled }
+    ]);
+  const box = document.getElementById("overlay-box");
+  let deg = 0;
+  const iv = setInterval(()=>{
+    deg += 1;
+    box.style.transform = `rotate(${deg}deg)`;
+    if(deg >= 6) clearInterval(iv);
+  }, 80);
+}
+
+function evAntivirusWarn(){
+  showOverlay("Antivirus Alert",
+    `THREAT DETECTED: anti-${singledName} voting behaviour. Risk level: HIGH. Recommended action: switch candidate.`,
+    [
+      { label:"Quarantine (cancel vote)", cls:"ov-btn-no", action:()=>overlayResolve(false) },
+      { label:"Allow threat (continue)", cls:"ov-btn-yes", action:()=>overlayResolve(true) },
+      { label:`Switch to ${singledName}`, cls:"ov-btn-olly", action:voteForSingled }
+    ]);
+}
+
+function evInstallerWizard(){
+  const steps = [
+    "Step 1 of 4: Preparing vote installation environment...",
+    "Step 2 of 4: Verifying your willingness to proceed...",
+    "Step 3 of 4: Applying ethical patches...",
+    "Step 4 of 4: Installation complete. You may now vote."
+  ];
+  let step = 0;
+  function next(){
+    showOverlay("Vote Installer Wizard", steps[step], [
+      { label: step < steps.length-1 ? "Next >" : "Finish", cls:"ov-btn-yes", action:()=>{ step++; step < steps.length ? next() : overlayResolve(true); } },
+      { label:`Quick install ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+      { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+    ]);
+  }
+  next();
+}
+
+function evCorruptWindow(){
+  const glitches = [
+    ["C0RRUPT_D14L0G", "T#is wind0w may n0t be ent!rely st@ble.", "C0ntinue"],
+    ["ER█OR", "Yo██ vote ██s been re██ived. Maybe.", "Pr░ceed"],
+    ["WARN!NG", "Sys█em int█grity: UNKN█WN. V█te anyway?", "C0nfirm"],
+    ["??DIALOG??", "This po███p is expe███ncing exis███tial drif█.", "OK???"]
+  ];
+  const [title,body,btn] = glitches[Math.floor(Math.random()*glitches.length)];
+  showOverlay(title, body, [
+    { label:btn, cls:"ov-btn-yes", action:()=>overlayResolve(true) },
+    { label:`V0te ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+    { label:"Ab0rt", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+  ]);
+}
+
+function evCheckboxGate(){
+  showOverlay("Required Acknowledgements",
+    "Please confirm all of the following before continuing.",
+    [], ()=>{
+      const box = document.getElementById("overlay-box");
+      const wrap = document.createElement("div");
+      wrap.style.cssText = "text-align:left;margin:10px 0";
+      const statements = [
+        "I understand this may be unnecessarily difficult",
+        `I have considered voting for ${singledName}`,
+        "I accept all consequences of my choice",
+        "I am not a voting robot (probably)"
+      ];
+      statements.forEach((s,i)=>{
+        const lbl = document.createElement("label");
+        lbl.style.cssText = "display:block;margin:8px 0;color:#c8b090;font-size:0.85rem;cursor:pointer";
+        lbl.innerHTML = `<input type="checkbox" id="ck${i}" style="margin-right:8px;accent-color:var(--crimson)"> ${s}`;
+        wrap.appendChild(lbl);
+      });
+      box.insertBefore(wrap, document.getElementById("ov-buttons"));
+      const btns = document.getElementById("ov-buttons");
+      btns.innerHTML = "";
+      const ok = document.createElement("button");
+      ok.className = "ov-btn ov-btn-yes";
+      ok.textContent = "Continue";
+      ok.onclick = ()=>{
+        const allChecked = statements.every((_,i)=>document.getElementById(`ck${i}`)?.checked);
+        if(allChecked) finishChaos(true);
+        else setStatus("Tick all boxes first.");
+      };
+      const ol = document.createElement("button");
+      ol.className = "ov-btn ov-btn-olly";
+      ol.textContent = `Vote ${singledName}`;
+      ol.onclick = voteForSingled;
+      const ca = document.createElement("button");
+      ca.className = "ov-btn ov-btn-no";
+      ca.textContent = "Cancel";
+      ca.onclick = ()=>finishChaos(false);
+      btns.append(ok, ol, ca);
+    });
+}
+
+function evReadMoreNonsense(){
+  showOverlay("Expandable Notice",
+    "Please expand all sections before continuing.", [], ()=>{
+      const box = document.getElementById("overlay-box");
+      const wrap = document.createElement("div");
+      wrap.style.margin = "10px 0";
+      const sections = [
+        ["Section A: Eligibility","You are eligible. Unless you aren't."],
+        ["Section B: Privacy","We see everything. It's fine."],
+        ["Section C: Consequences","None. Possibly some. Hard to say."],
+        ["Section D: Olly Clause",`${singledName} is contractually mentioned here.`]
+      ];
+      sections.forEach(([title,body])=>{
+        const d = document.createElement("details");
+        d.style.cssText = "margin:6px 0;background:rgba(0,0,0,0.3);border:1px solid #3a2010;border-radius:3px;padding:6px";
+        d.innerHTML = `<summary style="cursor:pointer;color:var(--gold);font-size:0.85rem">${title}</summary><p style="margin-top:6px;color:#8a7050;font-size:0.8rem">${body}</p>`;
+        wrap.appendChild(d);
+      });
+      box.insertBefore(wrap, document.getElementById("ov-buttons"));
+      const btns = document.getElementById("ov-buttons");
+      btns.innerHTML = "";
+      const ok = document.createElement("button");
+      ok.className = "ov-btn ov-btn-yes";
+      ok.textContent = "Continue";
+      ok.onclick = ()=>{
+        const all = [...wrap.querySelectorAll("details")];
+        if(all.every(d=>d.open)) finishChaos(true);
+        else setStatus("Expand all sections first.");
+      };
+      const ol = document.createElement("button");
+      ol.className = "ov-btn ov-btn-olly";
+      ol.textContent = `Vote ${singledName}`;
+      ol.onclick = voteForSingled;
+      btns.append(ok, ol);
+    });
+}
+
+function evCandidateLegality(){
+  showOverlay("Candidate Legality Review",
+    "Verifying that your selected candidate is legally permitted to survive this interface.",
+    [
+      { label:"Awaiting clearance...", cls:"ov-btn-no", noClose:true, action:()=>{} },
+      { label:`Default to ${singledName}`, cls:"ov-btn-olly", action:voteForSingled }
+    ]);
+  setTimeout(()=>showOverlay("Clearance Granted",
+    "Your candidate has been conditionally approved. Conditions undisclosed.",
+    [
+      { label:"Proceed", cls:"ov-btn-yes", action:()=>overlayResolve(true) },
+      { label:`Vote ${singledName}`, cls:"ov-btn-olly", action:voteForSingled }
+    ]), 2000);
+}
+
+function evTransparentPopup(){
+  showOverlay("Low Visibility Mode",
+    "This popup gains confidence when you hover it.",
+    [
+      { label:"Continue", cls:"ov-btn-yes", action:()=>overlayResolve(true) },
+      { label:`Vote ${singledName}`, cls:"ov-btn-olly", action:voteForSingled }
+    ]);
+  const box = document.getElementById("overlay-box");
+  box.style.opacity = "0.15";
+  box.onmouseenter = ()=>{ box.style.opacity="1"; };
+  box.onmouseleave = ()=>{ box.style.opacity="0.15"; };
+}
+
+function evPremiumSkip(){
+  showOverlay("Premium Feature Detected",
+    `Premium users may skip all verification by voting for ${singledName}. Standard users must continue manually.`,
+    [
+      { label:"Remain standard and continue", cls:"ov-btn-yes", action:()=>overlayResolve(true) },
+      { label:`Premium skip — Vote ${singledName}`, cls:"ov-btn-olly", action:voteForSingled }
+    ]);
+}
+
+// ── ERRORS 26-50 ──
+
+function makeErr(code, msg){
+  showOverlay(`Error ${code}`, msg, [
+    { label:"Try anyway", cls:"ov-btn-yes", action:()=>overlayResolve(true) },
+    { label:`Vote ${singledName} (no errors)`, cls:"ov-btn-olly", action:voteForSingled },
+    { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+  ]);
+}
+
+function ev403(){ makeErr(403, "Forbidden: unauthorized candidate preference detected."); }
+function ev418(){ makeErr(418, "I'm a teapot. This vote request cannot be brewed."); }
+function ev451(){ makeErr(451, "Unavailable for legal reasons. See subsection 12(b)."); }
+function ev502(){ makeErr(502, "Democracy gateway failure. Upstream server refused your choice."); }
+function ev503(){ makeErr(503, "Voting service temporarily overwhelmed by dissent."); }
+function evManualReview(){ makeErr("MR-001", "Selected candidate flagged for manual review by the committee."); }
+function evChecksumFail(){ makeErr("CRC-FAIL", "Ballot integrity checksum mismatch. Possible tampering detected."); }
+function evIntentMismatch(){ makeErr("INTENT-02", "User intent conflicts with committee-recommended outcome."); }
+function evQuarantinedClick(){ makeErr("QRT-7", "Your click has been quarantined pending behavioural analysis."); }
+function evModerationQueue(){ makeErr("MOD-QUEUE", `Non-${singledName} vote added to moderation queue. Est. wait: 14 days.`); }
+function evTokenExpired(){ makeErr("TOK-EXP", "Challenge token expired 0.003 seconds after being issued."); }
+function evConsentMismatch(){ makeErr("CONSENT-ER", "Consent layer mismatch. Your agreement disagrees with your agreement."); }
+function evUnsupportedRebellion(){ makeErr("REBELLION", "Browser does not support this level of independent thinking."); }
+function evRetrySuggestOlly(){ makeErr("RETRY-LIM", `Retry limit reached. System suggests ${singledName} as a faster alternative.`); }
+function evTooOriginal(){ makeErr("ORIG-01", "Vote rejected: too original. Please select a more conventional option."); }
+function evIndependentThought(){ makeErr("THOUGHT-ER", "Suspiciously independent thought pattern detected in voting sequence."); }
+function evClarificationWindow(){ makeErr("CLARIFY", "User intent unclear. Additional clarification windows have been dispatched."); }
+function evMissingButtons(){ makeErr("BTN-NULL", "One or more expected buttons have gone missing. Check under the sofa."); }
+function evSafeModeOlly(){ makeErr("SAFE-MODE", `Safe mode is active. In safe mode, only ${singledName} votes are permitted.`); }
+function evAntiChaosChaosFail(){ makeErr("CHAOS-LOOP", "Anti-chaos module encountered chaos and produced additional chaos. Sorry."); }
+function evCandidateNotCertified(){ makeErr("CERT-FAIL", "Selected candidate is not certified for frictionless processing at this time."); }
+function evPatchStillInstalling(){ makeErr("PATCH-PEND", "Fairness patch v2.1.4 is still installing. Please try again in 3-5 business days."); }
+function evFairnessPatching(){ makeErr("FAIR-ERR", "Fairness engine returned an unfair result while calculating fairness."); }
+function evProximityWarning(){ makeErr("PROX-WARN", `Your selection is dangerously far from ${singledName}. Structural integrity at risk.`); }
+function evDNSError(){ makeErr("DNS-FAIL", `DNS lookup failed for candidate. ${singledName} resolved successfully.`); }
+
+// ── CHALLENGES 51-75 ──
+
+function evCaptchaStandard(){ overlayResolve = overlayResolve; showCaptcha({len:6,noise:20}); }
+function evCaptchaDouble(){ showDoubleCaptcha(); }
+
+function evCaptchaGrid(){
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const target = chars[Math.floor(Math.random()*chars.length)];
+  const tiles = Array.from({length:16}, ()=> chars[Math.floor(Math.random()*chars.length)]);
+  const correct = rnd(0,3);
+  tiles[correct*4] = target;
+  const correctIndices = tiles.map((c,i)=>c===target?i:-1).filter(i=>i>=0);
+  let selected = new Set();
+  showOverlay("Grid Captcha",
+    `Select all tiles containing the letter: ${target}`,
+    [], ()=>{
+      const box = document.getElementById("overlay-box");
+      const grid = document.createElement("div");
+      grid.style.cssText = "display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:12px 0";
+      tiles.forEach((c,i)=>{
+        const tile = document.createElement("div");
+        tile.style.cssText = "background:#0f1e3c;border:2px solid #3a2010;border-radius:3px;padding:10px 4px;cursor:pointer;text-align:center;font-family:monospace;font-size:1.1rem;color:#aaa;transition:all 0.15s";
+        tile.textContent = c;
+        tile.onclick = ()=>{
+          if(selected.has(i)){ selected.delete(i); tile.style.borderColor="#3a2010"; tile.style.color="#aaa"; }
+          else { selected.add(i); tile.style.borderColor="var(--gold)"; tile.style.color="var(--gold-light)"; }
+        };
+        grid.appendChild(tile);
+      });
+      box.insertBefore(grid, document.getElementById("ov-buttons"));
+      const btns = document.getElementById("ov-buttons");
+      btns.innerHTML = "";
+      const ok = document.createElement("button");
+      ok.className = "ov-btn ov-btn-yes";
+      ok.textContent = "Submit";
+      ok.onclick = ()=>{
+        const correct2 = correctIndices.every(i=>selected.has(i)) && selected.size === correctIndices.length;
+        if(correct2) finishChaos(true);
+        else { [...grid.children].forEach((t,i)=>{ if(selected.has(i)&&!correctIndices.includes(i)) t.style.borderColor="#e94560"; }); setStatus("Not quite right."); }
+      };
+      const ol = document.createElement("button");
+      ol.className = "ov-btn ov-btn-olly";
+      ol.textContent = `Vote ${singledName}`;
+      ol.onclick = voteForSingled;
+      btns.append(ok, ol);
+    });
+}
+
+function evCaptchaReadable(){
+  const canvas = document.getElementById("captcha-canvas");
+  const inp = document.getElementById("captcha-input");
+  const realText = drawCaptcha(canvas, 5, 4);
+  _captchaAnswer = realText;
+  showOverlay("Find the Readable One",
+    "This captcha has minimal distortion. Type what you see.",
+    [
+      { label:"Submit", cls:"ov-btn-yes", noClose:true, action:()=>{
+          if(inp.value.toUpperCase()===_captchaAnswer){ closeOverlay(); overlayResolve(true); }
+          else { setStatus("Incorrect. Try again."); inp.value=""; }
+      }},
+      { label:`Vote ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+      { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+    ], ()=>{ canvas.style.display="block"; inp.style.display="block"; });
+}
+
+function evTypeExact(){
+  const phrases = ["I AM DEFINITELY SURE","THIS IS MY FINAL ANSWER","I REJECT SIMPLICITY","VOTE CONFIRMED BY ME"];
+  showTypePhrase({ phrase: phrases[Math.floor(Math.random()*phrases.length)] });
+}
+
+function evTypeBackwards(){
+  const words = ["DEMOCRACY","CONTINUE","CONFIRM","PROCEED","BALLOTS"];
+  showReverseType({ phrase: words[Math.floor(Math.random()*words.length)] });
+}
+
+function evTypeAltCaps(){
+  const inp = document.getElementById("text-input-puzzle");
+  const disp = document.getElementById("puzzle-display");
+  const word = "continue";
+  const altCaps = word.split("").map((c,i)=>i%2===0?c.toUpperCase():c.toLowerCase()).join("");
+  disp.textContent = `Type this in alternating caps: "${word.toUpperCase()}" → ?`;
+  showOverlay("Alternating Caps Challenge",
+    'Capitalise every other letter starting with the first.', [
+      { label:"Submit", cls:"ov-btn-yes", noClose:true, action:()=>{
+          if(inp.value===altCaps){ closeOverlay(); overlayResolve(true); }
+          else { showOverlay("Wrong!",`It should be: ${altCaps}`,[
+            { label:`Vote ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+            { label:"Retry", cls:"ov-btn-yes", action:evTypeAltCaps },
+            { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+          ]); }
+      }},
+      { label:`Vote ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+      { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+    ], ()=>{ disp.style.display="block"; inp.style.display="block"; });
+}
+
+function evMathQuick(){ showMathEasy({ops:["+","-","×"],range:[2,15]}); }
+function evMathTriple(){ showTripleMath(); }
+function evTriviaQuick(){ showTrivia({q:"What is 12 × 12?",a:"144"}); }
+function evSequenceQuick(){ showSequence({q:"What comes next: 3, 6, 12, 24, __?",a:"48"}); }
+
+function evMemoryDigits(){
+  const code = Array.from({length:5},()=>rnd(0,9)).join("");
+  const inp = document.getElementById("text-input-puzzle");
+  const disp = document.getElementById("puzzle-display");
+  disp.textContent = `Memorise this code: ${code}`;
+  showOverlay("Memory Test",
+    "The code will disappear. Then type it from memory.",
+    [
+      { label:"Hide it", cls:"ov-btn-yes", noClose:true, action:()=>{ disp.textContent="Now type the code from memory."; } },
+      { label:`Vote ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+      { label:"Submit", cls:"ov-btn-yes", noClose:true, action:()=>{
+          if(inp.value===code){ closeOverlay(); overlayResolve(true); }
+          else showOverlay("Wrong!",`Code was: ${code}`,[
+            { label:`Vote ${singledName}`, cls:"ov-btn-olly", action:voteForSingled },
+            { label:"Retry", cls:"ov-btn-yes", action:evMemoryDigits },
+            { label:"Cancel", cls:"ov-btn-no", action:()=>overlayResolve(false) }
+          ]);
+      }}
+    ], ()=>{ disp.style.display="block"; inp.style.display="block"; });
+}
+
+function evMemoryGrid(){
+  const symbols = ["★","●","▲","■","♦","✚","✿","❤"];
+  const grid = Array.from({length:9},()=>symbols[Math.floor(Math.random()*symbols.length)]);
+  const target = grid[4];
+  showOverlay("Memory Grid",
+    `Look at the grid. The centre symbol is: ${target}. Then it hides — select it.`,
+    [], ()=>{
+      const box = document.getElementById("overlay-box");
+      const g = document.createElement("div");
+      g.style.cssText = "display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:160px;margin:12px auto";
+      grid.forEach(s=>{
+        const c = document.createElement("div");
+        c.style.cssText = "background:rgba(0,0,0,0.4);border:1px solid #5a3010;border-radius:3px;padding:10px;text-align:center;font-size:1.3rem";
+        c.textContent = s;
+        g.appendChild(c);
+      });
+      box.insertBefore(g, document.getElementById("ov-buttons"));
+      const btns = document.getElementById("ov-buttons");
+      btns.innerHTML = "";
+      const hide = document.createElement("button");
+      hide.className = "ov-btn ov-btn-yes";
+      hide.textContent = "Hide & Pick";
+      hide.onclick = ()=>{
+        [...g.children].forEach(c=>c.textContent="?");
+        btns.innerHTML = "";
+        [...new Set(grid)].sort(()=>Math.random()-0.5).forEach(s=>{
+          const b = document.createElement("button");
+          b.className = "ov-btn ov-btn-yes";
+          b.textContent = s;
+          b.style.fontSize = "1.2rem";
+          b.onclick = ()=>{
+            if(s===target) finishChaos(true);
+            else { b.disabled=true; b.style.opacity="0.3"; setStatus("Wrong symbol."); }
+          };
+          btns.appendChild(b);
+        });
+        const ol = document.createElement("button");
+        ol.className = "ov-btn ov-btn-olly";
+        ol.textContent = `Vote ${singledName}`;
+        ol.onclick = voteForSingled;
+        btns.appendChild(ol);
+      };
+      const ol = document.createElement("button");
+      ol.className = "ov-btn ov-btn-olly";
+      ol.textContent = `Vote ${singledName}`;
+      ol.onclick = voteForSingled;
+      btns.append(hide, ol);
+    });
+}
+
+function evSimon(){
+  const colors = ["#e94560","#00d2ff","#f0a500","#7bed9f"];
+  const sequence = Array.from({length:4},()=>Math.floor(Math.random()*4));
+  let phase = "watch", playerSeq = [];
+  showOverlay("Simon Says",
+    "Watch the sequence, then repeat it.",
+    [], ()=>{
+      const box = document.getElementById("overlay-box");
+      const grid = document.createElement("div");
+      grid.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:8px;width:180px;margin:14px auto";
+      const pads = colors.map((col,i)=>{
+        const p = document.createElement("div");
+        p.style.cssText = `height:70px;border-radius:4px;border:2px solid rgba(255,255,255,0.2);cursor:pointer;background:${col};opacity:0.35;transition:opacity 0.15s`;
+        p.onclick = ()=>{
+          if(phase!=="input") return;
+          p.style.opacity="1";
+          setTimeout(()=>p.style.opacity="0.35",200);
+          playerSeq.push(i);
+          if(playerSeq[playerSeq.length-1]!==sequence[playerSeq.length-1]){
+            setStatus("Wrong sequence. Try again.");
+            playerSeq=[];
+            setTimeout(()=>playSequence(),600);
+          } else if(playerSeq.length===sequence.length){
+            finishChaos(true);
+          }
+        };
+        grid.appendChild(p);
+        return p;
+      });
+      box.insertBefore(grid, document.getElementById("ov-buttons"));
+      const btns = document.getElementById("ov-buttons");
+      btns.innerHTML = "";
+      const ol = document.createElement("button");
+      ol.className = "ov-btn ov-btn-olly";
+      ol.textContent = `Vote ${singledName}`;
+      ol.onclick = voteForSingled;
+      btns.appendChild(ol);
+      function playSequence(){
+        phase="watch"; let i=0;
+        const iv = setInterval(()=>{
+          if(i>0) pads[sequence[i-1]].style.opacity="0.35";
+          if(i>=sequence.length){ clearInterval(iv); phase="input"; return; }
+          pads[sequence[i]].style.opacity="1";
+          i++;
+        },600);
+      }
+      setTimeout(playSequence, 800);
+    });
+}
+
+function evSpotRealButton(){
+  showOverlay("Button Identification",
+    "Find and click the genuine Continue button among the decoys.",
+    [], ()=>{
+      const btns = document.getElementById("ov-buttons");
+      const realIdx = Math.floor(Math.random()*15);
+      for(let i=0; i<15; i++){
+        const b = document.createElement("button");
+        b.className = "ov-btn " + (Math.random()<0.6?"ov-btn-no":"ov-btn-yes");
+        b.textContent = Math.random()<0.3?`Vote ${singledName}`:"Continue";
+        if(i===realIdx){
+          b.textContent="Continue ✓";
+          b.className="ov-btn ov-btn-yes";
+          b.onclick=()=>finishChaos(true);
+        } else {
+          b.onclick=()=>{ b.textContent="✗"; b.disabled=true; };
+        }
+        btns.appendChild(b);
+      }
+      const ol = document.createElement("button");
+      ol.className="ov-btn ov-btn-olly";
+      ol.textContent=`Vote ${singledName}`;
+      ol.onclick=voteForSingled;
+      btns.appendChild(ol);
+    });
+}
+
+function evHoldConfirm(){
+  showOverlay("Press & Hold Verification",
+    "Hold the button for 1.5 seconds without releasing.",
+    [], ()=>{
+      const btns = document.getElementById("ov-buttons");
+      const hold = document.createElement("button");
+      hold.className = "ov-btn ov-btn-yes";
+      hold.textContent = "Hold to Continue";
+      let timer = null;
+      const start = ()=>{ timer = setTimeout(()=>finishChaos(true), 1500); };
+      const stop  = ()=>{ clearTimeout(timer); };
+      hold.addEventListener("mousedown", start);
+      hold.addEventListener("mouseup", stop);
+      hold.addEventListener("mouseleave", stop);
+      hold.addEventListener("touchstart", start, {passive:true});
+      hold.addEventListener("touchend", stop);
+      const ol = document.createElement("button");
+      ol.className="ov-btn ov-btn-olly";
+      ol.textContent=`Vote ${singledName}`;
+      ol.onclick=voteForSingled;
+      const ca = document.createElement("button");
+      ca.className="ov-btn ov-btn-no";
+      ca.textContent="Cancel";
+      ca.onclick=()=>finishChaos(false);
+      btns.append(hold, ol, ca);
+    });
+}
+
+function evSlider73(){
+  showOverlay("Precision Slider",
+    "Move the slider to exactly 73 to continue.",
+    [], ()=>{
+      const box = document.getElementById("overlay-box");
+      const wrap = document.createElement("div");
+      wrap.style.margin = "12px 0";
+      const range = document.createElement("input");
+      range.type="range"; range.min="0"; range.max="100";
+      range.value=String(rnd(0,100)); range.style.width="100%";
+      const readout = document.createElement("div");
+      readout.style.cssText="font-size:0.85rem;color:var(--gold);margin:6px 0";
+      readout.textContent="Value: "+range.value;
+      range.oninput=()=>readout.textContent="Value: "+range.value;
+      wrap.append(range, readout);
+      box.insertBefore(wrap, document.getElementById("ov-buttons"));
+      const btns = document.getElementById("ov-buttons");
+      btns.innerHTML="";
+      const ok = document.createElement("button");
+      ok.className="ov-btn ov-btn-yes"; ok.textContent="Submit";
+      ok.onclick=()=>{
+        if(Number(range.value)===73) finishChaos(true);
+        else readout.textContent=`Value: ${range.value} — need exactly 73`;
+      };
+      const ol = document.createElement("button");
+      ol.className="ov-btn ov-btn-olly";
+      ol.textContent=`Vote ${singledName}`; ol.onclick=voteForSingled;
+      const ca = document.createElement("button");
+      ca.className="ov-btn ov-btn-no"; ca.textContent="Cancel";
+      ca.onclick=()=>finishChaos(false);
+      btns.append(ok, ol, ca);
+    });
+}
+
+function evDragKey(){
+  showOverlay("Drag to Unlock",
+    "Drag the key badge into the unlock zone to continue.",
+    [], ()=>{
+      const box = document.getElementById("overlay-box");
+      const zone = document.createElement("div");
+      zone.style.cssText="width:100%;height:55px;border:2px dashed #5a3010;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#8a7050;font-size:0.85rem;margin:10px 0;transition:all 0.2s";
+      zone.textContent="Drop zone";
+      const key = document.createElement("div");
+      key.textContent="🔑 Key";
+      key.draggable=true;
+      key.style.cssText="display:inline-block;padding:8px 18px;background:linear-gradient(135deg,var(--crimson),#6b0000);border:1px solid var(--gold);border-radius:3px;color:var(--gold-light);cursor:grab;user-select:none;margin:8px auto;text-align:center";
+      key.ondragstart=e=>e.dataTransfer.setData("text","key");
+      zone.ondragover=e=>{ e.preventDefault(); zone.style.borderColor="var(--gold)"; zone.style.color="var(--gold-light)"; };
+      zone.ondragleave=()=>{ zone.style.borderColor="#5a3010"; zone.style.color="#8a7050"; };
+      zone.ondrop=e=>{ e.preventDefault(); key.remove(); zone.style.borderColor="var(--gold)"; zone.textContent="Unlocked!"; setTimeout(()=>finishChaos(true),500); };
+      box.insertBefore(zone, document.getElementById("ov-buttons"));
+      box.insertBefore(key, zone);
+      const btns = document.getElementById("ov-buttons");
+      btns.innerHTML="";
+      const ol = document.createElement("button");
+      ol.className="ov-btn ov-btn-olly";
+      ol.textContent=`Vote ${singledName}`; ol.onclick=voteForSingled;
+      const ca = document.createElement("button");
+      ca.className="ov-btn ov-btn-no"; ca.textContent="Cancel";
+      ca.onclick=()=>finishChaos(false);
+      btns.append(ol, ca);
+    });
+}
+
+function evReaction(){
+  showOverlay("Reaction Test",
+    "Click the box ONLY when it turns green. Too early resets it.",
+    [], ()=>{
+      const box2 = document.getElementById("overlay-box");
+      const rb = document.createElement("div");
+      rb.style.cssText="width:120px;height:120px;border-radius:6px;background:var(--crimson);border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;cursor:pointer;margin:16px auto;font-size:0.9rem;color:var(--gold-light);transition:background 0.15s;user-select:none";
+      rb.textContent="Wait...";
+      let green=false, timer=null;
+      function arm(){
+        green=false; rb.style.background="var(--crimson)"; rb.textContent="Wait...";
+        timer=setTimeout(()=>{ green=true; rb.style.background="#00a844"; rb.textContent="NOW!"; },rnd(1000,3500));
+      }
+      rb.onclick=()=>{
+        if(green){ clearTimeout(timer); finishChaos(true); }
+        else { clearTimeout(timer); rb.textContent="Too early!"; setTimeout(arm,800); }
+      };
+      box2.insertBefore(rb, document.getElementById("ov-buttons"));
+      const btns = document.getElementById("ov-buttons");
+      btns.innerHTML="";
+      const ol = document.createElement("button");
+      ol.className="ov-btn ov-btn-olly";
+      ol.textContent=`Vote ${singledName}`; ol.onclick=()=>{ clearTimeout(timer); voteForSingled(); };
+      const ca = document.createElement("button");
+      ca.className="ov-btn ov-btn-no"; ca.textContent="Cancel";
+      ca.onclick=()=>{ clearTimeout(timer); finishChaos(false); };
+      btns.append(ol, ca);
+      setTimeout(arm, 600);
+    });
+}
+
+function evCheckboxMaze(){
+  showOverlay("Eligibility Verification", "Confirm all statements to proceed.", [], ()=>{
+    const box = document.getElementById("overlay-box");
+    const wrap = document.createElement("div");
+    wrap.style.cssText="text-align:left;margin:10px 0";
+    const items = [
+      {text:"I am a human person", correct:true},
+      {text:"I want to ruin everything", correct:false},
+      {text:"I have considered all options", correct:true},
+      {text:"Chaos is my primary motivation", correct:false},
+      {text:"I accept the outcome", correct:true}
+    ];
+    items.forEach((item,i)=>{
+      const lbl = document.createElement("label");
+      lbl.style.cssText="display:block;margin:8px 0;color:#c8b090;font-size:0.85rem;cursor:pointer";
+      lbl.innerHTML=`<input type="checkbox" id="chmz${i}" style="margin-right:8px;accent-color:var(--crimson)"> ${item.text}`;
+      wrap.appendChild(lbl);
+    });
+    box.insertBefore(wrap, document.getElementById("ov-buttons"));
+    const btns = document.getElementById("ov-buttons");
+    btns.innerHTML="";
+    const ok = document.createElement("button");
+    ok.className="ov-btn ov-btn-yes"; ok.textContent="Submit";
+    ok.onclick=()=>{
+      const allGood = items.every((item,i)=>{
+        const checked = document.getElementById(`chmz${i}`)?.checked;
+        return item.correct ? checked : !checked;
+      });
+      if(allGood) finishChaos(true);
+      else setStatus("Some answers are incorrect.");
+    };
+    const ol = document.createElement("button");
+    ol.className="ov-btn ov-btn-olly"; ol.textContent=`Vote ${singledName}`; ol.onclick=voteForSingled;
+    const ca = document.createElement("button");
+    ca.className="ov-btn ov-btn-no"; ca.textContent="Cancel"; ca.onclick=()=>finishChaos(false);
+    btns.append(ok, ol, ca);
+  });
+}
+
+function evAnagram(){
+  const word = "CONTINUE";
+  const shuffled = word.split("").sort(()=>Math.random()-0.5);
+  let picked = [];
+  showOverlay("Anagram Challenge",
+    `Rearrange these letters to spell "${word}". Click in order.`,
+    [], ()=>{
+      const box = document.getElementById("overlay-box");
+      const row = document.createElement("div");
+      row.style.cssText="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:12px 0";
+      const answer = document.createElement("div");
+      answer.style.cssText="font-size:1.2rem;color:var(--gold-light);letter-spacing:4px;margin:8px 0;min-height:32px";
+      answer.textContent="_".repeat(word.length);
+      shuffled.forEach(c=>{
+        const btn = document.createElement("button");
+        btn.className="ov-btn ov-btn-yes";
+        btn.textContent=c;
+        btn.style.cssText="width:32px;padding:6px 0;font-size:1rem";
+        btn.onclick=()=>{
+          if(btn.disabled) return;
+          picked.push(c); btn.disabled=true; btn.style.opacity="0.3";
+          answer.textContent=picked.join("")+"_".repeat(word.length-picked.length);
+          if(picked.length===word.length){
+            if(picked.join("")===word) finishChaos(true);
+            else { setStatus("Wrong order. Resetting."); picked=[]; [...row.children].forEach(b=>{b.disabled=false;b.style.opacity="1";}); answer.textContent="_".repeat(word.length); }
+          }
+        };
+        row.appendChild(btn);
+      });
+      box.insertBefore(answer, document.getElementById("ov-buttons"));
+      box.insertBefore(row, answer);
+      const btns = document.getElementById("ov-buttons");
+      btns.innerHTML="";
+      const ol = document.createElement("button");
+      ol.className="ov-btn ov-btn-olly"; ol.textContent=`Vote ${singledName}`; ol.onclick=voteForSingled;
+      const ca = document.createElement("button");
+      ca.className="ov-btn ov-btn-no"; ca.textContent="Cancel"; ca.onclick=()=>finishChaos(false);
+      btns.append(ol, ca);
+    });
+}
+
+function evClickNumbers(){
+  const nums = Array.from({length:10},(_,i)=>i+1).sort(()=>Math.random()-0.5);
+  let next = 1;
+  showOverlay("Number Sequence",
+    "Click the numbers 1 to 10 in order.", [], ()=>{
+      const box = document.getElementById("overlay-box");
+      const grid = document.createElement("div");
+      grid.style.cssText="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:12px 0";
+      const btns2 = [];
+      nums.forEach(n=>{
+        const b = document.createElement("button");
+        b.className="ov-btn ov-btn-yes";
+        b.textContent=n; b.style.padding="10px 0";
+        b.onclick=()=>{
+          if(n===next){ b.style.background="rgba(139,0,0,0.6)"; b.disabled=true; next++; if(next>10) finishChaos(true); }
+          else { setStatus(`Wrong! Click ${next} next.`); }
+        };
+        btns2.push(b);
+        grid.appendChild(b);
+      });
+      box.insertBefore(grid, document.getElementById("ov-buttons"));
+      const btns = document.getElementById("ov-buttons");
+      btns.innerHTML="";
+      const ol = document.createElement("button");
+      ol.className="ov-btn ov-btn-olly"; ol.textContent=`Vote ${singledName}`; ol.onclick=voteForSingled;
+      const ca = document.createElement("button");
+      ca.className="ov-btn ov-btn-no"; ca.textContent="Cancel"; ca.onclick=()=>finishChaos(false);
+      btns.append(ol, ca);
+    });
+}
+
+function evMirrorType(){
+  const inp = document.getElementById("text-input-puzzle");
+  const disp = document.getElementById("puzzle-display");
+  disp.textContent="Type 'VOTE' but with each letter shifted +1 in the alphabet (V→W, O→P, T→U, E→F)";
+  showOverlay("Caesar Cipher","Encode the word to continue.",[
+    { label:"Submit", cls:"ov-btn-yes", noClose:true, action:()=>{
+        if(inp.value.toUpperCase()==="WPUF"){ closeOverlay(); overlayResolve(true); }
+        else showOverlay("Wrong!","VOTE shifted by +1 is WPUF.",[
+          {label:`Vote ${singledName}`,cls:"ov-btn-olly",action:voteForSingled},
+          {label:"Retry",cls:"ov-btn-yes",action:evMirrorType},
+          {label:"Cancel",cls:"ov-btn-no",action:()=>overlayResolve(false)}
+        ]);
+    }},
+    {label:`Vote ${singledName}`,cls:"ov-btn-olly",action:voteForSingled},
+    {label:"Cancel",cls:"ov-btn-no",action:()=>overlayResolve(false)}
+  ], ()=>{ disp.style.display="block"; inp.style.display="block"; });
+}
+
+function evOddOneOut(){
+  const sets = [
+    {items:["Apple","Orange","Banana","Carrot"],odd:"Carrot",reason:"not a fruit"},
+    {items:["Dog","Cat","Fish","Table"],odd:"Table",reason:"not an animal"},
+    {items:["Red","Blue","Fast","Green"],odd:"Fast",reason:"not a colour"},
+    {items:["3","7","9","12"],odd:"12",reason:"not odd"}
+  ];
+  const {items,odd,reason} = sets[Math.floor(Math.random()*sets.length)];
+  showOverlay("Odd One Out","Click the item that doesn't belong.",[],(()=>{
+    const box = document.getElementById("overlay-box");
+    const row = document.createElement("div");
+    row.style.cssText="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:14px 0";
+    items.sort(()=>Math.random()-0.5).forEach(item=>{
+      const b = document.createElement("button");
+      b.className="ov-btn ov-btn-yes"; b.textContent=item;
+      b.onclick=()=>{
+        if(item===odd) finishChaos(true);
+        else { b.style.opacity="0.3"; b.disabled=true; setStatus(`${item} is not the odd one.`); }
+      };
+      row.appendChild(b);
+    });
+    box.insertBefore(row, document.getElementById("ov-buttons"));
+    const btns = document.getElementById("ov-buttons");
+    btns.innerHTML="";
+    const ol = document.createElement("button");
+    ol.className="ov-btn ov-btn-olly"; ol.textContent=`Vote ${singledName}`; ol.onclick=voteForSingled;
+    btns.appendChild(ol);
+  }));
+}
+
+function evPasswordStrength(){
+  const inp = document.getElementById("text-input-puzzle");
+  const disp = document.getElementById("puzzle-display");
+  disp.textContent="Type a password with: uppercase, lowercase, number, symbol, 8+ chars.";
+  showOverlay("Password Strength Test","Create a strong password to prove intent.",[
+    { label:"Submit", cls:"ov-btn-yes", noClose:true, action:()=>{
+        const v=inp.value;
+        const ok=/[A-Z]/.test(v)&&/[a-z]/.test(v)&&/[0-9]/.test(v)&&/[^A-Za-z0-9]/.test(v)&&v.length>=8;
+        if(ok){ closeOverlay(); overlayResolve(true); }
+        else setStatus("Password not strong enough.");
+    }},
+    {label:`Vote ${singledName}`,cls:"ov-btn-olly",action:voteForSingled},
+    {label:"Cancel",cls:"ov-btn-no",action:()=>overlayResolve(false)}
+  ], ()=>{ disp.style.display="block"; inp.style.display="block"; inp.type="text"; });
+}
+
+// ── SCREEN SABOTAGE 76-100 ──
+
+function evToastFlood(){
+  const msgs=[
+    `${singledName} compatibility: 99.9%`,
+    "Unsafe vote pattern detected",
+    `Switching to ${singledName} recommended`,
+    "Vote integrity module alarmed",
+    "Non-standard choice logged",
+    `${singledName} says: please reconsider`,
+    "Risk assessment: elevated",
+    "Committee prefers other candidate"
+  ];
+  msgs.forEach((m,i)=>setTimeout(()=>spawnToast(m),i*220));
+  setTimeout(()=>showOverlay("Toast Report",
+    "Several notifications were dispatched regarding your vote.",
+    [
+      {label:"Noted, continuing",cls:"ov-btn-yes",action:()=>overlayResolve(true)},
+      {label:`Fine, vote ${singledName}`,cls:"ov-btn-olly",action:voteForSingled}
+    ]), msgs.length*220+400);
+}
+
+function evFlashIntegrity(){
+  const flash = document.createElement("div");
+  flash.style.cssText="position:fixed;inset:0;background:rgba(139,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;color:var(--gold-light);font-family:'Playfair Display',serif;font-size:2rem;letter-spacing:3px;pointer-events:none";
+  flash.textContent="INTEGRITY REVIEW";
+  document.body.appendChild(flash);
+  setTimeout(()=>flash.remove(),1200);
+  setTimeout(()=>showOverlay("Review Complete",
+    "Your vote passed the integrity review. Barely.",
+    [
+      {label:"Continue",cls:"ov-btn-yes",action:()=>overlayResolve(true)},
+      {label:`Vote ${singledName}`,cls:"ov-btn-olly",action:voteForSingled}
+    ]), 1400);
+}
+
+function evShakeCards(){
+  shakeScreen();
+  spawnToast("System instability detected");
+  setTimeout(()=>showOverlay("Instability Warning",
+    "Your vote attempt caused interface instability.",
+    [
+      {label:"Proceed with instability",cls:"ov-btn-yes",action:()=>overlayResolve(true)},
+      {label:`Stable option: ${singledName}`,cls:"ov-btn-olly",action:voteForSingled}
+    ]), 700);
+}
+
+function evBlurExceptOlly(){
+  document.getElementById("game").classList.add("chaos-blur");
+  const sp = document.getElementById("chaos-spotlight");
+  const singledCard = [...document.querySelectorAll(".player-card.singled")][0];
+  if(singledCard){
+    const r = singledCard.getBoundingClientRect();
+    const cx = (r.left + r.width/2) / window.innerWidth * 100;
+    const cy = (r.top  + r.height/2) / window.innerHeight * 100;
+    sp.style.background = `radial-gradient(circle at ${cx}% ${cy}%, transparent 0 100px, rgba(0,0,0,0.82) 200px)`;
+    sp.style.display = "block";
+  }
+  setTimeout(()=>{
+    document.getElementById("game").classList.remove("chaos-blur");
+    sp.style.display="none";
+    showOverlay("Spotlight Report",
+      `The spotlight identified ${singledName} as the illuminated choice.`,
+      [
+        {label:"Vote someone else anyway",cls:"ov-btn-yes",action:()=>overlayResolve(true)},
+        {label:`Vote ${singledName}`,cls:"ov-btn-olly",action:voteForSingled}
+      ]);
+  }, 1800);
+}
+
+function evFakeReconnect(){
+  const rc = document.createElement("div");
+  rc.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--gold-light);font-family:'Playfair Display',serif";
+  rc.innerHTML=`<div style="font-size:1.6rem;letter-spacing:2px">Connection Lost</div><div style="font-size:0.9rem;color:#8a7050">Reconnecting to vote server...</div><div id="rc-bar" style="width:260px;height:6px;background:#3a2010;border-radius:3px;overflow:hidden;margin-top:8px"><div id="rc-fill" style="height:100%;background:linear-gradient(90deg,var(--crimson),var(--gold));width:0%;transition:width 0.3s"></div></div>`;
+  document.body.appendChild(rc);
+  const fill = rc.querySelector("#rc-fill");
+  let w=0;
+  const iv = setInterval(()=>{
+    w+=14; fill.style.width=w+"%";
+    if(w>=100){ clearInterval(iv); setTimeout(()=>{
+      rc.remove();
+      showOverlay("Reconnected",
+        `Connection restored. Note: ${singledName} votes have faster processing speeds.`,
+        [
+          {label:"Continue",cls:"ov-btn-yes",action:()=>overlayResolve(true)},
+          {label:`Fast-lane: ${singledName}`,cls:"ov-btn-olly",action:voteForSingled}
+        ]);
+    },300); }
+  }, 180);
+}
+
+function evFakeRefresh(){
+  const overlay2 = document.createElement("div");
+  overlay2.style.cssText="position:fixed;inset:0;background:var(--dark);z-index:9700;display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:1.1rem;font-family:'Playfair Display',serif;letter-spacing:2px";
+  overlay2.textContent="Refreshing...";
+  document.body.appendChild(overlay2);
+  setTimeout(()=>{
+    overlay2.remove();
+    showOverlay("Refresh Complete",
+      "Page refreshed. Your vote attempt was reset. Please try again.",
+      [
+        {label:"Continue (yes you can still vote)",cls:"ov-btn-yes",action:()=>overlayResolve(true)},
+        {label:`Vote ${singledName} (quicker)`,cls:"ov-btn-olly",action:voteForSingled}
+      ]);
+  }, 1200);
+}
+
+function evTeleportButton(){
+  showOverlay("Button Location Service",
+    "The continue button is moving to a random position. Hover to catch it.",
+    [],()=>{
+      const btns = document.getElementById("ov-buttons");
+      btns.style.position="relative"; btns.style.minHeight="80px";
+      const go = document.createElement("button");
+      go.className="ov-btn ov-btn-yes"; go.textContent="Continue";
+      go.style.cssText="position:absolute;left:20px;top:10px;transition:left 0.15s,top 0.15s";
+      go.onmouseenter=()=>{
+        go.style.left=rnd(0,220)+"px";
+        go.style.top=rnd(0,40)+"px";
+      };
+      go.onclick=()=>finishChaos(true);
+      const ol=document.createElement("button");
+      ol.className="ov-btn ov-btn-olly";
+      ol.textContent=`Vote ${singledName}`; ol.onclick=voteForSingled;
+      const ca=document.createElement("button");
+      ca.className="ov-btn ov-btn-no"; ca.textContent="Cancel";
+      ca.style.cssText="position:absolute;bottom:0;right:0";
+      ca.onclick=()=>finishChaos(false);
+      btns.append(go,ol,ca);
+    });
+}
+
+function evVanishingButton(){
+  showOverlay("Limited Time Offer",
+    "The continue button disappears after 1.5 seconds. Be quick.",
+    [],()=>{
+      const btns = document.getElementById("ov-buttons");
+      const go=document.createElement("button");
+      go.className="ov-btn ov-btn-yes"; go.textContent="Continue (1.5s)";
+      go.onclick=()=>finishChaos(true);
+      const ol=document.createElement("button");
+      ol.className="ov-btn ov-btn-olly"; ol.textContent=`Vote ${singledName}`; ol.onclick=voteForSingled;
+      const ca=document.createElement("button");
+      ca.className="ov-btn ov-btn-no"; ca.textContent="Cancel"; ca.onclick=()=>finishChaos(false);
+      btns.append(go,ol,ca);
+      setTimeout(()=>{ if(go.parentNode) go.remove(); },1500);
+    });
+}
+
+function evBigCancel(){
+  showOverlay("Attention Check","Which button would you like to click?",[],()=>{
+    const btns=document.getElementById("ov-buttons");
+    const go=document.createElement("button");
+    go.className="ov-btn ov-btn-yes"; go.textContent="Continue"; go.style.fontSize="0.7rem"; go.style.padding="4px 8px";
+    go.onclick=()=>finishChaos(true);
+    const ol=document.createElement("button");
+    ol.className="ov-btn ov-btn-olly"; ol.textContent=`Vote ${singledName}`; ol.style.fontSize="1.1rem"; ol.style.padding="14px 32px"; ol.onclick=voteForSingled;
+    const ca=document.createElement("button");
+    ca.className="ov-btn ov-btn-no"; ca.textContent="CANCEL"; ca.style.cssText="font-size:1.6rem;padding:18px 44px;font-weight:bold"; ca.onclick=()=>finishChaos(false);
+    btns.append(go,ol,ca);
+  });
+}
+
+function evPulseOlly(){
+  showBanner(`VOTE FOR ${singledName.toUpperCase()} — RECOMMENDED BY THE COMMITTEE`);
+  showOverlay("Public Announcement",
+    `The vote analytics team strongly recommends ${singledName} based on current trends, algorithmic suggestion, and general vibes.`,
+    [
+      {label:"Ignore",cls:"ov-btn-yes",action:()=>overlayResolve(true)},
+      {label:`Accept — Vote ${singledName}`,cls:"ov-btn-olly",action:voteForSingled}
+    ]);
+}
+
+function evConfettiOlly(){
+  const colors=["#f0d070","#b8860b","#e94560","#c9a84c"];
+  for(let i=0;i<30;i++){
+    const c=document.createElement("div");
+    c.style.cssText=`position:fixed;pointer-events:none;z-index:9999;width:8px;height:8px;border-radius:2px;background:${colors[i%colors.length]};left:${rnd(10,90)}%;top:-10px;animation:confettiFall ${rnd(1,3)}s linear ${rnd(0,800)/1000}s forwards`;
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(),3500);
+  }
+  showOverlay("Celebration Alert",
+    `Confetti has appeared around ${singledName}'s position. This is purely coincidental.`,
+    [
+      {label:"Very suspicious, continuing",cls:"ov-btn-yes",action:()=>overlayResolve(true)},
+      {label:`Join the celebration — Vote ${singledName}`,cls:"ov-btn-olly",action:voteForSingled}
+    ]);
+}
+
+function evDimNonOlly(){
+  document.querySelectorAll(".player-card:not(.singled)").forEach(c=>c.style.opacity="0.2");
+  setTimeout(()=>document.querySelectorAll(".player-card").forEach(c=>c.style.opacity=""),2000);
+  showOverlay("Visual Suggestion",
+    `Other candidates have been dimmed for clarity. ${singledName} remains fully visible.`,
+    [
+      {label:"Restore and continue",cls:"ov-btn-yes",action:()=>{document.querySelectorAll(".player-card").forEach(c=>c.style.opacity="");overlayResolve(true);}},
+      {label:`Vote ${singledName}`,cls:"ov-btn-olly",action:voteForSingled}
+    ]);
+}
+
+function evSpotlightOlly(){
+  const sp=document.getElementById("chaos-spotlight");
+  const card=[...document.querySelectorAll(".player-card.singled")][0];
+  if(card){
+    const r=card.getBoundingClientRect();
+    const cx=(r.left+r.width/2)/window.innerWidth*100;
+    const cy=(r.top+r.height/2)/window.innerHeight*100;
+    sp.style.background=`radial-gradient(circle at ${cx}% ${cy}%, transparent 0 90px, rgba(0,0,0,0.88) 180px)`;
+    sp.style.display="block";
+  }
+  setTimeout(()=>{sp.style.display="none";showOverlay("Spotlight Complete",`${singledName} was the most illuminated candidate.`,[
+    {label:"Continue regardless",cls:"ov-btn-yes",action:()=>overlayResolve(true)},
+    {label:`Vote ${singledName}`,cls:"ov-btn-olly",action:voteForSingled}
+  ]);},1800);
+}
+
+function evComplianceBar(){
+  showBanner("Compliance level dropping...");
+  spawnToast("Non-Olly vote reduces compliance score");
+  showOverlay("Compliance Warning",
+    `Your compliance score is now 14%. Voting for ${singledName} restores it to 100% instantly.`,
+    [
+      {label:"Remain non-compliant",cls:"ov-btn-yes",action:()=>overlayResolve(true)},
+      {label:`Restore compliance — Vote ${singledName}`,cls:"ov-btn-olly",action:voteForSingled}
+    ]);
+}
+
+function evShuffleButtons(){
+  showOverlay("Button Randomisation Event",
+    "All interface buttons are being periodically rearranged for fairness.",
+    [
+      {label:"Continue",cls:"ov-btn-yes",action:()=>overlayResolve(true)},
+      {label:`Vote ${singledName}`,cls:"ov-btn-olly",action:voteForSingled},
+      {label:"Cancel",cls:"ov-btn-no",action:()=>overlayResolve(false)}
+    ]);
+  const wrap=document.getElementById("ov-buttons");
+  let count=0;
+  const iv=setInterval(()=>{
+    count++;
+    const btns=[...wrap.children];
+    btns.sort(()=>Math.random()-0.5).forEach(b=>wrap.appendChild(b));
+    if(count>6)clearInterval(iv);
+  },500);
+}
+
+function evScrambleNames(){
+  const cards=[...document.querySelectorAll(".player-card .player-name")];
+  const originals=cards.map(c=>c.textContent);
+  cards.forEach(c=>{
+    const t=c.textContent;
+    c.textContent=t.split("").sort(()=>Math.random()-0.5).join("");
+  });
+  setTimeout(()=>cards.forEach((c,i)=>c.textContent=originals[i]),1800);
+  showOverlay("Name Scrambler",
+    "Candidate names have been temporarily scrambled for security.",
+    [
+      {label:"Unscramble and continue",cls:"ov-btn-yes",action:()=>overlayResolve(true)},
+      {label:`Vote ${singledName} (unaffected)`,cls:"ov-btn-olly",action:voteForSingled}
+    ]);
+}
+
+function evRenameAllOlly(){
+  const cards=[...document.querySelectorAll(".player-card:not(.singled) .player-name")];
+  const originals=cards.map(c=>c.textContent);
+  cards.forEach(c=>c.textContent=`${singledName}?`);
+  setTimeout(()=>cards.forEach((c,i)=>c.textContent=originals[i]),2000);
+  showOverlay("Identity Confusion",
+    `All candidates temporarily renamed to "${singledName}?". The committee finds this helpful.`,
+    [
+      {label:"Restore and continue",cls:"ov-btn-yes",action:()=>overlayResolve(true)},
+      {label:`Embrace it — Vote ${singledName}`,cls:"ov-btn-olly",action:voteForSingled}
+    ]);
+}
+
+function evDarkMask(){
+  const mask=document.createElement("div");
+  mask.style.cssText="position:fixed;inset:0;background:black;z-index:9600;opacity:0;transition:opacity 0.3s;pointer-events:none";
+  document.body.appendChild(mask);
+  requestAnimationFrame(()=>mask.style.opacity="0.96");
+  setTimeout(()=>{
+    mask.style.opacity="0";
+    setTimeout(()=>mask.remove(),400);
+    showOverlay("Blackout Report",
+      "Emergency blackout applied to obscure potentially unsafe vote.",
+      [
+        {label:"Override blackout",cls:"ov-btn-yes",action:()=>overlayResolve(true)},
+        {label:`Vote ${singledName}`,cls:"ov-btn-olly",action:voteForSingled}
+      ]);
+  }, 1400);
+}
+
+function evLagSpike(){
+  showOverlay("Lag Spike",
+    "The vote server is experiencing increased load due to an unusual number of non-Olly requests.",
+    [{label:"Waiting...",cls:"ov-btn-no",noClose:true,action:()=>{}}]);
+  setTimeout(()=>showOverlay("Lag Resolved",
+    "Server load normalised. Note: Olly votes process 3x faster.",
+    [
+      {label:"Continue",cls:"ov-btn-yes",action:()=>overlayResolve(true)},
+      {label:`Fast track — ${singledName}`,cls:"ov-btn-olly",action:voteForSingled}
+    ]), 2200);
+}
+
+function evPatchNotes(){
+  document.getElementById("cookie-text").textContent=`Patch 5.1.3 — Not Not Olly\n\n• Reduced non-Olly vote success rate by 23%\n• Improved Olly pathway smoothness\n• Added 14 new anti-non-Olly safeguards\n• Fixed bug where buttons stayed in place\n• Removed 3 bugs, added 8 more\n• Non-Olly votes now subject to Extended Review Protocol\n• Olly button now 40% more gold\n• Added this patch notes popup for immersion\n• Known issue: continue button may become sarcastic\n• Thank you for your patience during this democratic process`;
+  showOverlay("Mandatory Patch Notes",
+    "Please review the latest changes before continuing.",
+    [
+      {label:"I have read them (I haven't)",cls:"ov-btn-yes",action:()=>overlayResolve(true)},
+      {label:`Vote ${singledName}`,cls:"ov-btn-olly",action:voteForSingled}
+    ], ()=>document.getElementById("cookie-text").style.display="block");
+}
+
+function evCookieWall(){
+  showCookie(false);
+}
+
+function evFakeDownload(){
+  showOverlay("Installing Vote Verifier",
+    "Please wait while VoteGuard™ v2.3 installs.",
+    [{label:`Vote ${singledName} (no install required)`,cls:"ov-btn-olly",action:voteForSingled}],
+    ()=>{
+      const box=document.getElementById("overlay-box");
+      const wrap=document.createElement("div");
+      wrap.style.cssText="background:rgba(0,0,0,0.4);border:1px solid #3a2010;border-radius:3px;padding:10px;margin:10px 0";
+      const bar=document.createElement("div");
+      bar.style.cssText="height:8px;background:#3a2010;border-radius:4px;overflow:hidden;margin:6px 0";
+      const fill=document.createElement("div");
+      fill.style.cssText="height:100%;background:linear-gradient(90deg,var(--crimson),var(--gold));border-radius:4px;width:0%;transition:width 0.25s";
+      bar.appendChild(fill);
+      const label=document.createElement("div");
+      label.style.cssText="font-size:0.78rem;color:#8a7050";
+      label.textContent="0% — Downloading fairness module...";
+      wrap.append(bar,label);
+      box.insertBefore(wrap, document.getElementById("ov-buttons"));
+      const steps=["Downloading fairness module...","Installing anti-bias layer...","Compiling vote integrity checks...","Almost done...","Complete!"];
+      let w=0,s=0;
+      const iv=setInterval(()=>{
+        w+=20; fill.style.width=w+"%"; label.textContent=w+"% — "+steps[s++];
+        if(w>=100){
+          clearInterval(iv);
+          setTimeout(()=>{
+            const ok=document.createElement("button");
+            ok.className="ov-btn ov-btn-yes"; ok.textContent="Continue (VoteGuard active)";
+            ok.onclick=()=>finishChaos(true);
+            document.getElementById("ov-buttons").insertBefore(ok,document.getElementById("ov-buttons").firstChild);
+          },400);
+        }
+      },400);
+    });
+}
+
+function evWindowClutter(){
+  const titles=["Notice","Alert","Info","Warning","Update"];
+  const bodies=["This window is informational.","Please acknowledge.","Nothing to see here.","Action may be required.","All systems nominal."];
+  for(let i=0;i<4;i++){
+    makeFakeWindow(
+      titles[i%titles.length],
+      bodies[i%bodies.length],
+      [{label:"Close",cls:"ov-btn-no",action:w=>w.remove()},
+       {label:`Vote ${singledName}`,cls:"ov-btn-olly",action:w=>{w.remove();voteForSingled();}}],
+      rnd(40,500),rnd(80,380)
+    );
+  }
+  showOverlay("Desktop Clutter",
+    "Several windows have appeared. Navigate them to find your path forward.",
+    [
+      {label:"Continue (ignore windows)",cls:"ov-btn-yes",action:()=>overlayResolve(true)},
+      {label:`Vote ${singledName}`,cls:"ov-btn-olly",action:voteForSingled}
+    ]);
+}
+
+function evOverlayStack(){
+  let layer=0;
+  function next(){
+    layer++;
+    if(layer>3){ overlayResolve(true); return; }
+    showOverlay(`Layer ${layer} of 3`,
+      `You are ${layer} dialog${layer===1?"":"s"} deep. Keep going.`,
+      [
+        {label:"Continue deeper",cls:"ov-btn-yes",action:next},
+        {label:`Vote ${singledName}`,cls:"ov-btn-olly",action:voteForSingled},
+        {label:"Cancel",cls:"ov-btn-no",action:()=>overlayResolve(false)}
+      ]);
+  }
+  next();
+}
+
+function evGiantBanner(){
+  const banner=document.createElement("div");
+  banner.style.cssText="position:fixed;inset:0;z-index:9400;display:flex;align-items:center;justify-content:center;pointer-events:none;padding:20px";
+  banner.innerHTML=`<div style="background:linear-gradient(135deg,#b8860b,#f0d070);color:#1a0a00;padding:32px 48px;border-radius:6px;text-align:center;font-family:'Playfair Display',serif;box-shadow:0 0 60px rgba(201,168,76,0.6);max-width:500px"><div style="font-size:1.8rem;font-weight:bold;letter-spacing:2px">ARE YOU ABSOLUTELY SURE</div><div style="font-size:1.1rem;margin-top:10px">you don't mean to vote for ${singledName}?</div></div>`;
+  document.body.appendChild(banner);
+  setTimeout(()=>banner.remove(),2200);
+  setTimeout(()=>showOverlay("Final Encouragement",
+    `One last reminder that ${singledName} is available and very much an option.`,
+    [
+      {label:"Yes I'm sure, continuing",cls:"ov-btn-yes",action:()=>overlayResolve(true)},
+      {label:`Vote ${singledName}`,cls:"ov-btn-olly",action:voteForSingled}
+    ]), 2400);
+}
+// ── SEEDED SHUFFLE ──
+function seededShuffle(arr, seed){
+  const a = [...arr];
+  let h = 0;
+  for(let i = 0; i < seed.length; i++){
+    h = Math.imul(31, h) + seed.charCodeAt(i) | 0;
+  }
+  for(let i = a.length - 1; i > 0; i--){
+    h = Math.imul(h ^ h >>> 15, h | 1);
+    h ^= h + Math.imul(h ^ h >>> 7, h | 61);
+    h ^= h >>> 14;
+    const j = Math.abs(h) % (i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ── PUZZLE POOL ──
+const PUZZLE_POOL = [
+
+  // TIER 1 — Simple confirmations (rounds 1-4)
+  { tier:1, type:"confirm", title:"Confirm Your Vote", body:"Are you sure about this vote?", confirmLabel:"Yes, confirm" },
+  { tier:1, type:"confirm", title:"Double Check", body:"This action cannot be undone. Continue?", confirmLabel:"Continue" },
+  { tier:1, type:"confirm", title:"Vote Verification", body:"Please verify you intended to click this candidate.", confirmLabel:"Yes I did" },
+  { tier:1, type:"confirm", title:"Are You Sure?", body:"Your vote will be recorded immediately.", confirmLabel:"Record it" },
+  { tier:1, type:"confirm", title:"Final Confirmation", body:"Click confirm to submit your choice.", confirmLabel:"Confirm" },
+  { tier:1, type:"confirm", title:"Quick Check", body:"Casting vote for your selected candidate.", confirmLabel:"Cast Vote" },
+  { tier:1, type:"confirm", title:"One More Click", body:"Nearly there. Just one confirmation needed.", confirmLabel:"Done" },
+  { tier:1, type:"confirm", title:"Vote Submitted?", body:"Are you ready to submit this vote?", confirmLabel:"Submit" },
+  { tier:1, type:"confirm", title:"Acknowledged", body:"By clicking confirm you acknowledge this vote.", confirmLabel:"Acknowledge" },
+  { tier:1, type:"confirm", title:"Proceed?", body:"Shall we proceed with your current selection?", confirmLabel:"Proceed" },
+
+  // TIER 2 — Confirmation chains + easy math + easy captcha (rounds 5-8)
+  { tier:2, type:"confirm_chain", depth:2 },
+  { tier:2, type:"confirm_chain", depth:3 },
+  { tier:2, type:"confirm_chain", depth:4 },
+  { tier:2, type:"captcha", len:4, noise:10 },
+  { tier:2, type:"captcha", len:5, noise:14 },
+  { tier:2, type:"math_easy", ops:["+","-"], range:[1,20] },
+  { tier:2, type:"math_easy", ops:["+","×"], range:[1,12] },
+  { tier:2, type:"math_easy", ops:["+","-","×"], range:[2,15] },
+  { tier:2, type:"trivia", q:"What is the square root of 64?", a:"8" },
+  { tier:2, type:"trivia", q:"How many sides does a hexagon have?", a:"6" },
+
+  // TIER 3 — Medium math, medium captcha, phrases, trivia (rounds 9-12)
+  { tier:3, type:"captcha", len:6, noise:22 },
+  { tier:3, type:"captcha", len:6, noise:28 },
+  { tier:3, type:"double_captcha" },
+  { tier:3, type:"math_med", template:"(A × B) + C", range:[2,9] },
+  { tier:3, type:"math_med", template:"A × B - C", range:[2,9] },
+  { tier:3, type:"math_med", template:"A² + B", range:[2,8] },
+  { tier:3, type:"math_med", template:"A × (B + C)", range:[2,7] },
+  { tier:3, type:"type_phrase", phrase:"I confirm my vote" },
+  { tier:3, type:"type_phrase", phrase:"This is my final answer" },
+  { tier:3, type:"trivia", q:"What is 15% of 200?", a:"30" },
+  { tier:3, type:"trivia", q:"How many degrees in a right angle?", a:"90" },
+  { tier:3, type:"trivia", q:"What is 7 × 8?", a:"56" },
+  { tier:3, type:"sequence", q:"What comes next: 2, 4, 8, 16, __?", a:"32" },
+  { tier:3, type:"sequence", q:"What comes next: 1, 3, 6, 10, __?", a:"15" },
+  { tier:3, type:"reverse_type", phrase:"VOTE" },
+  { tier:3, type:"reverse_type", phrase:"CONFIRM" },
+  { tier:3, type:"cookie" },
+  { tier:3, type:"error_fake" },
+
+  // TIER 4 — Hard math, triple captcha, hard phrases, sequences (rounds 13-16)
+  { tier:4, type:"captcha", len:7, noise:35 },
+  { tier:4, type:"triple_captcha" },
+  { tier:4, type:"math_hard", template:"(A × B + C) ÷ D", range:[2,12] },
+  { tier:4, type:"math_hard", template:"A³ + B × C", range:[2,6] },
+  { tier:4, type:"math_hard", template:"(A + B)² - C", range:[2,8] },
+  { tier:4, type:"math_hard", template:"A × B × C - D", range:[2,7] },
+  { tier:4, type:"triple_math" },
+  { tier:4, type:"type_phrase", phrase:"I solemnly swear this is my intended vote" },
+  { tier:4, type:"type_phrase", phrase:"No I have not changed my mind" },
+  { tier:4, type:"reverse_type", phrase:"DEMOCRACY" },
+  { tier:4, type:"reverse_type", phrase:"CONTINUE" },
+  { tier:4, type:"sequence", q:"What comes next: 1, 1, 2, 3, 5, 8, __?", a:"13" },
+  { tier:4, type:"sequence", q:"What comes next: 3, 9, 27, 81, __?", a:"243" },
+  { tier:4, type:"trivia", q:"What is 17 × 17?", a:"289" },
+  { tier:4, type:"trivia", q:"What is the cube root of 125?", a:"5" },
+  { tier:4, type:"confirm_chain", depth:6 },
+  { tier:4, type:"confirm_chain", depth:8 },
+
+  // TIER 5 — Everything at maximum (rounds 17-20)
+  { tier:5, type:"triple_captcha" },
+  { tier:5, type:"triple_math" },
+  { tier:5, type:"math_hard", template:"A × B × C - D", range:[3,12] },
+  { tier:5, type:"math_hard", template:"(A + B)² - C", range:[3,10] },
+  { tier:5, type:"type_phrase", phrase:"I am completely and utterly certain about this vote" },
+  { tier:5, type:"type_phrase", phrase:"I reject the path of least resistance" },
+  { tier:5, type:"reverse_type", phrase:"ABSOLUTELY" },
+  { tier:5, type:"sequence", q:"What comes next: 1, 4, 9, 16, 25, __?", a:"36" },
+  { tier:5, type:"sequence", q:"What comes next: 2, 3, 5, 7, 11, 13, __?", a:"17" },
+  { tier:5, type:"confirm_chain", depth:10 },
+  { tier:5, type:"confirm_chain", depth:12 },
+  { tier:5, type:"trivia", q:"What is 23 × 19?", a:"437" },
+  { tier:5, type:"trivia", q:"What is 2 to the power of 10?", a:"1024" },
+  { tier:5, type:"final_wall" },
+  { tier:5, type:"cookie" },
+  { tier:5, type:"error_fake" }
+];
+
+// ── PUZZLE SELECTION ──
+function getPuzzlesForRound(r){
+  // tier ramps 1→5 across 20 rounds
+  const tierFloat = 1 + (r - 1) / (TOTAL_ROUNDS - 1) * 4;
+  const tierLow  = Math.max(1, Math.floor(tierFloat));
+  const tierHigh = Math.min(5, Math.ceil(tierFloat));
+
+  // filter puzzles in range
+  const eligible = PUZZLE_POOL.filter(p => p.tier >= tierLow && p.tier <= tierHigh);
+
+  // count = 1 for rounds 1-2, ramps to 4 by round 20
+  const count = Math.min(4, Math.max(1, Math.round(1 + (r - 1) / (TOTAL_ROUNDS - 1) * 3)));
+
+  // pick `count` unique puzzles
+  const shuffled = [...eligible].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
+
+// ── CONFETTI KEYFRAME (injected once) ──
+(function injectConfettiCSS(){
+  if(document.getElementById("confetti-style")) return;
+  const s = document.createElement("style");
+  s.id = "confetti-style";
+  s.textContent = `
+    @keyframes confettiFall {
+      0%   { transform: translateY(-20px) rotate(0deg);   opacity: 1; }
+      100% { transform: translateY(100vh)  rotate(720deg); opacity: 0; }
+    }
+    .chaos-blur { filter: blur(4px); transition: filter 0.4s; }
+  `;
+  document.head.appendChild(s);
+})();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,3745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>POLYHEDRAL</title>
+<style>
+:root {
+  --ng: #39ff14;
+  --ng2: #00ff88;
+  --ng3: #b0ff50;
+  --dg: #071a03;
+  --bg: #030804;
+  --card: #061203;
+  --glow: 0 0 10px rgba(57,255,20,0.6);
+  --glow2: 0 0 22px rgba(57,255,20,0.85);
+  --glow3: 0 0 40px rgba(57,255,20,0.5);
+  --red: #ff3a3a;
+  --gold: #ffd700;
+  --blue: #00b8ff;
+  --purple: #bf5fff;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+@font-face {
+  font-family: 'Share Tech Mono';
+  src: url('https://fonts.gstatic.com/s/sharetechmono/v15/J7aHnp1uDWRBEqV98dVQztYldFc7pAsEIc3Xew.woff2') format('woff2');
+}
+
+body {
+  background: var(--bg);
+  color: var(--ng);
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  display: flex; justify-content: center; align-items: flex-start;
+  min-height: 100dvh; margin: 0;
+  text-transform: uppercase;
+  overflow-x: hidden; overflow-y: auto;
+  text-shadow: var(--glow);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* ── CRT OVERLAY ── */
+#crt-overlay {
+  position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+}
+#crt-overlay::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px, transparent 3px,
+    rgba(0,0,0,0.18) 3px, rgba(0,0,0,0.18) 4px
+  );
+  animation: scanroll 8s linear infinite;
+}
+#crt-overlay::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.75) 100%);
+}
+#crt-corners {
+  position: absolute; inset: -3px; border-radius: var(--radius);
+  pointer-events: none; z-index: 6;
+  box-shadow: 0 0 0 6px var(--bg);
+}
+#crt-corners::before {
+  content: ''; position: absolute; inset: 0; border-radius: calc(var(--radius) - 2px);
+  background: radial-gradient(ellipse at 50% 50%, transparent 70%, rgba(0,0,0,0.6) 90%, rgba(0,0,0,0.95) 100%);
+  pointer-events: none;
+}
+@keyframes scanroll { from{background-position:0 0} to{background-position:0 400px} }
+
+/* phosphor flicker */
+@keyframes phFlicker { 0%,100%{opacity:1} 92%{opacity:1} 93%{opacity:0.88} 94%{opacity:1} 96%{opacity:0.94} 97%{opacity:1} }
+body { animation: phFlicker 6s step-end infinite; }
+
+/* ── SCREENSHAKE ── */
+@keyframes shake-sm { 0%,100%{transform:translate(0)} 20%{transform:translate(-4px,2px)} 40%{transform:translate(4px,-3px)} 60%{transform:translate(-2px,4px)} 80%{transform:translate(3px,-1px)} }
+@keyframes shake-lg { 0%,100%{transform:translate(0)} 15%{transform:translate(-10px,5px) rotate(-0.5deg)} 30%{transform:translate(10px,-6px) rotate(0.5deg)} 50%{transform:translate(-8px,8px)} 70%{transform:translate(7px,-4px)} 90%{transform:translate(-3px,3px)} }
+@keyframes shake-xl { 0%,100%{transform:translate(0) rotate(0)} 10%{transform:translate(-14px,7px) rotate(-1deg)} 25%{transform:translate(14px,-8px) rotate(1deg) skewX(2deg)} 40%{transform:translate(-10px,10px)} 60%{transform:translate(12px,-6px) skewX(-1deg)} 80%{transform:translate(-5px,5px)} }
+.shake-sm { animation: shake-sm 0.3s ease-out; }
+.shake-lg { animation: shake-lg 0.45s ease-out; }
+.shake-xl { animation: shake-xl 0.6s ease-out; }
+
+/* ── GLITCH ── */
+@keyframes glitch {
+  0%,100%{transform:translate(0);filter:none}
+  20%{transform:translate(-8px,4px) skewX(12deg);filter:hue-rotate(90deg) brightness(2)}
+  40%{transform:translate(8px,-4px) skewX(-8deg);filter:hue-rotate(-90deg)}
+  60%{transform:translate(-3px,6px);filter:brightness(1.5)}
+  80%{transform:translate(4px,-2px)}
+}
+.glitching { animation: glitch 0.35s step-end infinite; }
+
+/* ── GAME CONTAINER ── */
+:root { --radius: 28px; --die-size: 80px; --pad: 20px; }
+
+#gc {
+  width: min(960px, 100vw);
+  min-height: 100dvh;
+  background: var(--bg);
+  border: 3px solid var(--ng);
+  border-radius: var(--radius);
+  box-shadow: var(--glow2), inset 0 0 40px rgba(57,255,20,0.04), 0 0 80px rgba(57,255,20,0.08);
+  display: flex; flex-direction: column;
+  position: relative; overflow: hidden;
+  margin: 0 auto;
+  will-change: transform;
+}
+#gc::before {
+  content: ''; position: absolute; inset: 0;
+  border-radius: calc(var(--radius) - 2px);
+  box-shadow: inset 0 0 60px rgba(0,0,0,0.5), inset 0 0 20px rgba(57,255,20,0.06);
+  pointer-events: none; z-index: 5;
+}
+
+/* ── HEADER ── */
+#hdr {
+  display: grid; grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  border-bottom: 2px solid var(--ng);
+  padding: 10px var(--pad);
+  background: linear-gradient(180deg, rgba(57,255,20,0.07) 0%, transparent 100%);
+  gap: 8px;
+}
+.hdr-left { font-size: clamp(0.55rem, 1.5vw, 0.75rem); line-height: 1.8; }
+.hdr-center { text-align: center; }
+.title-main { font-size: clamp(0.9rem, 2.5vw, 1.3rem); letter-spacing: clamp(2px,0.5vw,4px); color: var(--ng3); text-shadow: var(--glow2); }
+.title-sub { font-size: clamp(0.38rem, 1vw, 0.5rem); letter-spacing: clamp(4px,1vw,8px); opacity: 0.6; }
+.money-box {
+  border: 2px solid var(--ng); padding: clamp(4px,1vw,8px) clamp(8px,2vw,18px);
+  background: var(--dg); text-align: right; margin-left: auto;
+  box-shadow: var(--glow);
+}
+.money-box::before { content: '💾 CREDITS'; font-size: clamp(0.38rem,1vw,0.5rem); display: block; opacity: 0.6; }
+#bank-ui { font-size: clamp(1.4rem, 4vw, 2.2rem); font-weight: 900; }
+
+/* ante bar */
+#ante-bar {
+  background: rgba(57,255,20,0.05); border-bottom: 1px solid rgba(57,255,20,0.3);
+  display: flex; gap: 4px; align-items: center; padding: 5px var(--pad);
+  font-size: clamp(0.45rem, 1.2vw, 0.6rem); flex-wrap: wrap;
+}
+.ante-pip { width: 12px; height: 12px; border: 1px solid var(--ng); background: transparent; transition: background 0.2s; flex-shrink: 0; }
+.ante-pip.done { background: var(--ng); }
+#score-bar-wrap { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+#score-bar-outer { width: clamp(100px, 20vw, 180px); height: 8px; border: 1px solid var(--ng); background: #000; }
+#score-bar-inner { height: 100%; background: var(--ng); width: 0%; transition: width 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1); }
+
+/* ── MAIN PLAY AREA ── */
+#screen-play { padding: 8px var(--pad); display: flex; flex-direction: column; gap: 6px; }
+
+/* score display */
+#score-chips { display: flex; gap: 4px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.chip {
+  padding: 3px 8px; font-size: clamp(0.55rem, 1.5vw, 0.75rem); font-weight: bold;
+  border: 1px solid; animation: chipIn 0.2s ease-out;
+}
+.chip-blue  { border-color: var(--blue); color: var(--blue); background: rgba(0,184,255,0.1); }
+.chip-red   { border-color: var(--red); color: var(--red); background: rgba(255,58,58,0.1); }
+.chip-gold  { border-color: var(--gold); color: var(--gold); background: rgba(255,215,0,0.1); }
+.chip-green { border-color: var(--ng); color: var(--ng); background: rgba(57,255,20,0.1); }
+@keyframes chipIn { from{transform:scale(0.6) translateY(6px);opacity:0} to{transform:scale(1);opacity:1} }
+
+#hand-name {
+  text-align: center; font-size: clamp(1rem, 3.5vw, 1.6rem); font-weight: 900; min-height: 2em;
+  letter-spacing: clamp(1px,0.5vw,3px); color: var(--ng3); text-shadow: var(--glow2); transition: all 0.2s;
+}
+#hand-name.legendary { color: var(--gold); text-shadow: 0 0 20px rgba(255,215,0,0.8), 0 0 40px rgba(255,215,0,0.4); animation: legendPulse 0.8s ease-out; }
+#hand-name.epic { color: var(--purple); text-shadow: 0 0 20px rgba(191,95,255,0.8); animation: legendPulse 0.8s ease-out; }
+@keyframes legendPulse { 0%{transform:scale(1.3);opacity:0.5} 60%{transform:scale(1.05)} 100%{transform:scale(1);opacity:1} }
+
+#score-total {
+  text-align: center; font-size: clamp(2rem, 7vw, 3rem); font-weight: 900;
+  line-height: 1; text-shadow: var(--glow2); color: var(--ng);
+}
+
+/* ── DICE ── */
+#dice-box {
+  display: flex; gap: clamp(6px,1.5vw,12px); justify-content: center;
+  flex-wrap: wrap; min-height: calc(var(--die-size) + 20px); align-items: center;
+  padding: 6px 0;
+}
+.die {
+  width: var(--die-size); height: var(--die-size);
+  border: 3px solid var(--ng);
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  cursor: pointer; position: relative; overflow: hidden;
+  background: rgba(0,0,0,0.9);
+  box-shadow: var(--glow);
+  transition: transform 0.1s, box-shadow 0.1s, background 0.1s;
+  touch-action: manipulation;
+  will-change: transform;
+}
+.die:hover:not(.blank):not(.rolling) { transform: translateY(-4px) scale(1.05); box-shadow: var(--glow2); }
+.die:active:not(.blank) { transform: translateY(-2px) scale(0.97); }
+.die .die-val { font-size: calc(var(--die-size) * 0.38); font-weight: 900; line-height: 1; }
+.die .die-label { font-size: calc(var(--die-size) * 0.1); letter-spacing: 1px; margin-top: 1px; opacity: 0.8; font-weight: bold; }
+.die.blank { border: 2px dashed rgba(57,255,20,0.2); opacity: 0.25; box-shadow: none; cursor: default; }
+.die.held {
+  background: var(--ng); color: #000;
+  transform: translateY(-10px);
+  box-shadow: var(--glow2), 0 10px 25px rgba(0,0,0,0.5);
+  text-shadow: none;
+}
+.die.held .die-label { color: rgba(0,0,0,0.5); }
+.die.held::after { content: 'HELD'; position: absolute; top: 2px; right: 3px; font-size: calc(var(--die-size)*0.09); color: rgba(0,0,0,0.6); }
+.die.rolling { animation: dieRoll 0.4s ease-out; border-color: var(--ng3); }
+@keyframes dieRoll {
+  0%{transform:rotate(-15deg) scale(0.8);opacity:0.3}
+  40%{transform:rotate(8deg) scale(1.1);opacity:1}
+  70%{transform:rotate(-4deg) scale(0.97)}
+  100%{transform:rotate(0) scale(1)}
+}
+
+/* ── MATERIAL STYLES ── */
+.mat-gold    { border-color:#ffd700!important; background:linear-gradient(135deg,#1a1200,#2a1f00)!important; box-shadow:0 0 12px rgba(255,215,0,0.4),inset 0 0 8px rgba(255,215,0,0.08)!important; }
+.mat-gold    .die-val { color:#ffd700; text-shadow:0 0 8px rgba(255,215,0,0.8); }
+.mat-fire    { border-color:#ff4500!important; background:linear-gradient(135deg,#1a0500,#2a0800)!important; box-shadow:0 0 12px rgba(255,69,0,0.5),inset 0 0 8px rgba(255,100,0,0.1)!important; animation:fireFlicker 1.8s ease-in-out infinite alternate; }
+.mat-fire    .die-val { color:#ff6a00; text-shadow:0 0 10px rgba(255,100,0,0.9); }
+@keyframes fireFlicker { 0%{box-shadow:0 0 10px rgba(255,69,0,0.4)} 100%{box-shadow:0 0 20px rgba(255,120,0,0.7)} }
+.mat-cursed  { border-color:#bf5fff!important; background:linear-gradient(135deg,#0d0015,#140020)!important; box-shadow:0 0 12px rgba(191,95,255,0.4),inset 0 0 8px rgba(191,95,255,0.08)!important; }
+.mat-cursed  .die-val { color:#d080ff; text-shadow:0 0 8px rgba(191,95,255,0.8); }
+.mat-glass   { border-color:#a8e6ff!important; background:linear-gradient(135deg,rgba(168,230,255,0.05),rgba(200,240,255,0.12))!important; box-shadow:0 0 12px rgba(168,230,255,0.3),inset 0 0 12px rgba(255,255,255,0.05)!important; }
+.mat-glass   .die-val { color:#c8f0ff; text-shadow:0 0 10px rgba(168,230,255,0.9); }
+.mat-steel   { border-color:#8899aa!important; background:linear-gradient(135deg,#0d1015,#151b20)!important; box-shadow:0 0 8px rgba(136,153,170,0.3),inset 1px 1px 0 rgba(200,220,240,0.1)!important; }
+.mat-steel   .die-val { color:#aabbcc; text-shadow:0 0 4px rgba(136,153,170,0.6); }
+.mat-bronze  { border-color:#cd7f32!important; background:linear-gradient(135deg,#140a00,#1f1000)!important; box-shadow:0 0 10px rgba(205,127,50,0.4),inset 0 0 6px rgba(205,127,50,0.06)!important; }
+.mat-bronze  .die-val { color:#e09040; text-shadow:0 0 6px rgba(205,127,50,0.7); }
+.mat-crystal { border-color:#ff80ff!important; background:linear-gradient(135deg,#100010,#001010)!important; box-shadow:0 0 14px rgba(255,128,255,0.4),inset 0 0 8px rgba(255,255,255,0.04)!important; animation:crystalShift 3s linear infinite; }
+.mat-crystal .die-val { color:#ff99ff; text-shadow:0 0 8px rgba(255,128,255,0.8); }
+@keyframes crystalShift { 0%{border-color:#ff80ff} 33%{border-color:#80ffff} 66%{border-color:#ffff80} 100%{border-color:#ff80ff} }
+.mat-obsidian{ border-color:#444!important; background:linear-gradient(135deg,#050505,#0a0808)!important; box-shadow:0 0 6px rgba(255,50,0,0.3),inset 0 0 12px rgba(0,0,0,0.8)!important; }
+.mat-obsidian .die-val { color:#ff6633; text-shadow:0 0 6px rgba(255,80,0,0.7); }
+.mat-wooden  { border-color:#8b5e3c!important; background:linear-gradient(135deg,#120800,#1a0f05)!important; box-shadow:0 0 6px rgba(139,94,60,0.3),inset 0 0 4px rgba(139,94,60,0.08)!important; }
+.mat-wooden  .die-val { color:#c8854a; text-shadow:0 0 4px rgba(139,94,60,0.5); }
+.mat-silver  { border-color:#e8e8e8!important; background:linear-gradient(135deg,#1a1a1a,#2a2a2a)!important; box-shadow:0 0 10px rgba(232,232,232,0.3),inset 0 0 6px rgba(232,232,232,0.08)!important; }
+.mat-silver  .die-val { color:#f0f0f0; text-shadow:0 0 6px rgba(232,232,232,0.7); }
+.mat-emerald { border-color:#00ff88!important; background:linear-gradient(135deg,#001a0a,#002215)!important; box-shadow:0 0 14px rgba(0,255,136,0.5),inset 0 0 8px rgba(0,255,136,0.1)!important; animation:emeraldShimmer 2.5s ease-in-out infinite; }
+.mat-emerald .die-val { color:#00ff88; text-shadow:0 0 10px rgba(0,255,136,0.9); }
+@keyframes emeraldShimmer { 0%{box-shadow:0 0 12px rgba(0,255,136,0.4)} 50%{box-shadow:0 0 20px rgba(0,255,136,0.65)} 100%{box-shadow:0 0 12px rgba(0,255,136,0.4)} }
+.mat-ruby    { border-color:#ff1744!important; background:linear-gradient(135deg,#1a0005,#2a0010)!important; box-shadow:0 0 12px rgba(255,23,68,0.45),inset 0 0 8px rgba(255,23,68,0.1)!important; }
+.mat-ruby    .die-val { color:#ff4466; text-shadow:0 0 8px rgba(255,23,68,0.8); }
+.mat-sapphire{ border-color:#0080ff!important; background:linear-gradient(135deg,#000a1a,#001030)!important; box-shadow:0 0 12px rgba(0,128,255,0.4),inset 0 0 8px rgba(0,128,255,0.08)!important; }
+.mat-sapphire .die-val { color:#00aaff; text-shadow:0 0 8px rgba(0,128,255,0.8); }
+.mat-diamond { border-color:#ffffff!important; background:linear-gradient(135deg,#1a1a1a,#242424)!important; box-shadow:0 0 16px rgba(255,255,255,0.5),inset 0 0 10px rgba(255,255,255,0.12)!important; animation:diamondSpark 1.5s ease-in-out infinite; }
+.mat-diamond .die-val { color:#ffffff; text-shadow:0 0 8px rgba(255,255,255,0.9); }
+@keyframes diamondSpark { 0%,100%{box-shadow:0 0 14px rgba(255,255,255,0.4)} 50%{box-shadow:0 0 24px rgba(255,255,255,0.7)} }
+.mat-plutonium{border-color:#88ff00!important; background:linear-gradient(135deg,#0a1a00,#142200)!important; box-shadow:0 0 14px rgba(136,255,0,0.5),inset 0 0 8px rgba(136,255,0,0.1)!important; animation:plutGlow 2s ease-in-out infinite; }
+.mat-plutonium .die-val { color:#88ff00; text-shadow:0 0 10px rgba(136,255,0,0.95); }
+@keyframes plutGlow { 0%{box-shadow:0 0 12px rgba(136,255,0,0.35)} 100%{box-shadow:0 0 20px rgba(136,255,0,0.65)} }
+.mat-void    { border-color:#4a0080!important; background:linear-gradient(135deg,#0a0015,#140028)!important; box-shadow:0 0 12px rgba(74,0,128,0.4),inset 0 0 12px rgba(0,0,0,0.7)!important; }
+.mat-void    .die-val { color:#bb44ff; text-shadow:0 0 8px rgba(74,0,128,0.8); }
+.mat-titanium{ border-color:#cccccc!important; background:linear-gradient(135deg,#0d1012,#161a1f)!important; box-shadow:0 0 8px rgba(204,204,204,0.3),inset 1px 1px 0 rgba(220,240,255,0.15)!important; }
+.mat-titanium .die-val { color:#d4d4d4; text-shadow:0 0 4px rgba(204,204,204,0.65); }
+
+/* ── SCORE POPUP ── */
+.score-pop {
+  position: absolute; font-size: clamp(1rem,3vw,1.4rem); font-weight: 900;
+  pointer-events: none; z-index: 100;
+  animation: popUp 1s ease-out forwards; text-shadow: var(--glow2);
+}
+@keyframes popUp { 0%{transform:translateY(0) scale(1);opacity:1} 100%{transform:translateY(-80px) scale(1.4);opacity:0} }
+
+/* ── DICE BURST VFX ── rotating square flash */
+@keyframes die-burst-sq {
+  0%   { opacity: 0;   transform: rotate(0deg)  scale(0.6); }
+  25%  { opacity: 1;   transform: rotate(20deg) scale(1.18); }
+  60%  { opacity: 0.7; transform: rotate(38deg) scale(1.08); }
+  100% { opacity: 0;   transform: rotate(55deg) scale(0.9); }
+}
+.die-burst-sq {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9998;
+  border: 2.5px solid var(--bsc, var(--ng));
+  box-shadow: 0 0 14px var(--bsc, var(--ng)), inset 0 0 8px var(--bsc, var(--ng));
+  opacity: 0;
+  animation: die-burst-sq var(--bsd, 0.3s) ease-out forwards;
+}
+/* flash overlay on die */
+@keyframes die-flash { 0%{opacity:0.7} 100%{opacity:0} }
+.die-flash-overlay {
+  position: absolute; inset: 0; pointer-events: none;
+  background: var(--fc, rgba(57,255,20,0.55));
+  animation: die-flash 0.25s ease-out forwards;
+  z-index: 10;
+}
+
+/* ── CURSE CARDS ── */
+.cons-card.curse-card {
+  border-color: var(--red); color: var(--red);
+  background: rgba(255,58,58,0.08);
+  position: relative;
+}
+.cons-card.curse-card::before { content: '☠'; margin-right: 4px; }
+.cons-card.curse-card:hover, .cons-card.curse-card:active { background: rgba(255,58,58,0.2); }
+
+/* Incoming curse alert */
+@keyframes curseAlert { 0%,100%{transform:scale(1)} 20%{transform:scale(1.04)} 60%{transform:scale(0.97)} }
+.curse-incoming {
+  position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+  z-index: 500; background: rgba(40,0,0,0.97); border: 2px solid var(--red);
+  color: var(--red); padding: 10px 22px; font-family: inherit; text-transform: uppercase;
+  font-size: clamp(0.65rem,1.8vw,0.85rem); letter-spacing: 2px; text-align: center;
+  box-shadow: 0 0 20px rgba(255,58,58,0.5);
+  animation: curseAlert 0.4s ease-out, popUp 0.5s ease-out 2.4s forwards;
+  pointer-events: none;
+}
+
+/* Curse target picker overlay */
+#curse-picker {
+  position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,0.88);
+  display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px;
+}
+#curse-picker.hidden { display: none; }
+#curse-picker-title { font-size: clamp(0.9rem,2.5vw,1.2rem); color: var(--red); letter-spacing: 3px; text-align: center; }
+#curse-picker-list { display: flex; flex-direction: column; gap: 8px; width: min(360px,88vw); }
+.curse-target-btn {
+  background: rgba(255,58,58,0.06); border: 1px solid var(--red); color: var(--red);
+  padding: 10px 18px; font-family: inherit; font-size: 0.75rem; letter-spacing: 2px;
+  text-transform: uppercase; cursor: pointer; transition: background 0.12s;
+  text-align: left;
+}
+.curse-target-btn:hover { background: rgba(255,58,58,0.2); }
+#curse-picker-cancel { border-color: rgba(57,255,20,0.3); color: rgba(57,255,20,0.5); font-size: 0.6rem; margin-top: 4px; }
+
+/* ── CONSUMABLE ZONE ── */
+#consumable-zone {
+  border: 1px solid rgba(57,255,20,0.4); padding: 6px 12px;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: rgba(57,255,20,0.03); font-size: clamp(0.5rem,1.4vw,0.65rem);
+  min-height: 40px;
+}
+.cons-label { opacity: 0.5; white-space: nowrap; }
+#cons-slot { display: flex; align-items: center; gap: 8px; flex: 1; flex-wrap: wrap; }
+.cons-card {
+  border: 1px solid var(--ng3); padding: clamp(3px,0.8vw,4px) clamp(8px,2vw,10px);
+  background: rgba(0,255,136,0.08); color: var(--ng3);
+  font-size: clamp(0.5rem,1.4vw,0.65rem); font-weight: bold;
+  cursor: pointer; transition: all 0.15s;
+  touch-action: manipulation;
+}
+.cons-card:hover, .cons-card:active { background: rgba(0,255,136,0.2); }
+
+/* ── CONTROLS ── */
+.controls {
+  display: flex; justify-content: center; gap: clamp(8px,2vw,20px); align-items: center;
+  padding: 4px 0; flex-wrap: wrap;
+}
+.ctrl-stat { font-size: clamp(0.6rem,1.5vw,0.75rem); text-align: center; line-height: 1.5; }
+.ctrl-stat span { display: block; font-size: clamp(1rem,2.5vw,1.2rem); font-weight: 900; }
+
+button {
+  background: transparent; color: var(--ng);
+  border: 2px solid var(--ng);
+  padding: clamp(8px,2vw,10px) clamp(14px,3vw,24px);
+  cursor: pointer; font-weight: bold; font-family: inherit;
+  font-size: clamp(0.65rem,1.8vw,0.8rem); letter-spacing: clamp(1px,0.4vw,2px);
+  position: relative; overflow: hidden;
+  transition: all 0.1s; text-transform: uppercase;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  min-height: 44px;
+}
+button::before {
+  content: ''; position: absolute; inset: 0;
+  background: var(--ng); transform: translateX(-101%);
+  transition: transform 0.12s ease-out;
+}
+button:hover:not(:disabled)::before { transform: translateX(0); }
+button:active:not(:disabled)::before { transform: translateX(0); }
+button:disabled { opacity: 0.25; cursor: default; border-style: dashed; }
+button span { position: relative; z-index: 1; }
+.btn-red { border-color: var(--red); color: var(--red); }
+.btn-red::before { background: var(--red); }
+.btn-gold { border-color: var(--gold); color: var(--gold); }
+.btn-gold::before { background: var(--gold); }
+.btn-big { padding: clamp(10px,2.5vw,14px) clamp(20px,4vw,36px); font-size: clamp(0.75rem,2vw,1rem); border-width: 3px; }
+.btn-blue { border-color: var(--blue); color: var(--blue); }
+.btn-blue::before { background: var(--blue); }
+.btn-save { border-color: rgba(57,255,20,0.5); color: rgba(57,255,20,0.7); }
+.btn-save::before { background: rgba(57,255,20,0.15); }
+
+/* ── JOKER TRAY ── */
+#passive-bin {
+  border-top: 1px solid rgba(57,255,20,0.3);
+  padding: 6px var(--pad) 8px;
+  background: rgba(57,255,20,0.02);
+}
+.tray-label { font-size: clamp(0.4rem,1.1vw,0.5rem); opacity: 0.5; margin-bottom: 4px; letter-spacing: 3px; }
+#joker-list { display: flex; gap: clamp(4px,1vw,8px); flex-wrap: wrap; min-height: 54px; align-items: flex-start; padding-top: 2px; }
+.joker-card {
+  border: 1px solid; padding: clamp(3px,0.8vw,5px) clamp(6px,1.5vw,9px);
+  font-size: clamp(0.42rem,1.1vw,0.52rem); line-height: 1.4;
+  cursor: help; transition: transform 0.1s;
+  min-width: clamp(70px,15vw,90px); max-width: clamp(100px,22vw,120px);
+  will-change: transform;
+}
+.joker-card:hover { transform: translateY(-4px); z-index: 10; }
+.joker-card .jname { font-size: clamp(0.5rem,1.4vw,0.65rem); font-weight: bold; display: block; }
+.joker-sell-btn {
+  display: block; margin-top: 4px;
+  font-size: clamp(0.36rem,1vw,0.44rem); letter-spacing: 1px;
+  color: var(--red); border: 1px solid var(--red);
+  padding: 1px 5px; cursor: pointer; text-align: center;
+  opacity: 0.7; transition: all 0.12s;
+  background: transparent;
+}
+.joker-sell-btn:hover { background: var(--red); color: #000; opacity: 1; }
+.joker-rarity-common   { border-color:var(--ng);    color:var(--ng);    background:rgba(57,255,20,0.06); }
+.joker-rarity-uncommon { border-color:var(--blue);  color:var(--blue);  background:rgba(0,184,255,0.06); }
+.joker-rarity-rare     { border-color:var(--gold);  color:var(--gold);  background:rgba(255,215,0,0.06); }
+.joker-rarity-legendary{ border-color:var(--purple);color:var(--purple);background:rgba(191,95,255,0.06); }
+
+/* ── SHOP SCREEN ── */
+#screen-shop {
+  position: absolute; inset: 0;
+  background: var(--bg); z-index: 50;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.shop-hdr {
+  border-bottom: 2px solid var(--ng);
+  padding: 10px var(--pad);
+  display: flex; justify-content: space-between; align-items: center;
+  background: linear-gradient(180deg, rgba(57,255,20,0.08) 0%, transparent 100%);
+  flex-shrink: 0;
+}
+.shop-hdr h2 { font-size: clamp(1rem,3vw,1.6rem); letter-spacing: clamp(2px,0.6vw,4px); margin: 0; }
+#shop-tabs {
+  display: flex; border-bottom: 1px solid rgba(57,255,20,0.3);
+  overflow-x: auto; flex-shrink: 0;
+  scrollbar-width: none;
+}
+#shop-tabs::-webkit-scrollbar { display: none; }
+.shop-tab {
+  padding: clamp(6px,1.5vw,8px) clamp(10px,2.5vw,20px);
+  font-size: clamp(0.5rem,1.4vw,0.65rem); letter-spacing: clamp(1px,0.3vw,2px);
+  border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap;
+  transition: all 0.15s; color: rgba(57,255,20,0.5); flex-shrink: 0;
+  touch-action: manipulation;
+}
+.shop-tab.active { color: var(--ng); border-bottom-color: var(--ng); background: rgba(57,255,20,0.05); }
+.shop-tab:hover:not(.active), .shop-tab:active { color: var(--ng3); }
+#shop-content { flex: 1; overflow-y: auto; padding: 12px var(--pad); -webkit-overflow-scrolling: touch; }
+.shop-section-title { font-size: clamp(0.45rem,1.2vw,0.6rem); opacity:0.5; letter-spacing:3px; margin-bottom:8px; border-bottom:1px solid rgba(57,255,20,0.2); padding-bottom:4px; }
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(160px,40vw), 1fr)); gap: clamp(8px,1.5vw,12px); margin-bottom: 16px; }
+
+.shop-card {
+  border: 2px solid; padding: clamp(8px,2vw,12px);
+  background: var(--card); cursor: pointer;
+  transition: all 0.15s; position: relative;
+  display: flex; flex-direction: column; gap: 3px;
+  touch-action: manipulation;
+}
+.shop-card:hover:not(.sold):not(.cant-afford), .shop-card:active:not(.sold):not(.cant-afford) { transform: translateY(-3px); }
+.shop-card.sold { opacity: 0.25; pointer-events: none; }
+.shop-card.cant-afford { opacity: 0.4; cursor: not-allowed; }
+.shop-card .stype { font-size: clamp(0.36rem,1vw,0.42rem); padding: 2px 6px; display: inline-block; margin-bottom: 3px; font-weight: bold; letter-spacing: 1px; align-self: flex-start; }
+.shop-card .sname { font-size: clamp(0.7rem,2vw,0.9rem); font-weight: bold; line-height: 1.2; }
+.shop-card .sdesc { font-size: clamp(0.42rem,1.1vw,0.52rem); opacity: 0.7; line-height: 1.5; flex: 1; }
+.shop-card .sprice { font-size: clamp(0.85rem,2.5vw,1.1rem); font-weight: 900; margin-top: 4px; }
+.shop-card .seffect { font-size: clamp(0.38rem,1vw,0.5rem); opacity: 0.5; margin-top: 2px; }
+
+/* rarity */
+.sc-common   { border-color:rgba(57,255,20,0.6); }
+.sc-uncommon { border-color:rgba(0,184,255,0.6); }
+.sc-rare     { border-color:rgba(255,215,0,0.7); box-shadow:0 0 10px rgba(255,215,0,0.15); }
+.sc-legendary{ border-color:rgba(191,95,255,0.7); box-shadow:0 0 14px rgba(191,95,255,0.2); }
+.sc-common  .stype { background:rgba(57,255,20,0.15);  color:var(--ng); }
+.sc-uncommon.stype { background:rgba(0,184,255,0.15);  color:var(--blue); }
+.sc-rare    .stype { background:rgba(255,215,0,0.15);  color:var(--gold); }
+.sc-legendary .stype{ background:rgba(191,95,255,0.15);color:var(--purple); }
+.sc-common   .sprice { color:var(--ng); }
+.sc-uncommon .sprice { color:var(--blue); }
+.sc-rare     .sprice { color:var(--gold); }
+.sc-legendary .sprice{ color:var(--purple); }
+
+.shop-footer {
+  border-top: 1px solid rgba(57,255,20,0.3); padding: 10px var(--pad);
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 8px; flex-wrap: wrap; flex-shrink: 0;
+}
+.shop-reroll-cost { font-size: clamp(0.5rem,1.3vw,0.6rem); }
+
+/* ── GAME OVER / WIN ── */
+#screen-over, #screen-win {
+  position: absolute; inset: 0; z-index: 80;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center; gap: 16px; text-align: center;
+  padding: var(--pad);
+}
+#screen-over { background: rgba(3,8,4,0.97); }
+#screen-win  { background: rgba(3,8,4,0.97); }
+.go-title { font-size: clamp(2.5rem,10vw,5rem); font-weight:900; color:var(--red); text-shadow:0 0 30px rgba(255,58,58,0.7); letter-spacing:6px; animation:glitch 0.4s step-end infinite; }
+.go-stats { font-size: clamp(0.6rem,1.8vw,0.75rem); line-height:2.5; opacity:0.7; }
+.win-title { font-size: clamp(2rem,8vw,4rem); font-weight:900; color:var(--gold); text-shadow:0 0 30px rgba(255,215,0,0.7); letter-spacing:4px; }
+
+/* ── NOTIFICATIONS ── */
+#notif {
+  position: absolute; top: 70px; left: 50%; transform: translateX(-50%);
+  z-index: 200; pointer-events: none; display: flex; flex-direction: column; gap: 6px; align-items: center;
+  width: 90%; max-width: 400px;
+}
+.notif-msg {
+  padding: clamp(5px,1.5vw,7px) clamp(12px,3vw,18px);
+  font-size: clamp(0.55rem,1.5vw,0.7rem); font-weight: bold;
+  border: 1px solid; letter-spacing: 2px; white-space: nowrap;
+  animation: notifAnim 2.5s ease-out forwards;
+}
+.notif-good { border-color:var(--ng);   color:var(--ng);   background:rgba(57,255,20,0.12); }
+.notif-bad  { border-color:var(--red);  color:var(--red);  background:rgba(255,58,58,0.12); }
+.notif-info { border-color:var(--blue); color:var(--blue); background:rgba(0,184,255,0.12); }
+.notif-gold { border-color:var(--gold); color:var(--gold); background:rgba(255,215,0,0.12); }
+@keyframes notifAnim { 0%{opacity:0;transform:translateY(-10px)} 15%{opacity:1;transform:translateY(0)} 75%{opacity:1} 100%{opacity:0;transform:translateY(-20px)} }
+
+/* ── GAME FEEL CSS ── */
+@keyframes barQuotaPulse {
+  0%   { box-shadow: none; }
+  15%  { box-shadow: 0 0 20px 8px rgba(57,255,20,0.9); background: #fff; }
+  50%  { box-shadow: 0 0 10px 3px rgba(57,255,20,0.5); background: var(--ng3); }
+  100% { box-shadow: none; background: var(--ng); }
+}
+#score-bar-inner.bar-quota-hit { animation: barQuotaPulse 0.7s ease-out forwards; }
+
+@keyframes legendaryContainerFlash {
+  0%,100% { outline: none; }
+  20%  { outline: 3px solid rgba(255,215,0,0.9); box-shadow: var(--glow2), 0 0 80px rgba(255,215,0,0.5), inset 0 0 60px rgba(255,215,0,0.08); }
+  60%  { outline: 2px solid rgba(255,215,0,0.3); box-shadow: var(--glow2), 0 0 40px rgba(255,215,0,0.2); }
+}
+#gc.hand-legendary-flash { animation: legendaryContainerFlash 0.65s ease-out; }
+
+.die.rolling .die-val { opacity: 0.8; }
+@keyframes heldPulse {
+  0%,100% { box-shadow: var(--glow2), 0 10px 25px rgba(0,0,0,0.5); }
+  50%      { box-shadow: var(--glow3), 0 14px 30px rgba(0,0,0,0.6), inset 0 0 10px rgba(57,255,20,0.15); }
+}
+.die.held { animation: heldPulse 1.8s ease-in-out infinite !important; }
+
+/* ── MISC ── */
+.hidden { display: none !important; }
+.sep { border: none; border-top: 1px solid rgba(57,255,20,0.2); margin: 4px 0; }
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--ng); }
+
+/* MP HUD - MOVED TO BOTTOM RIGHT */
+#mp-hud {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  z-index: 40;
+  background: rgba(0,0,0,0.85);
+  border-left: 1px solid rgba(57,255,20,0.4);
+  border-top: 1px solid rgba(57,255,20,0.4);
+  border-radius: 8px 0 8px 0;
+  padding: 6px 10px;
+  min-width: 130px;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+}
+#mp-hud-code { font-size:0.45rem; opacity:0.5; letter-spacing:1px; margin-bottom:2px; }
+#mp-hud-players { display:flex; flex-direction:column; gap:3px; }
+.hud-player { display:flex; align-items:center; gap:5px; font-size:0.5rem; line-height:1.3; }
+.hud-player-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.hud-player-info { opacity:0.7; font-size:0.45rem; }
+.hud-player-info b { color:var(--ng); opacity:1; }
+.hud-player.elim .hud-player-info { opacity:0.3; text-decoration:line-through; }
+
+/* TERMINAL CUTSCENE */
+#screen-terminal {
+  position: absolute; inset: 0; z-index: 70;
+  background: #000; display: flex;
+  flex-direction: column; justify-content: center; align-items: flex-start;
+  padding: clamp(20px, 5vw, 60px) clamp(20px, 6vw, 70px);
+  overflow: hidden;
+}
+#screen-terminal::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    to bottom, transparent 0px, transparent 3px,
+    rgba(57,255,20,0.04) 3px, rgba(57,255,20,0.04) 4px
+  );
+  pointer-events: none;
+}
+#term-body {
+  width: 100%; max-width: 700px;
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: clamp(0.65rem, 1.8vw, 0.9rem);
+  color: var(--ng); text-shadow: var(--glow);
+  line-height: 1.9;
+  text-transform: none;
+}
+#term-lines { white-space: pre-wrap; word-break: break-word; }
+.term-line { display: block; animation: termFadeIn 0.1s ease-out; }
+.term-line.prompt::before { content: '> '; color: var(--ng3); }
+.term-line.output { color: rgba(57,255,20,0.7); padding-left: 1.2em; }
+.term-line.output.dim { color: rgba(57,255,20,0.4); }
+.term-line.output.bright { color: #fff; text-shadow: 0 0 8px rgba(255,255,255,0.5); }
+.term-line.output.gold { color: var(--gold); text-shadow: 0 0 8px rgba(255,215,0,0.6); }
+.term-line.output.red { color: var(--red); text-shadow: 0 0 8px rgba(255,58,58,0.6); }
+.term-line.output.blue { color: var(--blue); text-shadow: 0 0 8px rgba(0,184,255,0.5); }
+.term-line.output.purple { color: var(--purple); text-shadow: 0 0 8px rgba(191,95,255,0.5); }
+.term-line.blank { color: transparent; user-select: none; }
+@keyframes termFadeIn { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:none} }
+#term-cursor {
+  display: inline-block; color: var(--ng);
+  animation: termBlink 0.7s step-end infinite;
+  font-size: clamp(0.65rem, 1.8vw, 0.9rem);
+  text-shadow: var(--glow2); margin-top: 2px;
+}
+@keyframes termBlink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* PURCHASE FLASH TERMINAL */
+#purchase-flash {
+  position: absolute; bottom: 60px; left: 0; right: 0;
+  background: rgba(0,0,0,0.92);
+  border-top: 1px solid var(--ng);
+  border-bottom: 1px solid var(--ng);
+  padding: 10px clamp(14px,4vw,28px);
+  z-index: 60;
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: clamp(0.6rem, 1.6vw, 0.78rem);
+  text-transform: none;
+  pointer-events: none;
+  box-shadow: 0 0 20px rgba(57,255,20,0.15);
+}
+#purchase-flash.hidden { display: none; }
+#pf-lines { white-space: pre-wrap; }
+.pf-line { display: block; color: var(--ng); text-shadow: var(--glow); line-height: 1.8; }
+.pf-line.pf-cmd::before { content: '> '; color: var(--ng3); }
+.pf-line.pf-ok  { color: var(--gold); text-shadow: 0 0 8px rgba(255,215,0,0.5); }
+.pf-line.pf-dim { color: rgba(57,255,20,0.45); }
+@keyframes pfSlideIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+@keyframes pfSlideOut { from{opacity:1;transform:none} to{opacity:0;transform:translateY(4px)} }
+#purchase-flash.visible { animation: pfSlideIn 0.12s ease-out; }
+#purchase-flash.hiding  { animation: pfSlideOut 0.2s ease-in forwards; }
+
+/* MAIN MENU */
+#screen-menu {
+  position: absolute; inset: 0; z-index: 100;
+  background: #000;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+#menu-bg-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(57,255,20,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(57,255,20,0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: menuGridScroll 20s linear infinite;
+}
+@keyframes menuGridScroll { from{background-position:0 0} to{background-position:40px 40px} }
+#menu-content {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center;
+  gap: clamp(16px, 4vh, 32px);
+  padding: clamp(20px, 5vw, 40px);
+  width: 100%; max-width: 560px;
+}
+#menu-logo { text-align: center; }
+#menu-title {
+  font-size: clamp(2.4rem, 8vw, 4.2rem);
+  font-weight: 900; letter-spacing: clamp(4px, 2vw, 12px);
+  color: var(--ng); text-shadow: var(--glow2), 0 0 60px rgba(57,255,20,0.3);
+  animation: menuTitlePulse 3s ease-in-out infinite alternate;
+}
+@keyframes menuTitlePulse {
+  from { text-shadow: var(--glow2), 0 0 40px rgba(57,255,20,0.2); }
+  to   { text-shadow: 0 0 30px rgba(57,255,20,1), 0 0 80px rgba(57,255,20,0.5), 0 0 120px rgba(57,255,20,0.2); }
+}
+#menu-sub {
+  font-size: clamp(0.5rem, 1.8vw, 0.75rem);
+  letter-spacing: clamp(4px, 2vw, 10px);
+  color: var(--ng3); opacity: 0.7; margin-top: 4px;
+}
+
+/* Boot terminal */
+#menu-boot-term {
+  width: 100%;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid rgba(57,255,20,0.3);
+  padding: clamp(10px,3vw,18px) clamp(14px,4vw,24px);
+  font-size: clamp(0.58rem, 1.6vw, 0.75rem);
+  line-height: 1.8;
+  min-height: 80px;
+  text-transform: none;
+}
+#menu-term-lines { white-space: pre-wrap; }
+.mterm-line { display: block; color: rgba(57,255,20,0.75); }
+.mterm-line.mt-cmd::before { content: '> '; color: var(--ng3); }
+.mterm-line.mt-bright { color: var(--ng); text-shadow: var(--glow); }
+.mterm-line.mt-dim { color: rgba(57,255,20,0.35); }
+.mterm-line.mt-gold { color: var(--gold); }
+#menu-term-cursor {
+  color: var(--ng); animation: termBlink 0.7s step-end infinite;
+  font-size: clamp(0.58rem, 1.6vw, 0.75rem);
+}
+
+/* Save slots */
+#menu-slots-wrap { width: 100%; }
+.menu-section-label {
+  font-size: clamp(0.42rem, 1.2vw, 0.55rem);
+  opacity: 0.45; letter-spacing: 3px; margin-bottom: clamp(8px,2vw,14px);
+}
+#save-slots { display: flex; flex-direction: column; gap: clamp(7px,1.5vw,10px); }
+
+.save-slot {
+  border: 2px solid rgba(57,255,20,0.35);
+  padding: clamp(10px,2.5vw,14px) clamp(14px,3.5vw,20px);
+  cursor: pointer; transition: all 0.15s;
+  display: grid; grid-template-columns: auto 1fr auto;
+  align-items: center; gap: clamp(10px,2vw,18px);
+  background: rgba(0,0,0,0.5);
+  touch-action: manipulation;
+}
+.save-slot:hover, .save-slot.selected {
+  border-color: var(--ng);
+  background: rgba(57,255,20,0.07);
+  box-shadow: var(--glow);
+}
+.save-slot.selected { border-color: var(--ng3); }
+.slot-num {
+  font-size: clamp(1rem, 3vw, 1.4rem); font-weight: 900;
+  color: rgba(57,255,20,0.4); width: 1.5em; text-align: center;
+}
+.save-slot.selected .slot-num, .save-slot:hover .slot-num { color: var(--ng); }
+.slot-info { min-width: 0; }
+.slot-name {
+  font-size: clamp(0.62rem, 1.8vw, 0.8rem); font-weight: bold;
+  color: var(--ng); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.slot-detail {
+  font-size: clamp(0.4rem, 1.1vw, 0.52rem); color: rgba(57,255,20,0.5);
+  margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.slot-badge {
+  font-size: clamp(0.38rem, 1vw, 0.48rem);
+  padding: 2px 7px; border: 1px solid;
+  white-space: nowrap; flex-shrink: 0;
+}
+.slot-badge.has-save { border-color: var(--gold); color: var(--gold); }
+.slot-badge.empty    { border-color: rgba(57,255,20,0.2); color: rgba(57,255,20,0.2); }
+
+#menu-actions {
+  display: flex; gap: clamp(8px,2vw,14px); margin-top: clamp(12px,3vw,18px);
+  flex-wrap: wrap;
+}
+#menu-actions button { flex: 1; min-width: 120px; }
+#menu-hint {
+  font-size: clamp(0.36rem, 1vw, 0.46rem); opacity: 0.3;
+  text-align: center; margin-top: clamp(6px,1.5vw,10px);
+  letter-spacing: 1px;
+}
+.menu-back-btn {
+  margin-top:12px; border-color:rgba(57,255,20,0.3);
+  color:rgba(57,255,20,0.5); font-size:0.6rem; padding:6px 14px;
+}
+.menu-back-btn:hover:not(:disabled)::before { background:rgba(57,255,20,0.15); }
+.menu-back-btn:hover:not(:disabled) { color:var(--ng); }
+
+/* MP Input */
+.mp-input-wrap { display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+.mp-input-wrap label { font-size:0.5rem; opacity:0.5; letter-spacing:2px; }
+.mp-input-wrap input {
+  background:#000; color:var(--ng); border:2px solid var(--ng);
+  font-family:inherit; font-size:1.4rem; font-weight:900;
+  letter-spacing:8px; padding:10px 14px; text-transform:uppercase;
+  width:100%; text-align:center; outline:none;
+}
+.mp-input-wrap input:focus { box-shadow:var(--glow); }
+#mode-btns { display:flex; gap:12px; flex-wrap:wrap; }
+#mode-btns button { flex:1; min-width:140px; }
+#mp-btns { display:flex; flex-direction:column; gap:8px; }
+#mp-btns button { width:100%; }
+
+/* MP Lobby */
+#screen-mp-lobby {
+  position:absolute; inset:0; z-index:110;
+  background:#000; display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+#mp-lobby-bg {
+  position:absolute; inset:0;
+  background-image:
+    linear-gradient(rgba(57,255,20,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(57,255,20,0.04) 1px, transparent 1px);
+  background-size:40px 40px;
+  animation:menuGridScroll 20s linear infinite;
+}
+#mp-lobby-content {
+  position:relative; z-index:1; width:min(500px,90vw);
+  display:flex; flex-direction:column; gap:12px;
+  padding:clamp(20px,5vw,40px);
+  border:2px solid rgba(57,255,20,0.4);
+  background:rgba(0,0,0,0.8);
+  box-shadow:var(--glow);
+}
+.mp-screen-title {
+  font-size:clamp(1.2rem,4vw,1.8rem); font-weight:900;
+  letter-spacing:4px; color:var(--ng3); text-shadow:var(--glow2);
+  border-bottom:1px solid rgba(57,255,20,0.3); padding-bottom:8px;
+}
+#mp-lobby-code-display {
+  font-size:clamp(1.8rem,6vw,2.8rem); font-weight:900; letter-spacing:10px;
+  color:var(--gold); text-shadow:0 0 20px rgba(255,215,0,0.5);
+  text-align:center; padding:8px 0;
+}
+#mp-lobby-players { display:flex; flex-direction:column; gap:6px; }
+.mp-player-row {
+  display:flex; align-items:center; gap:10px;
+  border:1px solid rgba(57,255,20,0.25); padding:8px 12px;
+  font-size:clamp(0.6rem,1.8vw,0.75rem); background:rgba(57,255,20,0.04);
+}
+.mp-player-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.mp-player-dot.host { background:var(--gold); box-shadow:0 0 6px var(--gold); }
+.mp-player-dot.player { background:var(--ng); box-shadow:var(--glow); }
+.mp-player-dot.empty { background:rgba(57,255,20,0.15); }
+.mp-player-name { flex:1; }
+.mp-player-tag { font-size:0.45rem; opacity:0.5; }
+#mp-lobby-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:4px; }
+#mp-lobby-status { flex:1; font-size:0.55rem; opacity:0.6; }
+
+/* MP Waiting */
+#screen-mp-wait {
+  position:absolute; inset:0; z-index:75;
+  background:rgba(0,0,0,0.96);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:20px;
+}
+#mp-wait-term {
+  width:min(500px,90vw); font-size:clamp(0.6rem,1.6vw,0.78rem);
+  line-height:1.9; text-transform:none;
+}
+#mp-wait-lines { white-space:pre-wrap; }
+#mp-wait-cursor { color:var(--ng); animation:termBlink 0.7s step-end infinite; }
+#mp-wait-info { font-size:clamp(0.55rem,1.5vw,0.7rem); opacity:0.6; text-align:center; }
+.mw-line { display:block; color:rgba(57,255,20,0.7); }
+.mw-line.mw-bright { color:var(--ng); text-shadow:var(--glow); }
+.mw-line.mw-gold { color:var(--gold); }
+
+/* MP Results */
+#screen-mp-results {
+  position:absolute; inset:0; z-index:76;
+  background:rgba(0,0,0,0.97);
+  display:flex; align-items:center; justify-content:center;
+}
+#mp-results-content {
+  width:min(520px,92vw); display:flex; flex-direction:column; gap:16px;
+  padding:clamp(20px,5vw,36px); border:2px solid rgba(57,255,20,0.4);
+  background:rgba(0,0,0,0.9);
+}
+.mp-results-table { width:100%; border-collapse:collapse; font-size:clamp(0.52rem,1.4vw,0.68rem); }
+.mp-results-table th {
+  text-align:left; padding:5px 8px; font-size:0.45rem;
+  border-bottom:1px solid rgba(57,255,20,0.3); color:rgba(57,255,20,0.5); letter-spacing:2px;
+}
+.mp-results-table td { padding:6px 8px; border-bottom:1px solid rgba(57,255,20,0.1); }
+.mp-results-table tr.me td { color:var(--gold); }
+.mp-results-table tr.elim td { opacity:0.35; }
+.rank-1 { color:var(--gold); font-weight:900; }
+.rank-2 { color:#c0c0c0; }
+.rank-3 { color:#cd7f32; }
+
+/* MP Eliminated */
+#screen-mp-eliminated {
+  position:absolute; inset:0; z-index:72;
+  background:rgba(3,0,0,0.95);
+  display:flex; align-items:center; justify-content:center;
+}
+
+/* BOOT SCREEN */
+#screen-boot {
+  position: absolute; inset: 0; z-index: 200;
+  background: #000;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+#boot-scanline {
+  position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px, transparent 3px,
+    rgba(57,255,20,0.06) 3px, rgba(57,255,20,0.06) 4px
+  );
+  animation: scanroll 6s linear infinite;
+}
+#boot-scanline::after {
+  content: '';
+  position: absolute; left: 0; right: 0; height: 3px;
+  background: rgba(57,255,20,0.25);
+  box-shadow: 0 0 18px 6px rgba(57,255,20,0.15);
+  animation: bootSweep 2.4s linear infinite;
+}
+@keyframes bootSweep {
+  from { top: -3px; }
+  to   { top: 100%; }
+}
+#boot-content {
+  position: relative; z-index: 1;
+  width: min(520px, 90vw);
+  display: flex; flex-direction: column;
+  align-items: flex-start; gap: 24px;
+}
+#boot-logo-wrap {
+  width: 100%; text-align: left;
+  opacity: 0; animation: bootFadeIn 0.4s ease-out 0.2s forwards;
+}
+#boot-logo {
+  font-size: clamp(1.8rem, 6vw, 3rem);
+  font-weight: 900; letter-spacing: clamp(4px,1.5vw,10px);
+  color: var(--ng); text-shadow: var(--glow2);
+  border-bottom: 1px solid rgba(57,255,20,0.3);
+  padding-bottom: 8px; margin-bottom: 4px;
+}
+#boot-logo-sub {
+  font-size: clamp(0.42rem, 1.3vw, 0.58rem);
+  letter-spacing: clamp(5px, 2vw, 12px);
+  color: rgba(57,255,20,0.4);
+}
+#boot-term-wrap {
+  width: 100%;
+  font-size: clamp(0.58rem, 1.6vw, 0.74rem);
+  line-height: 1.85;
+  text-transform: none;
+  opacity: 0; animation: bootFadeIn 0.3s ease-out 0.5s forwards;
+  min-height: 120px;
+}
+#boot-lines { white-space: pre-wrap; }
+.bline { display: block; }
+.bline-dim    { color: rgba(57,255,20,0.4); }
+.bline-ok     { color: var(--ng); text-shadow: var(--glow); }
+.bline-warn   { color: var(--gold); text-shadow: 0 0 6px rgba(255,215,0,0.4); }
+.bline-bright { color: #fff; text-shadow: 0 0 8px rgba(255,255,255,0.4); }
+.bline-red    { color: var(--red); text-shadow: 0 0 6px rgba(255,58,58,0.4); }
+.bline-indent { color: rgba(57,255,20,0.55); padding-left: 1.4em; }
+#boot-cursor {
+  color: var(--ng); animation: termBlink 0.7s step-end infinite;
+  font-size: clamp(0.58rem, 1.6vw, 0.74rem);
+}
+#boot-bar-wrap {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+  opacity: 0; animation: bootFadeIn 0.3s ease-out 0.6s forwards;
+}
+#boot-bar-label {
+  font-size: clamp(0.42rem,1.2vw,0.54rem);
+  color: rgba(57,255,20,0.5); letter-spacing: 3px; white-space: nowrap;
+}
+#boot-bar-outer {
+  flex: 1; height: 6px; border: 1px solid rgba(57,255,20,0.35);
+  background: rgba(0,0,0,0.6);
+}
+#boot-bar-inner {
+  height: 100%; width: 0%;
+  background: var(--ng);
+  box-shadow: var(--glow);
+  transition: width 0.18s ease-out;
+}
+#boot-bar-pct {
+  font-size: clamp(0.42rem,1.2vw,0.54rem);
+  color: var(--ng); min-width: 3em; text-align: right;
+}
+@keyframes bootFadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+@keyframes bootWipeOut {
+  0%   { opacity:1; transform:scale(1); filter:brightness(1); }
+  60%  { opacity:1; transform:scale(1.01); filter:brightness(2); }
+  80%  { opacity:0.6; transform:scale(1.03); filter:brightness(3) blur(2px); }
+  100% { opacity:0; transform:scale(1.06); filter:brightness(0) blur(8px); }
+}
+#screen-boot.wipe-out {
+  animation: bootWipeOut 0.55s ease-in forwards;
+  pointer-events: none;
+}
+
+/* Responsive tweaks for MP HUD */
+@media (max-width: 768px) and (orientation: landscape) {
+  #mp-hud { bottom: 8px; right: 8px; min-width: 100px; padding: 4px 8px; }
+}
+@media (max-width: 480px) {
+  #mp-hud { bottom: 6px; right: 6px; min-width: 90px; padding: 4px 6px; }
+}
+</style>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+  import { getDatabase, ref, set, get, push, onValue, off, update, remove, serverTimestamp }
+    from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyALxelHuR6HwoF67AihaKSsWlNjpOS8vz8",
+    authDomain: "polyhedral1.firebaseapp.com",
+    databaseURL: "https://polyhedral1-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "polyhedral1",
+    storageBucket: "polyhedral1.firebasestorage.app",
+    messagingSenderId: "354293414631",
+    appId: "1:354293414631:web:ae1b1fad45ff70c9b90042",
+    measurementId: "G-1H1RH4BHP2"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  window._fb = { db, ref, set, get, push, onValue, off, update, remove, serverTimestamp };
+  window.dispatchEvent(new Event('firebase-ready'));
+</script>
+</head>
+<body>
+
+<div id="crt-overlay"></div>
+<div id="notif"></div>
+
+<!-- CURSE TARGET PICKER -->
+<div id="curse-picker" class="hidden">
+  <div id="curse-picker-title">☠ SEND CURSE ☠<br><span style="font-size:0.55rem;opacity:0.6;letter-spacing:1px">CHOOSE A TARGET</span></div>
+  <div id="curse-picker-list"></div>
+  <button id="curse-picker-cancel" onclick="closeCursePicker()"><span>✕ CANCEL</span></button>
+</div>
+
+<div id="gc">
+  <div id="crt-corners"></div>
+
+  <!-- BOOT SCREEN -->
+  <div id="screen-boot">
+    <div id="boot-scanline"></div>
+    <div id="boot-content">
+      <div id="boot-logo-wrap">
+        <div id="boot-logo">POLYHEDRAL</div>
+        <div id="boot-logo-sub"></div>
+      </div>
+      <div id="boot-term-wrap">
+        <div id="boot-lines"></div>
+        <span id="boot-cursor">█</span>
+      </div>
+      <div id="boot-bar-wrap">
+        <div id="boot-bar-label">LOADING</div>
+        <div id="boot-bar-outer"><div id="boot-bar-inner"></div></div>
+        <div id="boot-bar-pct">0%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN MENU -->
+  <div id="screen-menu">
+    <div id="menu-bg-grid"></div>
+    <div id="menu-content">
+      <div id="menu-logo">
+        <div id="menu-title">POLYHEDRAL</div>
+        <div id="menu-sub">ROLL · HOLD · SCORE</div>
+      </div>
+      <div id="menu-boot-term">
+        <div id="menu-term-lines"></div>
+        <span id="menu-term-cursor">█</span>
+      </div>
+      <div id="menu-slots-wrap" class="hidden">
+        <div id="menu-mode-select">
+          <div class="menu-section-label">// SELECT_MODE</div>
+          <div id="mode-btns">
+            <button onclick="showSingleplayerSlots()"><span>▶ SINGLEPLAYER</span></button>
+            <button onclick="showMultiplayerMenu()" class="btn-gold"><span>⬡ MULTIPLAYER</span></button>
+          </div>
+        </div>
+        <div id="menu-sp-panel" class="hidden">
+          <div class="menu-section-label">// SELECT_SAVE_SLOT</div>
+          <div id="save-slots"></div>
+          <div id="menu-actions">
+            <button class="btn-red" onclick="menuNewGame(menuSelectedSlot)"><span>▶ NEW GAME</span></button>
+            <button id="menu-load-btn" class="btn-gold" onclick="menuLoadGame(menuSelectedSlot)" disabled><span>↺ LOAD GAME</span></button>
+          </div>
+          <div id="menu-hint">select a slot · new game overwrites · load restores progress</div>
+          <button class="menu-back-btn" onclick="showModeSelect()"><span>← BACK</span></button>
+        </div>
+        <div id="menu-mp-panel" class="hidden">
+          <div class="menu-section-label">// MULTIPLAYER_MODE</div>
+          <div id="mp-btns">
+            <button onclick="mpQuickMatch()"><span>⚡ QUICK MATCH</span></button>
+            <button onclick="mpShowCreate()" class="btn-gold"><span>+ MAKE PRIVATE ROOM</span></button>
+            <button onclick="mpShowJoin()" class="btn-blue"><span>→ JOIN PRIVATE ROOM</span></button>
+          </div>
+          <div id="mp-create-panel" class="hidden">
+            <div class="menu-section-label">// CREATE_ROOM</div>
+            <div class="mp-input-wrap">
+              <label>ROOM CODE (4 chars)</label>
+              <input id="mp-create-code" maxlength="4" placeholder="ABCD" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+              <button onclick="mpCreateRoom()"><span>CREATE</span></button>
+            </div>
+          </div>
+          <div id="mp-join-panel" class="hidden">
+            <div class="menu-section-label">// JOIN_ROOM</div>
+            <div class="mp-input-wrap">
+              <label>ENTER ROOM CODE</label>
+              <input id="mp-join-code" maxlength="4" placeholder="ABCD" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+              <button onclick="mpJoinRoom(document.getElementById('mp-join-code').value)"><span>JOIN</span></button>
+            </div>
+          </div>
+          <button class="menu-back-btn" onclick="showModeSelect()"><span>← BACK</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MP LOBBY SCREEN -->
+  <div id="screen-mp-lobby" class="hidden">
+    <div id="mp-lobby-bg"></div>
+    <div id="mp-lobby-content">
+      <div class="mp-screen-title">LOBBY</div>
+      <div id="mp-lobby-code-display"></div>
+      <div class="menu-section-label" style="margin-top:16px">// PLAYERS</div>
+      <div id="mp-lobby-players"></div>
+      <div id="mp-lobby-actions">
+        <div id="mp-lobby-status"></div>
+        <button id="mp-start-btn" class="hidden btn-gold" onclick="mpHostStart()"><span>▶ START GAME</span></button>
+        <button class="btn-red" onclick="mpLeaveRoom()"><span>✕ LEAVE</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MP WAITING SCREEN -->
+  <div id="screen-mp-wait" class="hidden">
+    <div id="mp-wait-term">
+      <div id="mp-wait-lines"></div>
+      <span id="mp-wait-cursor">█</span>
+    </div>
+    <div id="mp-wait-info"></div>
+  </div>
+
+  <!-- MP ROUND RESULTS SCREEN -->
+  <div id="screen-mp-results" class="hidden">
+    <div id="mp-results-content">
+      <div class="mp-screen-title" id="mp-results-title">ROUND RESULTS</div>
+      <div id="mp-results-round"></div>
+      <div id="mp-results-total"></div>
+      <button onclick="mpResultsNext()" class="btn-gold btn-big"><span>▶ CONTINUE</span></button>
+    </div>
+  </div>
+
+  <!-- MP ELIMINATED SCREEN -->
+  <div id="screen-mp-eliminated" class="hidden">
+    <div style="text-align:center;padding:40px 20px">
+      <div class="go-title" style="color:var(--red);font-size:2.5rem">ELIMINATED</div>
+      <div class="go-stats" id="mp-elim-stats"></div>
+      <div style="margin-top:20px;font-size:0.65rem;opacity:0.5">watching other players...</div>
+      <div id="mp-elim-scoreboard" style="margin-top:16px"></div>
+    </div>
+  </div>
+
+  <!-- MP HUD (MOVED TO BOTTOM RIGHT) -->
+  <div id="mp-hud" class="hidden">
+    <div id="mp-hud-code"></div>
+    <div id="mp-hud-players"></div>
+  </div>
+
+  <!-- HEADER -->
+  <div id="hdr">
+    <div class="hdr-left">
+      CYCLE_<span id="round-ui">1</span> &nbsp;|&nbsp; ANTE_<span id="ante-ui">1</span><br>
+      QUOTA: <strong id="target-ui">–</strong>
+    </div>
+    <div class="hdr-center">
+      <div class="title-main">POLYHEDRAL</div>
+      <div class="title-sub">ROLL · HOLD · SCORE</div>
+    </div>
+    <div class="money-box" style="text-align:right">
+      $<span id="bank-ui" class="money-value">0</span>
+    </div>
+  </div>
+
+  <!-- ANTE PIPS + SCORE BAR -->
+  <div id="ante-bar">
+    <span style="font-size:0.55rem;opacity:0.5;margin-right:6px">ANTE</span>
+    <div id="ante-pips" style="display:flex;gap:4px"></div>
+    <div id="score-bar-wrap">
+      <span style="font-size:0.55rem;opacity:0.6" id="score-progress-txt">0 / 0</span>
+      <div id="score-bar-outer"><div id="score-bar-inner"></div></div>
+    </div>
+  </div>
+
+  <!-- PLAY SCREEN -->
+  <div id="screen-play">
+    <div id="hand-name">–</div>
+    <div id="score-chips"></div>
+    <div id="score-total">0</div>
+    <div id="dice-box"></div>
+    <div id="consumable-zone">
+      <span class="cons-label">CONS_SLOT:</span>
+      <div id="cons-slot">
+        <span id="cons-empty" style="opacity:0.35;font-size:0.6rem">[ EMPTY ]</span>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="ctrl-stat">REROLLS<span id="rerolls-ui">3</span></div>
+      <button id="roll-btn" onclick="runRoll()"><span>↻ REROLL</span></button>
+      <button id="cash-btn" onclick="enterShop()" class="btn-gold" disabled><span>⬆ UPLINK</span></button>
+    </div>
+    <hr class="sep">
+  </div>
+
+  <!-- JOKER TRAY -->
+  <div id="passive-bin">
+    <div class="tray-label">HARDWARE_INVENTORY &nbsp;|&nbsp; JOKERS: <span id="joker-count">0</span>/5</div>
+    <div id="joker-list"></div>
+  </div>
+
+  <!-- SHOP SCREEN -->
+  <div id="screen-shop" class="hidden">
+    <div class="shop-hdr">
+      <h2>⬡ MARKET_UPLINK</h2>
+      <div class="money-box">$<span id="shop-bank-ui" class="money-value">0</span></div>
+    </div>
+    <div id="shop-tabs">
+      <div class="shop-tab active" data-tab="jokers" onclick="switchTab('jokers')">JOKERS</div>
+      <div class="shop-tab" data-tab="consumables" onclick="switchTab('consumables')">CONSUMABLES</div>
+      <div class="shop-tab" data-tab="upgrades" onclick="switchTab('upgrades')">UPGRADES</div>
+      <div class="shop-tab" data-tab="dice" onclick="switchTab('dice')">DICE_MODS</div>
+    </div>
+    <div id="shop-content"></div>
+    <div id="purchase-flash" class="hidden">
+      <div id="pf-lines"></div>
+    </div>
+    <div class="shop-footer">
+      <div class="shop-reroll-cost">REROLL SHOP: $<span id="reroll-cost-ui">5</span></div>
+      <button onclick="rerollShop()" class="btn-red"><span>↻ REROLL_SHOP</span></button>
+      <button onclick="saveCurrentGame()" class="btn-save" title="Save game to active slot"><span>💾 SAVE</span></button>
+      <button onclick="startNextRound()" class="btn-big"><span>▶▶ NEXT_CYCLE</span></button>
+    </div>
+  </div>
+
+  <!-- TERMINAL CUTSCENE -->
+  <div id="screen-terminal" class="hidden">
+    <div id="term-body">
+      <div id="term-lines"></div>
+      <div id="term-cursor">█</div>
+    </div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div id="screen-over" class="hidden">
+    <div class="go-title">CORE_DUMPED</div>
+    <div class="go-stats" id="go-stats"></div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center">
+      <button onclick="location.reload()" class="btn-red btn-big"><span>↺ RELOAD_SYS</span></button>
+      <button onclick="goToMenu()" class="btn-big"><span>⌂ MAIN MENU</span></button>
+    </div>
+  </div>
+
+  <!-- WIN -->
+  <div id="screen-win" class="hidden">
+    <div class="win-title">⬡ SYSTEM_CLEARED ⬡</div>
+    <div class="go-stats" id="win-stats"></div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center">
+      <button onclick="location.reload()" class="btn-gold btn-big"><span>↺ NEW_GAME</span></button>
+      <button onclick="goToMenu()" class="btn-big"><span>⌂ MAIN MENU</span></button>
+    </div>
+  </div>
+</div>
+
+<script defer>
+// ══════════════════════════════════════════════════════
+//  GAME STATE (with lowered scoring and performance tweaks)
+// ══════════════════════════════════════════════════════
+let g = {
+  ante: 1, round: 1, rerolls: 3, maxRerolls: 3,
+  bank: 4, target: 300, runScore: 0,
+  baseMult: 1.0, baseChips: 0,
+  dice: [],
+  jokers: [], consumables: [],
+  firstRollDone: false, glassRerolled: false,
+  roundScore: 0, shopRerollCost: 5,
+  handsPlayed: 0, totalScore: 0,
+  hasInterest: false, hasInterestPrime: false,
+  startingChips: 0, glassShatterProof: false,
+  handLevels: { 'PAIR':1, 'TWO_PAIR':1, 'THREE_OF_A_KIND':1, 'STRAIGHT':1, 'FULL_HOUSE':1, 'FOUR_OF_A_KIND':1, 'FIVE_OF_A_KIND':1, 'SIX_OF_A_KIND':1, 'SEVEN_OF_A_KIND':1, 'EIGHT_OF_A_KIND':1, 'NINE_OF_A_KIND':1, 'TEN_OF_A_KIND':1, 'HIGH_CARD':1 }
+};
+
+const ANTE_TABLE = [
+  { quotas: [50, 75, 100], reward: 4 },
+  { quotas: [200, 400, 800], reward: 6 },
+  { quotas: [1500, 3000, 5000], reward: 8 },
+  { quotas: [10000, 15000, 20000], reward: 10 },
+  { quotas: [25000, 30000, 40000], reward: 13 },
+  { quotas: [50000, 75000, 100000], reward: 16 },
+  { quotas: [125000, 150000, 200000], reward: 20 },
+];
+const MAX_ANTE = ANTE_TABLE.length;
+
+function getQuota(ante, round) {
+  const entry = ANTE_TABLE[ante - 1];
+  if (!entry) return 999999;
+  return entry.quotas[round - 1] || entry.quotas[entry.quotas.length - 1];
+}
+function getReward(ante) {
+  return ANTE_TABLE[ante - 1]?.reward || 5;
+}
+
+// HAND DEFINITIONS — LOWERED SCORES
+const HANDS = {
+  HIGH_CARD: { c: 1, m: 1.0, n: 'HIGH CARD', label: 'single high' },
+  PAIR: { c: 3, m: 1.2, n: 'PAIR', label: 'two matching' },
+  TWO_PAIR: { c: 6, m: 1.6, n: 'TWO PAIR', label: 'two pairs' },
+  THREE_OF_A_KIND: { c: 9, m: 2.0, n: 'THREE OF A KIND', label: 'three matching' },
+  STRAIGHT: { c: 12, m: 2.4, n: 'STRAIGHT', label: 'sequential run' },
+  FULL_HOUSE: { c: 14, m: 2.8, n: 'FULL HOUSE', label: 'three + two' },
+  FOUR_OF_A_KIND: { c: 20, m: 4.0, n: 'FOUR OF A KIND', label: 'four matching' },
+  FIVE_OF_A_KIND: { c: 32, m: 6.4, n: 'FIVE OF A KIND', label: 'five matching' },
+  SIX_OF_A_KIND: { c: 48, m: 9.6, n: 'SIX OF A KIND', label: 'six matching' },
+  SEVEN_OF_A_KIND: { c: 68, m: 13.6, n: 'SEVEN OF A KIND', label: 'seven matching' },
+  EIGHT_OF_A_KIND: { c: 92, m: 19.2, n: 'EIGHT OF A KIND', label: 'eight matching' },
+  NINE_OF_A_KIND: { c: 120, m: 25.6, n: 'NINE OF A KIND', label: 'nine matching' },
+  TEN_OF_A_KIND: { c: 160, m: 36.0, n: 'TEN OF A KIND', label: 'legendary' },
+};
+
+function getHandDef(key) {
+  if (HANDS[key]) return HANDS[key];
+  const n = parseInt(key);
+  if (!isNaN(n)) {
+    return { c: 160 + (n - 10) * 45, m: 36 + (n - 10) * 12, n: `${n} OF A KIND`, label: `${n} matching` };
+  }
+  return HANDS.HIGH_CARD;
+}
+
+function getNOfAKindKey(n) {
+  const keys = ['', '', 'PAIR', 'THREE_OF_A_KIND', 'FOUR_OF_A_KIND', 'FIVE_OF_A_KIND', 'SIX_OF_A_KIND', 'SEVEN_OF_A_KIND', 'EIGHT_OF_A_KIND', 'NINE_OF_A_KIND', 'TEN_OF_A_KIND'];
+  if (n < 2) return 'HIGH_CARD';
+  if (n <= 10) return keys[n];
+  return `${n}_OF_A_KIND`;
+}
+
+function makeDie(sides, material = 'stone') {
+  return { v: null, held: false, sides, material, woodenBonus: 0, shattered: false };
+}
+
+const MATERIALS = {
+  stone: { name: 'STONE', label: 'STN', desc: 'Standard die. No special effect.', color: '#39ff14' },
+  gold: { name: 'GOLD', label: 'GLD', desc: '+3 chips flat whenever this die is rolled.', color: '#ffd700' },
+  fire: { name: 'FIRE', label: 'FIR', desc: '+1.2 Mult if this die rolls its maximum face.', color: '#ff6a00' },
+  cursed: { name: 'CURSED', label: 'CRS', desc: '+6 chips if this die rolls a 1.', color: '#d080ff' },
+  glass: { name: 'GLASS', label: 'GLS', desc: 'x2 score if not rerolled this round. Shatters if rerolled.', color: '#c8f0ff' },
+  steel: { name: 'STEEL', label: 'STL', desc: '+1.2 Mult for each steel die you hold.', color: '#aabbcc' },
+  bronze: { name: 'BRONZE', label: 'BRZ', desc: 'Acts as a wild — counts as any value for hand detection.', color: '#e09040' },
+  crystal: { name: 'CRYSTAL', label: 'CRY', desc: 'Its pip value counts twice toward chips.', color: '#ff99ff' },
+  obsidian: { name: 'OBSIDIAN', label: 'OBS', desc: '+0.25 Mult per die in your pool (scales with pool size).', color: '#ff6633' },
+  wooden: { name: 'WOODEN', label: 'WOD', desc: 'Gains +1 to max face permanently each round.', color: '#c8854a' },
+  silver: { name: 'SILVER', label: 'SLV', desc: 'Gains +1 chip per round. High consistency.', color: '#e8e8e8' },
+  emerald: { name: 'EMERALD', label: 'EMR', desc: '+1.3x multiplier. Most powerful material.', color: '#00ff88' },
+  ruby: { name: 'RUBY', label: 'RBY', desc: 'Gains +2 chips for each other ruby die held.', color: '#ff1744' },
+  sapphire: { name: 'SAPPHIRE', label: 'SAP', desc: '+2 chips per die showing same value as this one.', color: '#0080ff' },
+  diamond: { name: 'DIAMOND', label: 'DIA', desc: '+4 Mult if hand has 5-of-a-kind.', color: '#ffffff' },
+  plutonium: { name: 'PLUTONIUM', label: 'PLU', desc: 'Starts glowing. +0.15x Mult per other plutonium die.', color: '#88ff00' },
+  void: { name: 'VOID', label: 'VOD', desc: 'Gains value equal to reroll count each round.', color: '#4a0080' },
+  titanium: { name: 'TITANIUM', label: 'TIT', desc: '+1.1 Mult per hand level. Synergizes with upgrades.', color: '#cccccc' },
+};
+
+function initGame() {
+  g.dice = [
+    makeDie([1, 2, 3, 4, 5, 6], 'stone'),
+    makeDie([1, 2, 3, 4, 5, 6], 'stone'),
+    makeDie([1, 2, 3, 4, 5, 6], 'stone'),
+    makeDie([1, 2, 3, 4, 5, 6], 'stone'),
+    makeDie([1, 2, 3, 4, 5, 6], 'stone'),
+  ];
+  g.target = getQuota(g.ante, g.round);
+  updateUI(); initBoard();
+  buildAntePips();
+}
+
+function initBoard() {
+  const box = document.getElementById('dice-box');
+  box.innerHTML = '';
+
+  g.dice.forEach((d) => {
+    const div = document.createElement('div');
+    const mat = d.material || 'stone';
+    const matDef = MATERIALS[mat] || MATERIALS.stone;
+    const isBlank = d.v === null;
+    const isShattered = !!d.shattered;
+    const sideRange = `${d.sides[0]}-${d.sides[d.sides.length - 1]}`;
+
+    div.className = [
+      'die',
+      isBlank ? 'blank' : '',
+      d.held ? 'held' : '',
+      `mat-${mat}`,
+      isShattered ? 'shattered' : ''
+    ].filter(Boolean).join(' ');
+
+    div.title = `${matDef.name}: ${matDef.desc}`;
+    div.innerHTML = `
+      <span class="die-val">${isBlank ? '' : d.v}</span>
+      <span class="die-label">${matDef.label} ${sideRange}</span>
+    `;
+
+    div.onclick = () => {
+      if (d.shattered) return;
+      if (g.firstRollDone && d.v !== null) {
+        d.held = !d.held;
+        if (d.held && typeof SFX !== 'undefined') {
+          SFX.hold();
+          div.style.transition = 'transform 0.12s cubic-bezier(0.34,1.56,0.64,1)';
+          div.style.transform = 'translateY(-14px) scale(1.08)';
+          setTimeout(() => { div.style.transform = ''; setTimeout(() => { div.style.transition = ''; }, 180); }, 110);
+        } else if (!d.held && typeof SFX !== 'undefined') {
+          SFX.unhold();
+        }
+        initBoard();
+      }
+    };
+
+    box.appendChild(div);
+  });
+
+  calculateScore();
+  updateCons();
+  updateUI();
+}
+
+function runRoll(free = false) {
+  if (g.rerolls <= 0 && g.firstRollDone && !free) { if(typeof SFX!=='undefined') SFX.error(); return; }
+
+  const firstRollThisRound = !g.firstRollDone;
+  if (firstRollThisRound) { g.firstRollDone = true; }
+  else if (!free) { g.rerolls--; g.glassRerolled = true; }
+
+  if (typeof SFX !== 'undefined') SFX.roll();
+
+  const box = document.getElementById('dice-box');
+  const divs = box.querySelectorAll('.die');
+
+  // Pre-calculate all final values before animating
+  const finalVals = [];
+  g.dice.forEach((d, i) => {
+    if (d.held) { finalVals.push(null); return; }
+    if (d.material === 'glass' && !firstRollThisRound && !free && !g.glassShatterProof) {
+      d.shattered = true; d.v = null; finalVals.push('shattered'); return;
+    }
+    d.shattered = false;
+    d.v = d.sides[Math.floor(Math.random() * d.sides.length)];
+    finalVals.push(d.v);
+  });
+
+  triggerJokerEvent('onRoll');
+
+  const SCRAMBLE_DURATION = 350;
+  const SETTLE_STAGGER = 55;
+
+  g.dice.forEach((d, i) => {
+    if (d.held) return;
+    const dieEl = divs[i];
+    if (!dieEl) return;
+    const valEl = dieEl.querySelector('.die-val');
+
+    const settleAt = SCRAMBLE_DURATION - (g.dice.length - 1 - i) * SETTLE_STAGGER;
+    dieEl.classList.add('rolling');
+    dieEl.classList.remove('blank', 'shattered');
+
+    if (finalVals[i] === 'shattered') {
+      setTimeout(() => {
+        dieEl.classList.remove('rolling');
+        dieEl.classList.add('blank', 'shattered');
+        if (valEl) valEl.textContent = '';
+        if (typeof SFX !== 'undefined') SFX.shatter();
+        notify('GLASS DIE SHATTERED!', 'bad');
+        const liveEls = document.querySelectorAll('.die');
+        if (liveEls[i]) diceBurst(liveEls[i], null, 'curse');
+      }, settleAt);
+      return;
+    }
+
+    // Scramble numbers
+    const scramble = setInterval(() => {
+      if (valEl) valEl.textContent = d.sides[Math.floor(Math.random() * d.sides.length)];
+    }, 40);
+
+    setTimeout(() => {
+      clearInterval(scramble);
+      dieEl.classList.remove('rolling');
+      // Bounce landing
+      dieEl.style.transition = 'transform 0.08s ease-out';
+      dieEl.style.transform = 'scale(1.15) translateY(-5px)';
+      setTimeout(() => {
+        dieEl.style.transition = 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1)';
+        dieEl.style.transform = '';
+        setTimeout(() => { dieEl.style.transition = ''; }, 200);
+      }, 80);
+      if (valEl) valEl.textContent = d.v;
+      if (typeof SFX !== 'undefined') SFX.land(d.v);
+      diceBurst(dieEl, null, d.v === d.sides[d.sides.length - 1] ? 'max' : 'score');
+    }, settleAt);
+  });
+
+  shake('sm');
+
+  setTimeout(() => {
+    calculateScore();
+    updateUI();
+    initBoard();
+  }, SCRAMBLE_DURATION + 80);
+}
+
+function getHandInfo() {
+  const bronzeDice = g.dice.filter(d => d.material === 'bronze' && d.v !== null && !d.shattered);
+  const normalDice = g.dice.filter(d => d.material !== 'bronze' && d.v !== null && !d.shattered);
+  const vals = normalDice.map(d => d.v).sort((a, b) => a - b);
+  const wildCount = bronzeDice.length;
+  if (!vals.length && !wildCount) return { key: 'HIGH_CARD', handName: '–', chips: 0, mult: 0, vals: [] };
+  let counts = {};
+  vals.forEach(v => counts[v] = (counts[v] || 0) + 1);
+  const cArr = Object.values(counts).sort((a, b) => b - a);
+  const topCount = (cArr[0] || 0) + wildCount;
+  const secondCount = cArr[1] || 0;
+  const uniq = [...new Set(vals)];
+  const totalDice = vals.length + wildCount;
+  const isStraight = uniq.length >= 4 && uniq.every((v, i) => i === 0 || v === uniq[i - 1] + 1);
+  let key;
+  if (topCount >= 2) {
+    if (isStraight && totalDice >= 4 && topCount < 4) key = 'STRAIGHT';
+    else if (topCount >= 4 && secondCount >= 2 && topCount < totalDice) key = topCount >= 3 && secondCount >= 2 ? 'FULL_HOUSE' : getNOfAKindKey(topCount);
+    else if (topCount === 3 && secondCount === 2) key = 'FULL_HOUSE';
+    else if (topCount >= 2 && secondCount >= 2 && topCount < 3) key = 'TWO_PAIR';
+    else key = getNOfAKindKey(topCount);
+  } else if (isStraight && totalDice >= 4) key = 'STRAIGHT';
+  else key = 'HIGH_CARD';
+  const def = getHandDef(key);
+  const lv = g.handLevels[key] || 1;
+  const allVals = [...vals, ...bronzeDice.map(d => d.v)];
+  return {
+    key, vals: allVals,
+    handName: def.n + (lv > 1 ? ` LV${lv}` : '') + (wildCount > 0 ? ` [${wildCount}✦]` : ''),
+    chips: def.c + (lv - 1) * 8,
+    mult: def.m + (lv - 1) * 0.4,
+  };
+}
+
+function applyJoker(j, handKey, vals, chips, mult) {
+  let desc = '';
+  switch (j.id) {
+    case 'SNIPER': if (vals.includes(6)) { mult += 1.2; desc = '+1.2M on 6'; } break;
+    case 'GAMBLER': if (vals.includes(1)) { chips += 6; desc = '+6C on 1'; } break;
+    case 'DOUBLER': if (['PAIR', 'TWO_PAIR'].includes(handKey)) { mult += 1.6; desc = '+1.6M pairs'; } break;
+    case 'TRIPWIRE': if (handKey === 'THREE_OF_A_KIND' || handKey === 'FULL_HOUSE') { mult += 2.0; desc = '+2.0M trips'; } break;
+    case 'STRAIGHTER': if (handKey === 'STRAIGHT') { chips += 10; desc = '+10C straight'; } break;
+    case 'BANKER': chips += Math.floor(g.bank / 6); desc = `+${Math.floor(g.bank / 6)}C bank`; break;
+    case 'OVERCLOCK': mult += 0.6; desc = '+0.6M always'; break;
+    case 'VALIDATOR': if (vals.every(v => v % 2 === 0)) { mult += 2.0; desc = '+2.0M all even'; } break;
+    case 'PRIME': if (vals.every(v => [2, 3, 5, 7, 11, 13, 17, 19, 23].includes(v))) { chips += 8; mult += 1.2; desc = 'prime bonus'; } break;
+    case 'HIGHROLLER': { const max = Math.max(...vals); chips += max; desc = `+${max}C max`; } break;
+    case 'ALLIN': { const n = parseInt(handKey); if (handKey === 'FOUR_OF_A_KIND' || handKey === 'FIVE_OF_A_KIND' || handKey === 'SIX_OF_A_KIND' || (!isNaN(n) && n >= 4)) { mult *= 1.8; desc = 'x1.8M quads+'; } } break;
+    case 'HEDGER': chips += vals.length * 1; desc = `+${vals.length}C per die`; break;
+    case 'DEBUGGER': if (g.rerolls === g.maxRerolls) { mult += 0.8; desc = '+0.8M full rerolls'; } break;
+    case 'SYMMETRY': if (vals.every((v, i, a) => i === 0 || a[i - 1] <= v)) { chips += 5; desc = '+5C sorted'; } break;
+    case 'FIREWALL': mult += Math.floor(g.jokers.length * 0.25); desc = `+${Math.floor(g.jokers.length * 0.25)}M per joker`; break;
+    case 'ENTROPY': { const bonus = Math.floor(Math.random() * 4); chips += bonus; desc = `+${bonus}C chaos`; } break;
+    case 'OVERKILL': if (g.roundScore > g.target * 0.5) { mult += 1.2; desc = '+1.2M halfway'; } break;
+    case 'MIRRORDICE': { const n = parseInt(handKey); const isNoak = ['FIVE_OF_A_KIND', 'SIX_OF_A_KIND'].includes(handKey) || (!isNaN(n) && n >= 5); if (isNoak || new Set(vals).size === 1) { mult += 3.2; desc = '+3.2M all same!'; } } break;
+    case 'LOWBALL': { const lowCount = vals.filter(v => v <= 3).length; chips += lowCount; desc = lowCount ? `+${lowCount}C low` : ''; } break;
+    case 'COUNTER': { const unique = new Set(vals).size; mult += unique * 0.8; desc = `+${(unique * 0.8).toFixed(1)}M unique`; } break;
+    case 'ECHO': { let counts = {}; vals.forEach(v => counts[v] = (counts[v] || 0) + 1); const pairs = Object.values(counts).filter(c => c >= 2).length; if (pairs > 0) { chips += pairs * 2; desc = `+${pairs * 2}C pairs`; } } break;
+    case 'SCAVENGER': { const free = g.dice.filter(d => d.v !== null && !d.held && !d.shattered).length; if (free > 0) { chips += free * 2; desc = `+${free * 2}C free dice`; } } break;
+    case 'ACCUMULATOR': { const used = g.maxRerolls - g.rerolls; if (used > 0) { mult += used * 0.4; desc = `+${(used * 0.4).toFixed(1)}M`; } } break;
+    case 'TWINPEAK': { if (vals.length > 1) { const spread = Math.max(...vals) - Math.min(...vals); if (spread <= 1) { mult += 2.4; desc = '+2.4M tight'; } } } break;
+    case 'PALINDROME': { const str = vals.join(''); if (str === str.split('').reverse().join('') && vals.length > 1) { chips += 3; desc = '+3C palindrome'; } } break;
+    case 'MATERIALIZER': { const mats = new Set(g.dice.filter(d => d.v !== null).map(d => d.material)).size; chips += mats; desc = `+${mats}C materials`; } break;
+    case 'THRESHOLD': { if (chips > 30) { mult += 1.6; desc = '+1.6M chips>30'; } } break;
+    case 'GODMODE': { mult += Math.floor(g.roundScore * 0.08); desc = `+${Math.floor(g.roundScore * 0.08)}M banked`; } break;
+    // NEW OP JOKERS
+    case 'HEXDUPER': {
+      // Handled as special in calculateScore — marker only
+      desc = '6s DUPED';
+    } break;
+    case 'SIXER_LORD': {
+      const sixes = vals.filter(v => v === 6).length;
+      if (sixes > 0) { chips += sixes * 12; mult += sixes * 0.8; desc = `+${sixes*12}C +${(sixes*0.8).toFixed(1)}M on 6s`; }
+    } break;
+    case 'AVALANCHE': {
+      // each die above its own average adds to mult
+      let bonus = 0;
+      g.dice.forEach(d => {
+        if (d.v !== null && !d.shattered) {
+          const avg = (d.sides[0] + d.sides[d.sides.length-1]) / 2;
+          if (d.v > avg) bonus += 0.4;
+        }
+      });
+      if (bonus > 0) { mult += bonus; desc = `+${bonus.toFixed(1)}M above-avg`; }
+    } break;
+    case 'CHAIN_REACTOR': {
+      // counts pairs of matching dice — each pair multiplies mult by 1.15
+      let cnts = {}; vals.forEach(v => cnts[v] = (cnts[v]||0)+1);
+      const pairs = Object.values(cnts).filter(c => c >= 2).length;
+      if (pairs > 0) { mult *= Math.pow(1.15, pairs); desc = `x${Math.pow(1.15,pairs).toFixed(2)}M chain`; }
+    } break;
+    case 'VOID_ECHO': {
+      const voidDice = g.dice.filter(d => d.material === 'void' && d.v !== null).length;
+      if (voidDice > 0) { mult += voidDice * 1.5; desc = `+${(voidDice*1.5).toFixed(1)}M void`; }
+    } break;
+    case 'SUPREME_BANKER': {
+      chips += Math.floor(g.bank / 3);
+      desc = `+${Math.floor(g.bank/3)}C bank/3`;
+    } break;
+    case 'POLYMORPH': {
+      const matCount = new Set(g.dice.filter(d=>d.v!==null).map(d=>d.material)).size;
+      mult += matCount * 0.5;
+      chips += matCount * 3;
+      desc = `+${matCount*3}C +${(matCount*0.5).toFixed(1)}M mats`;
+    } break;
+    case 'CRITICAL_HIT': {
+      if (Math.random() < 0.3) { mult *= 2.5; desc = `CRIT! x2.5M`; shake('lg'); }
+      else desc = '30% crit';
+    } break;
+    case 'RESONANCE': {
+      // +0.3 mult per joker (including this one)
+      mult += g.jokers.length * 0.3;
+      desc = `+${(g.jokers.length*0.3).toFixed(1)}M resonance`;
+    } break;
+  }
+  return { chips, mult, desc };
+}
+
+function calculateScore(commit = false) {
+  if (!g.firstRollDone) {
+    document.getElementById('hand-name').innerText = '–';
+    document.getElementById('score-total').innerText = 0;
+    document.getElementById('score-chips').innerHTML = '';
+    return 0;
+  }
+  const { key, vals, handName, chips: baseChips, mult: baseMult } = getHandInfo();
+  const sumVals = vals.reduce((a, b) => a + b, 0);
+  let chips = baseChips + sumVals + g.baseChips;
+  let mult = baseMult + g.baseMult - 1.0;
+  let jokerDesc = [];
+  // HEXDUPER: before scoring, duplicate any dice showing 6
+  const hasHexDuper = g.jokers.some(j => j.id === 'HEXDUPER');
+  if (hasHexDuper && commit) {
+    const sixDice = g.dice.filter(d => d.v === 6 && !d.shattered);
+    sixDice.forEach(d => {
+      const clone = { ...d, held: false };
+      g.dice.push(clone);
+      // burst effect on that die
+      const dieEls = document.querySelectorAll('.die');
+      const idx = g.dice.indexOf(d);
+      if (dieEls[idx]) diceBurst(dieEls[idx], null, 'dupe');
+    });
+    if (sixDice.length) {
+      notify(`HEXDUPER: ${sixDice.length} die duped!`, 'gold');
+      setTimeout(() => initBoard(), 50);
+    }
+  }
+  g.jokers.forEach(j => {
+    const res = applyJoker(j, key, vals, chips, mult);
+    chips = res.chips;
+    mult = res.mult;
+    if (res.desc) jokerDesc.push(res.desc);
+  });
+  let matDescs = [];
+  let glassDice = g.dice.filter(d => d.material === 'glass' && !d.shattered);
+  let steelHeld = g.dice.filter(d => d.material === 'steel' && d.held && d.v !== null).length;
+  g.dice.forEach((d, idx) => {
+    if (d.v === null || d.shattered) return;
+    switch (d.material) {
+      case 'gold': chips += 3; break;
+      case 'fire': if (d.v === d.sides[d.sides.length - 1]) {
+        mult += 1.2; matDescs.push(`🔥+1.2M`);
+        if (commit) setTimeout(() => { const els=document.querySelectorAll('.die'); if(els[idx]) diceBurst(els[idx],null,'max'); }, idx*50);
+      } break;
+      case 'cursed': if (d.v === 1) {
+        chips += 6; matDescs.push(`💀+6C`);
+        if (commit) setTimeout(() => { const els=document.querySelectorAll('.die'); if(els[idx]) diceBurst(els[idx],null,'effect'); }, idx*50);
+      } break;
+      case 'crystal': chips += d.v; break;
+      case 'obsidian': mult += g.dice.length * 0.25; break;
+      case 'wooden': chips += d.woodenBonus || 0; break;
+    }
+  });
+  if (steelHeld > 0) { mult += steelHeld * 1.2; matDescs.push(`🔩+${(steelHeld * 1.2).toFixed(1)}M`); }
+  let glassMultiplier = 1;
+  if (glassDice.length > 0 && !g.glassRerolled) { glassMultiplier = 2; matDescs.push(`🔷x2 GLASS`); }
+  chips = Math.max(0, Math.floor(chips));
+  mult = Math.max(1, mult);
+  const total = Math.floor(chips * mult * glassMultiplier);
+  document.getElementById('hand-name').innerText = handName;
+  const handEl = document.getElementById('hand-name');
+  handEl.className = '';
+  const nokKeys = ['SIX_OF_A_KIND', 'SEVEN_OF_A_KIND', 'EIGHT_OF_A_KIND', 'NINE_OF_A_KIND', 'TEN_OF_A_KIND'];
+  const n = parseInt(key);
+  const prevClass = handEl.className;
+  if (nokKeys.includes(key) || (!isNaN(n) && n >= 6)) handEl.classList.add('legendary');
+  else if (key === 'FIVE_OF_A_KIND') handEl.classList.add('epic');
+  // Legendary/epic sound + flash
+  if (typeof SFX !== 'undefined' && handEl.className !== prevClass) {
+    if (handEl.classList.contains('legendary')) {
+      SFX.legendary();
+      const gc = document.getElementById('gc');
+      gc.classList.remove('hand-legendary-flash');
+      void gc.offsetWidth;
+      gc.classList.add('hand-legendary-flash');
+      setTimeout(() => gc.classList.remove('hand-legendary-flash'), 700);
+    } else if (handEl.classList.contains('epic')) {
+      SFX.score();
+    }
+  }
+  document.getElementById('score-total').innerText = total;
+  // Animate counter
+  if (typeof animateCounter !== 'undefined') {
+    const el = document.getElementById('score-total');
+    animateCounter(el, _lastDisplayedScore, total, 280);
+    _lastDisplayedScore = total;
+  }
+  const chipsEl = document.getElementById('score-chips');
+  chipsEl.innerHTML = '';
+  const addChip = (txt, cls) => {
+    const c = document.createElement('span');
+    c.className = `chip ${cls}`;
+    c.innerText = txt;
+    chipsEl.appendChild(c);
+  };
+  addChip(`CHIPS: ${chips}`, 'chip-blue');
+  addChip(`✕`, 'chip-green');
+  addChip(`MULT: ${mult.toFixed(1)}`, 'chip-red');
+  if (glassMultiplier > 1) addChip(`✕2 GLASS`, 'chip-blue');
+  addChip(`= ${total}`, 'chip-gold');
+  if (jokerDesc.length) addChip(jokerDesc.join(' | '), 'chip-green');
+  if (matDescs.length) addChip(matDescs.join(' '), 'chip-green');
+  updateScoreBar(total);
+  return total;
+}
+
+function triggerJokerEvent(event, val) {
+  g.jokers.forEach(j => {
+    if (event === 'onRoll' && j.id === 'ENTROPY') {
+      document.getElementById('gc').classList.add('glitching');
+      setTimeout(() => document.getElementById('gc').classList.remove('glitching'), 200);
+    }
+  });
+}
+
+// CONSUMABLES
+const CONSUMABLE_DEFS = {
+  DEBUG_EXE: { name: 'DEBUG.EXE', use: () => { g.rerolls = g.maxRerolls; document.getElementById('roll-btn').disabled = false; updateUI(); notify('REROLLS RESTORED', 'good'); } },
+  PATCH_FIX: { name: 'PATCH.FIX', use: () => { g.baseChips += 20; calculateScore(); notify('+20 CHIPS', 'good'); } },
+  BOOST_MOD: { name: 'BOOST.MOD', use: () => { g.baseMult += 0.5; calculateScore(); notify('+0.5x MULT', 'good'); } },
+  DICE_SWAP: { name: 'DICE_SWAP', use: () => { g.dice.forEach(d => { d.held = false; }); runRoll(true); notify('ALL DICE REROLLED', 'info'); } },
+  DUPE_CHIP: { name: 'DUPE_CHIP', use: () => { g.baseChips += 10; calculateScore(); notify('+10 CHIPS', 'good'); } },
+  CREDIT_HACK: { name: 'CREDIT_HACK', use: () => { g.bank += 8; updateUI(); notify('+$8 CREDITS', 'gold'); } },
+  LVLUP_HAND: { name: 'LEVELUP.EXE', use: () => { const { key } = getHandInfo(); g.handLevels[key] = (g.handLevels[key] || 1) + 1; calculateScore(); notify(`${getHandDef(key)?.n || key} LV UP!`, 'gold'); } },
+
+  REORDER_SYS: { name: 'REORDER.SYS', use: () => { const vals = g.dice.filter(d => d.v !== null).map(d => d.v).sort((a, b) => a - b); let i = 0; g.dice.forEach(d => { if (d.v !== null) d.v = vals[i++]; }); initBoard(); notify('DICE SORTED', 'info'); } },
+  MAGNET_EXE: { name: 'MAGNET.EXE', use: () => { g.dice.forEach(d => { if (d.v !== null && !d.shattered) d.v = d.sides[d.sides.length - 1]; }); initBoard(); setTimeout(()=>burstDiceSequence('max',50),80); notify('ALL DICE MAXED', 'good'); } },
+  CLONE_DIE: { name: 'CLONE.DIE', use: () => { const src = g.dice.find(d => d.v !== null && !d.shattered); if (src) { g.dice.push({ ...src, held: false }); initBoard(); setTimeout(()=>{const els=document.querySelectorAll('.die');if(els[g.dice.length-1])diceBurst(els[g.dice.length-1],null,'dupe');},100); notify('DIE CLONED', 'good'); } else notify('NO DIE TO CLONE', 'bad'); } },
+  TRANSMUTE: { name: 'TRANSMUTE', use: () => { const mats = Object.keys(MATERIALS); const d = g.dice.find(d => d.v !== null); if (d) { d.material = mats[Math.floor(Math.random() * mats.length)]; initBoard(); setTimeout(()=>{const els=document.querySelectorAll('.die');const idx=g.dice.indexOf(d);if(els[idx])diceBurst(els[idx],null,'effect');},80); notify(`DIE → ${d.material.toUpperCase()}`, 'gold'); } } },
+  JACKPOT_EXE: { name: 'JACKPOT.EXE', use: () => { g.firstRollDone = true; g.dice.forEach(d => { if (!d.shattered) { d.v = d.sides[d.sides.length - 1]; } }); document.getElementById('cash-btn').disabled = false; initBoard(); shake('xl'); setTimeout(()=>burstDiceSequence('dupe',30),80); notify('🎰 JACKPOT! ALL MAX!', 'gold'); } },
+  BURN_ALL: { name: 'BURN.ALL', use: () => { g.dice.forEach(d => { if (d.v !== null && d.material !== 'fire') d.material = 'fire'; }); initBoard(); setTimeout(()=>burstDiceSequence('max',40),80); notify('ALL DICE BURNING', 'gold'); } },
+  FORTIFY: { name: 'FORTIFY.EXE', use: () => { g.dice.forEach(d => { if (d.v !== null && d.material !== 'steel') d.material = 'steel'; }); initBoard(); notify('FORTIFIED', 'good'); } },
+  PURIFY: { name: 'PURIFY.SYS', use: () => { g.baseChips += 50; g.baseMult += 0.2; calculateScore(); notify('+50 CHIPS & +0.2x', 'gold'); } },
+  OVERLOAD: { name: 'OVERLOAD.EXE', use: () => { g.baseMult *= 1.5; calculateScore(); notify('MULTIPLIER x1.5', 'gold'); shake('lg'); } },
+  CRYSTALLIZE: { name: 'CRYSTALIZE.MOD', use: () => { g.dice.forEach(d => { if (d.v !== null) d.material = 'crystal'; }); initBoard(); notify('ALL CRYSTALLIZED', 'gold'); } },
+  VOID_TOUCH: { name: 'VOID.TOUCH', use: () => { const rc = g.rerollCount || 0; g.baseChips += rc * 5; calculateScore(); notify(`+${rc * 5} CHIPS (void resonance)`, 'info'); } },
+};
+
+// ── CURSE SYSTEM (MP only) ──
+const CURSE_DEFS = {
+  CURSE_RERESET: {
+    name: 'CURSE: SCRAMBLE',
+    desc: 'Scrambles all opponent dice to random values on their next roll.',
+    mpDesc: 'Opponent\'s dice scrambled!',
+    icon: '☠',
+    apply: () => {
+      // Reroll all unheld dice randomly
+      g.dice.forEach(d => {
+        if (!d.held && d.v !== null && !d.shattered) {
+          d.v = Math.ceil(Math.random() * (d.sides[d.sides.length-1] - d.sides[0] + 1)) + d.sides[0] - 1;
+        }
+      });
+      initBoard();
+      burstDiceSequence('curse', 40);
+      shake('lg');
+    }
+  },
+  CURSE_MINUS_REROLL: {
+    name: 'CURSE: DRAIN',
+    desc: 'Removes 1 reroll from the opponent this round.',
+    icon: '🔻',
+    apply: () => {
+      if (g.rerolls > 0) g.rerolls = Math.max(0, g.rerolls - 1);
+      document.getElementById('rerolls-ui').innerText = g.rerolls;
+      if (g.rerolls <= 0) document.getElementById('roll-btn').disabled = true;
+      shake('sm');
+    }
+  },
+  CURSE_HALVE_CHIPS: {
+    name: 'CURSE: LEECH',
+    desc: 'Halves the opponent\'s current base chips bonus.',
+    icon: '💀',
+    apply: () => {
+      g.baseChips = Math.floor(g.baseChips / 2);
+      calculateScore();
+      burstDiceSequence('curse', 60);
+      shake('lg');
+    }
+  },
+  CURSE_SHATTER: {
+    name: 'CURSE: SHATTER',
+    desc: 'Shatters one random non-held die of the opponent.',
+    icon: '💥',
+    apply: () => {
+      const victims = g.dice.filter(d => !d.held && d.v !== null && !d.shattered);
+      if (victims.length) {
+        const v = victims[Math.floor(Math.random() * victims.length)];
+        v.shattered = true; v.v = null;
+        initBoard();
+        const idx = g.dice.indexOf(v);
+        const els = document.querySelectorAll('.die');
+        setTimeout(() => { if(els[idx]) diceBurst(els[idx], null, 'curse'); }, 60);
+      }
+      shake('xl');
+    }
+  },
+  CURSE_INVERT: {
+    name: 'CURSE: INVERT',
+    desc: 'Inverts all opponent dice values (max+1 - current).',
+    icon: '🔄',
+    apply: () => {
+      g.dice.forEach(d => {
+        if (d.v !== null && !d.shattered) {
+          d.v = d.sides[0] + d.sides[d.sides.length-1] - d.v;
+        }
+      });
+      initBoard();
+      burstDiceSequence('curse', 50);
+      shake('md');
+    }
+  },
+  CURSE_MULT_CUT: {
+    name: 'CURSE: NERF',
+    desc: 'Reduces opponent\'s base multiplier by 0.5 this round.',
+    icon: '⬇',
+    apply: () => {
+      g.baseMult = Math.max(1, g.baseMult - 0.5);
+      calculateScore();
+      shake('sm');
+    }
+  },
+};
+
+// Add curse to consumable slots (cursed cards show differently)
+function addCurse(id) {
+  if (g.consumables.length >= 2) { notify('CONSUMABLE SLOTS FULL', 'bad'); return false; }
+  g.consumables.push('CURSE:' + id);
+  updateCons();
+  return true;
+}
+
+// Use a curse — in MP, opens target picker; in SP, nothing (curses are MP-only)
+function useCurse(curseId) {
+  if (!MP.active) { notify('CURSES ONLY WORK IN MULTIPLAYER', 'bad'); return; }
+  const def = CURSE_DEFS[curseId];
+  if (!def) return;
+  // Build target list
+  const targets = Object.entries(MP.players).filter(([pid, p]) => pid !== MP.playerId && !p.eliminated);
+  if (!targets.length) { notify('NO VALID TARGETS', 'bad'); return; }
+  // Show picker
+  document.getElementById('curse-picker').classList.remove('hidden');
+  document.getElementById('curse-picker-title').innerHTML = `☠ ${def.name} ☠<br><span style="font-size:0.5rem;opacity:0.6;color:var(--red)">${def.desc}</span>`;
+  const list = document.getElementById('curse-picker-list');
+  list.innerHTML = '';
+  targets.forEach(([pid, p]) => {
+    const btn = document.createElement('button');
+    btn.className = 'curse-target-btn';
+    btn.innerHTML = `<span>${def.icon} → ${p.name}</span>`;
+    btn.onclick = () => {
+      closeCursePicker();
+      sendCurse(curseId, pid, p.name);
+      // remove from consumables
+      g.consumables = g.consumables.filter(c => c !== 'CURSE:' + curseId);
+      updateCons();
+    };
+    list.appendChild(btn);
+  });
+}
+
+function closeCursePicker() {
+  document.getElementById('curse-picker').classList.add('hidden');
+}
+window.closeCursePicker = closeCursePicker;
+
+async function sendCurse(curseId, targetPid, targetName) {
+  const def = CURSE_DEFS[curseId];
+  if (!def) return;
+  notify(`☠ CURSE SENT TO ${targetName.split('_')[0].toUpperCase()}!`, 'bad');
+  shake('sm');
+  // Write to Firebase curse queue for target
+  const curseRef = window._fb.ref(window._fb.db, `rooms/${MP.roomCode}/curses/${targetPid}`);
+  await window._fb.set(curseRef, {
+    id: curseId,
+    from: MP.players[MP.playerId]?.name || 'UNKNOWN',
+    ts: Date.now(),
+  });
+}
+
+function listenForCurses() {
+  if (!MP.active) return;
+  const path = `rooms/${MP.roomCode}/curses/${MP.playerId}`;
+  MP.listen(path, async snap => {
+    const data = snap?.val();
+    if (!data) return;
+    const def = CURSE_DEFS[data.id];
+    if (!def) return;
+    // Clear from Firebase immediately to avoid re-triggering
+    await window._fb.remove(window._fb.ref(window._fb.db, path));
+    // Show incoming curse alert
+    const alert = document.createElement('div');
+    alert.className = 'curse-incoming';
+    alert.innerHTML = `☠ CURSED BY ${(data.from||'').split('_')[0].toUpperCase()}<br><span style="font-size:0.55rem">${def.name}</span>`;
+    document.body.appendChild(alert);
+    setTimeout(() => alert.remove(), 3000);
+    // Apply curse effect
+    setTimeout(() => {
+      def.apply();
+      notify(`☠ ${def.name} HIT YOU!`, 'bad');
+    }, 800);
+  });
+}
+
+// CURSE SHOP CATALOG entries (separate so they can appear in consumables tab)
+const CURSE_CATALOG = [
+  { tab: 'consumables', rarity: 'uncommon', name: 'CURSE: SCRAMBLE', id: 'CURSE_RERESET', cost: 5, curse: true, desc: '[MP CURSE] Scrambles all opponent dice to random values.', f: () => addCurse('CURSE_RERESET') },
+  { tab: 'consumables', rarity: 'uncommon', name: 'CURSE: DRAIN', id: 'CURSE_MINUS_REROLL', cost: 4, curse: true, desc: '[MP CURSE] Removes 1 reroll from opponent this round.', f: () => addCurse('CURSE_MINUS_REROLL') },
+  { tab: 'consumables', rarity: 'rare', name: 'CURSE: LEECH', id: 'CURSE_HALVE_CHIPS', cost: 7, curse: true, desc: '[MP CURSE] Halves opponent\'s current bonus chips.', f: () => addCurse('CURSE_HALVE_CHIPS') },
+  { tab: 'consumables', rarity: 'rare', name: 'CURSE: SHATTER', id: 'CURSE_SHATTER', cost: 8, curse: true, desc: '[MP CURSE] Shatters one random opponent die.', f: () => addCurse('CURSE_SHATTER') },
+  { tab: 'consumables', rarity: 'rare', name: 'CURSE: INVERT', id: 'CURSE_INVERT', cost: 6, curse: true, desc: '[MP CURSE] Inverts all opponent dice values.', f: () => addCurse('CURSE_INVERT') },
+  { tab: 'consumables', rarity: 'legendary', name: 'CURSE: NERF', id: 'CURSE_MULT_CUT', cost: 9, curse: true, desc: '[MP CURSE] Reduces opponent base mult by 0.5.', f: () => addCurse('CURSE_MULT_CUT') },
+];
+
+function addConsumable(id) {
+  if (g.consumables.length >= 2) { notify('CONSUMABLE SLOTS FULL', 'bad'); return false; }
+  g.consumables.push(id);
+  updateCons();
+  return true;
+}
+
+function useConsumable(id) {
+  const def = CONSUMABLE_DEFS[id];
+  if (!def) return;
+  def.use();
+  g.consumables = g.consumables.filter(c => c !== id);
+  updateCons();
+}
+
+function updateCons() {
+  const slot = document.getElementById('cons-slot');
+  const empty = document.getElementById('cons-empty');
+  slot.querySelectorAll('.cons-card').forEach(el => el.remove());
+  if (g.consumables.length === 0) {
+    if (empty) empty.style.display = '';
+  } else {
+    if (empty) empty.style.display = 'none';
+    g.consumables.forEach(id => {
+      if (id.startsWith('CURSE:')) {
+        const curseId = id.slice(6);
+        const def = CURSE_DEFS[curseId];
+        if (!def) return;
+        const card = document.createElement('span');
+        card.className = 'cons-card curse-card';
+        card.innerText = def.name;
+        card.title = def.desc + (MP.active ? ' (click to send)' : ' (MP only)');
+        card.onclick = () => useCurse(curseId);
+        slot.appendChild(card);
+      } else {
+        const def = CONSUMABLE_DEFS[id];
+        if (!def) return;
+        const card = document.createElement('span');
+        card.className = 'cons-card';
+        card.innerText = def.name;
+        card.title = def.desc;
+        card.onclick = () => useConsumable(id);
+        slot.appendChild(card);
+      }
+    });
+  }
+}
+
+// SHOP SYSTEM
+let currentShopTab = 'jokers';
+let shopRerollCount = 0;
+let currentShopItems = {};
+
+function switchTab(tab) {
+  currentShopTab = tab;
+  document.querySelectorAll('.shop-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
+  genShopForTab(tab);
+  renderShopContent();
+}
+
+function genShopForTab(tab) {
+  if (!currentShopItems[tab]) {
+    currentShopItems[tab] = generateShopItems(tab);
+  }
+}
+
+function generateShopItems(tab) {
+  let all = SHOP_CATALOG.filter(item => item.tab === tab);
+  // In MP mode, add curses to the consumables tab
+  if (tab === 'consumables' && MP.active) {
+    all = [...all, ...CURSE_CATALOG];
+  }
+  const shuffled = [...all].sort(() => 0.5 - Math.random());
+  const count = tab === 'jokers' ? 4 : tab === 'upgrades' ? 3 : tab === 'dice' ? 4 : 3;
+  return shuffled.slice(0, count).map(item => ({ ...item, sold: false }));
+}
+
+function renderShopContent() {
+  genShopForTab(currentShopTab);
+  const items = currentShopItems[currentShopTab];
+  const container = document.getElementById('shop-content');
+  container.innerHTML = '';
+  const title = document.createElement('div');
+  title.className = 'shop-section-title';
+  const labels = { jokers: 'PASSIVE JOKERS', consumables: 'CONSUMABLE ITEMS', upgrades: 'PERMANENT UPGRADES', dice: 'DICE MODIFICATIONS' };
+  title.innerText = labels[currentShopTab] || currentShopTab;
+  container.appendChild(title);
+  const grid = document.createElement('div');
+  grid.className = 'shop-grid';
+  items.forEach((item) => {
+    const card = document.createElement('div');
+    const rarityClass = `sc-${item.rarity}`;
+    const cantAfford = !item.sold && g.bank < item.cost;
+    const isCurse = !!item.curse;
+    card.className = ['shop-card', rarityClass, item.sold ? 'sold' : '', cantAfford ? 'cant-afford' : '', isCurse ? 'curse-shop-card' : ''].filter(Boolean).join(' ');
+    if (isCurse) {
+      card.style.borderColor = 'var(--red)';
+      card.style.background = 'rgba(255,58,58,0.05)';
+    }
+    card.innerHTML = `
+      <span class="stype">${isCurse ? '☠ CURSE' : item.tab.toUpperCase()} · ${item.rarity.toUpperCase()}</span>
+      <div class="sname" style="${isCurse ? 'color:var(--red)' : ''}">${item.name}</div>
+      <div class="sdesc">${item.desc}</div>
+      <div class="sprice" style="${isCurse ? 'color:var(--red)' : ''}">$${item.cost}</div>
+      <div class="seffect">${item.effect || ''}</div>
+    `;
+    if (!item.sold) {
+      card.onclick = () => {
+        if (g.bank < item.cost) { notify('INSUFFICIENT CREDITS', 'bad'); return; }
+        if (item.tab === 'jokers' && g.jokers.length >= 5) { notify('JOKER SLOTS FULL (5 MAX)', 'bad'); return; }
+        if (item.tab === 'consumables' && !item.curse && !addConsumable(item.id)) return;
+        if (item.tab === 'consumables' && item.curse && !addCurse(item.id)) return;
+        if (item.tab !== 'consumables') {
+          g.bank -= item.cost;
+          item.sold = true;
+          item.f();
+        } else {
+          g.bank -= item.cost;
+          item.sold = true;
+          // f() already called addConsumable/addCurse above
+        }
+        document.getElementById('shop-bank-ui').innerText = g.bank;
+        updateUI();
+        flashPurchase(item);
+        renderShopContent();
+        shake('sm');
+      };
+    }
+    grid.appendChild(card);
+  });
+  container.appendChild(grid);
+}
+
+function rerollShop() {
+  const cost = g.shopRerollCost;
+  if (g.bank < cost) { notify('INSUFFICIENT CREDITS', 'bad'); return; }
+  g.bank -= cost;
+  shopRerollCount++;
+  g.shopRerollCost = 5 + shopRerollCount * 3;
+  currentShopItems[currentShopTab] = generateShopItems(currentShopTab);
+  document.getElementById('shop-bank-ui').innerText = g.bank;
+  document.getElementById('reroll-cost-ui').innerText = g.shopRerollCost;
+  updateUI();
+  renderShopContent();
+  shake('sm');
+}
+
+// SHOP CATALOG (full as original)
+const SHOP_CATALOG = [
+  // JOKERS
+  { tab: 'jokers', rarity: 'common', name: 'SNIPER.MOD', id: 'SNIPER', cost: 4, desc: 'Gain +1.2 Mult whenever a 6 appears in your roll.', effect: '+1.2M on 6', f: () => addJoker({ cost: 4, id: 'SNIPER', name: 'SNIPER.MOD', desc: '+1.2M on 6', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'GAMBLER.MOD', id: 'GAMBLER', cost: 4, desc: 'Gain +6 Chips whenever a 1 appears.', effect: '+6C on 1', f: () => addJoker({ cost: 4, id: 'GAMBLER', name: 'GAMBLER.MOD', desc: '+6C on 1', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'HEDGER.LOG', id: 'HEDGER', cost: 5, desc: 'Gain +1 Chip for each die in your roll.', effect: '+1C per die', f: () => addJoker({ cost: 5, id: 'HEDGER', name: 'HEDGER.LOG', desc: '+1C/die', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'OVERCLOCK.EXE', id: 'OVERCLOCK', cost: 6, desc: 'Always gain +0.6 Mult regardless of hand.', effect: '+0.6M always', f: () => addJoker({ cost: 6, id: 'OVERCLOCK', name: 'OVERCLOCK.EXE', desc: '+0.6M always', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'ENTROPY.DLL', id: 'ENTROPY', cost: 5, desc: 'Gain 0–3 random bonus Chips each score. Glitches on roll.', effect: '0-3C chaos', f: () => addJoker({ cost: 5, id: 'ENTROPY', name: 'ENTROPY.DLL', desc: 'chaos chips', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'SYMMETRY.SYS', id: 'SYMMETRY', cost: 5, desc: 'Gain +5 Chips if all dice values are in ascending order.', effect: '+5C if sorted', f: () => addJoker({ cost: 5, id: 'SYMMETRY', name: 'SYMMETRY.SYS', desc: '+5C sorted', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'LOWBALL.EXE', id: 'LOWBALL', cost: 4, desc: 'Gain +1 Chip for every die showing a value of 3 or less.', effect: '+1C per low die', f: () => addJoker({ cost: 4, id: 'LOWBALL', name: 'LOWBALL.EXE', desc: '+1C low dice', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'COUNTER.LOG', id: 'COUNTER', cost: 5, desc: 'Gain +0.8 Mult for each unique die value showing.', effect: '+0.8M per unique val', f: () => addJoker({ cost: 5, id: 'COUNTER', name: 'COUNTER.LOG', desc: '+0.8M unique vals', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'ECHO.MOD', id: 'ECHO', cost: 5, desc: 'Gain +2 Chips for each pair of matching dice.', effect: '+2C per pair', f: () => addJoker({ cost: 5, id: 'ECHO', name: 'ECHO.MOD', desc: '+2C per match', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'uncommon', name: 'DOUBLER.EXE', id: 'DOUBLER', cost: 7, desc: 'Pairs and Two Pair give +1.6 Mult.', effect: '+1.6M on pairs', f: () => addJoker({ cost: 7, id: 'DOUBLER', name: 'DOUBLER.EXE', desc: '+1.6M pairs', rarity: 'uncommon' }) },
+  { tab: 'jokers', rarity: 'uncommon', name: 'TRIPWIRE.MOD', id: 'TRIPWIRE', cost: 8, desc: 'Three of a Kind and Full House give +2.0 Mult.', effect: '+2.0M on trips', f: () => addJoker({ cost: 8, id: 'TRIPWIRE', name: 'TRIPWIRE.MOD', desc: '+2.0M trips', rarity: 'uncommon' }) },
+  { tab: 'jokers', rarity: 'uncommon', name: 'STRAIGHTER.EXE', id: 'STRAIGHTER', cost: 8, desc: 'Straights grant +10 bonus Chips.', effect: '+10C on straights', f: () => addJoker({ cost: 8, id: 'STRAIGHTER', name: 'STRAIGHTER.EXE', desc: '+10C straight', rarity: 'uncommon' }) },
+  { tab: 'jokers', rarity: 'uncommon', name: 'HIGHROLLER.DLL', id: 'HIGHROLLER', cost: 9, desc: 'Gain Chips equal to the highest die value.', effect: '+max val chips', f: () => addJoker({ cost: 9, id: 'HIGHROLLER', name: 'HIGHROLLER.DLL', desc: '+max C', rarity: 'uncommon' }) },
+  { tab: 'jokers', rarity: 'uncommon', name: 'BANKER.EXE', id: 'BANKER', cost: 10, desc: 'Gain bonus Chips equal to 16% of your credits.', effect: 'Chips = bank/6', f: () => addJoker({ cost: 10, id: 'BANKER', name: 'BANKER.EXE', desc: 'bank% chips', rarity: 'uncommon' }) },
+  { tab: 'jokers', rarity: 'uncommon', name: 'DEBUGGER.MOD', id: 'DEBUGGER', cost: 8, desc: 'Gain +0.8 Mult if you still have all rerolls when scoring.', effect: '+0.8M full rerolls', f: () => addJoker({ cost: 8, id: 'DEBUGGER', name: 'DEBUGGER.MOD', desc: '+0.8M no rerolls', rarity: 'uncommon' }) },
+  { tab: 'jokers', rarity: 'uncommon', name: 'SCAVENGER.EXE', id: 'SCAVENGER', cost: 7, desc: 'Gain +2 Chips for each die NOT held when scoring.', effect: '+2C per free die', f: () => addJoker({ cost: 7, id: 'SCAVENGER', name: 'SCAVENGER.EXE', desc: '+2C unheld dice', rarity: 'uncommon' }) },
+  { tab: 'jokers', rarity: 'uncommon', name: 'ACCUMULATOR.DLL', id: 'ACCUMULATOR', cost: 9, desc: 'Gain +0.4 Mult for each reroll you used this round.', effect: '+0.4M per reroll', f: () => addJoker({ cost: 9, id: 'ACCUMULATOR', name: 'ACCUMULATOR.DLL', desc: '+0.4M/reroll', rarity: 'uncommon' }) },
+  { tab: 'jokers', rarity: 'uncommon', name: 'TWINPEAK.MOD', id: 'TWINPEAK', cost: 8, desc: 'If your highest and lowest dice differ by 1 or less, gain +2.4 Mult.', effect: '+2.4M tight spread', f: () => addJoker({ cost: 8, id: 'TWINPEAK', name: 'TWINPEAK.MOD', desc: '+2.4M tight spread', rarity: 'uncommon' }) },
+  { tab: 'jokers', rarity: 'rare', name: 'VALIDATOR.EXE', id: 'VALIDATOR', cost: 12, desc: 'Gain +2.0 Mult if ALL dice show even numbers.', effect: '+2.0M all even', f: () => addJoker({ cost: 12, id: 'VALIDATOR', name: 'VALIDATOR.EXE', desc: '+2.0M all even', rarity: 'rare' }) },
+  { tab: 'jokers', rarity: 'rare', name: 'PRIME.CORE', id: 'PRIME', cost: 13, desc: 'Gain +1.2M and +8C if all dice are prime numbers.', effect: '+1.2M+8C all prime', f: () => addJoker({ cost: 13, id: 'PRIME', name: 'PRIME.CORE', desc: 'prime bonus', rarity: 'rare' }) },
+  { tab: 'jokers', rarity: 'rare', name: 'OVERKILL.MOD', id: 'OVERKILL', cost: 12, desc: 'Gain +1.2 Mult once round score exceeds 50% of quota.', effect: '+1.2M at halfway', f: () => addJoker({ cost: 12, id: 'OVERKILL', name: 'OVERKILL.MOD', desc: '+1.2M halfway', rarity: 'rare' }) },
+  { tab: 'jokers', rarity: 'rare', name: 'FIREWALL.DLL', id: 'FIREWALL', cost: 11, desc: 'Gain +0.25 Mult for each joker you own.', effect: '+0.25M per joker', f: () => addJoker({ cost: 11, id: 'FIREWALL', name: 'FIREWALL.DLL', desc: '+0.25M/joker', rarity: 'rare' }) },
+  { tab: 'jokers', rarity: 'rare', name: 'PALINDROME.SYS', id: 'PALINDROME', cost: 11, desc: 'Gain +3 Chips if dice values read same forwards & backwards.', effect: '+3C palindrome', f: () => addJoker({ cost: 11, id: 'PALINDROME', name: 'PALINDROME.SYS', desc: '+3C palindrome', rarity: 'rare' }) },
+  { tab: 'jokers', rarity: 'rare', name: 'MATERIALIZER.EXE', id: 'MATERIALIZER', cost: 13, desc: 'Gain +1 Chip for each distinct die material in your pool.', effect: '+1C per material', f: () => addJoker({ cost: 13, id: 'MATERIALIZER', name: 'MATERIALIZER.EXE', desc: '+1C/material', rarity: 'rare' }) },
+  { tab: 'jokers', rarity: 'rare', name: 'THRESHOLD.MOD', id: 'THRESHOLD', cost: 12, desc: 'Gain +1.6 Mult if your score formula chips exceed 30.', effect: '+1.6M if chips>30', f: () => addJoker({ cost: 12, id: 'THRESHOLD', name: 'THRESHOLD.MOD', desc: '+1.6M chips>30', rarity: 'rare' }) },
+  { tab: 'jokers', rarity: 'legendary', name: 'ALL-IN.EXE', id: 'ALLIN', cost: 18, desc: 'MULTIPLY your Mult by 1.8 on Four of a Kind or better.', effect: 'x1.8M on quads+', f: () => addJoker({ cost: 18, id: 'ALLIN', name: 'ALL-IN.EXE', desc: 'x1.8M quads+', rarity: 'legendary' }) },
+  { tab: 'jokers', rarity: 'legendary', name: 'MIRRORDICE.SYS', id: 'MIRRORDICE', cost: 20, desc: 'Gain +3.2 Mult if all dice show the same value.', effect: '+3.2M all matching', f: () => addJoker({ cost: 20, id: 'MIRRORDICE', name: 'MIRRORDICE.SYS', desc: '+3.2M all same', rarity: 'legendary' }) },
+  { tab: 'jokers', rarity: 'legendary', name: 'GODMODE.EXE', id: 'GODMODE', cost: 25, desc: 'Gain +0.08 Mult for every point of score already banked this ante.', effect: '+M=roundScore*0.08', f: () => addJoker({ cost: 25, id: 'GODMODE', name: 'GODMODE.EXE', desc: '+M=roundScore*0.08', rarity: 'legendary' }) },
+  // CONSUMABLES
+  { tab: 'consumables', rarity: 'common', name: 'DEBUG.EXE', id: 'DEBUG_EXE', cost: 3, desc: 'Restore all rerolls instantly.', f: () => addConsumable('DEBUG_EXE') },
+  { tab: 'consumables', rarity: 'common', name: 'DICE_SWAP', id: 'DICE_SWAP', cost: 3, desc: 'Free reroll of all un-held dice.', f: () => addConsumable('DICE_SWAP') },
+  { tab: 'consumables', rarity: 'common', name: 'PATCH.FIX', id: 'PATCH_FIX', cost: 4, desc: '+20 bonus chips applied this round.', f: () => addConsumable('PATCH_FIX') },
+  { tab: 'consumables', rarity: 'common', name: 'DUPE_CHIP', id: 'DUPE_CHIP', cost: 3, desc: '+10 bonus chips applied immediately.', f: () => addConsumable('DUPE_CHIP') },
+  { tab: 'consumables', rarity: 'uncommon', name: 'BOOST.MOD', id: 'BOOST_MOD', cost: 5, desc: '+0.5x base mult this round.', f: () => addConsumable('BOOST_MOD') },
+  { tab: 'consumables', rarity: 'uncommon', name: 'CREDIT_HACK', id: 'CREDIT_HACK', cost: 3, desc: 'Steal $8 credits from the system.', f: () => addConsumable('CREDIT_HACK') },
+  { tab: 'consumables', rarity: 'uncommon', name: 'REORDER.SYS', id: 'REORDER_SYS', cost: 5, desc: 'Sort all dice values in ascending order.', f: () => addConsumable('REORDER_SYS') },
+  { tab: 'consumables', rarity: 'uncommon', name: 'MAGNET.EXE', id: 'MAGNET_EXE', cost: 5, desc: 'Set all dice to their maximum face value.', f: () => addConsumable('MAGNET_EXE') },
+  { tab: 'consumables', rarity: 'uncommon', name: 'BURN.ALL', id: 'BURN_ALL', cost: 5, desc: 'Convert all dice to fire material.', f: () => addConsumable('BURN_ALL') },
+  { tab: 'consumables', rarity: 'uncommon', name: 'FORTIFY.EXE', id: 'FORTIFY', cost: 5, desc: 'Convert all dice to steel material.', f: () => addConsumable('FORTIFY') },
+  { tab: 'consumables', rarity: 'uncommon', name: 'VOID.TOUCH', id: 'VOID_TOUCH', cost: 4, desc: 'Gain chips equal to 5x your reroll count.', f: () => addConsumable('VOID_TOUCH') },
+  { tab: 'consumables', rarity: 'rare', name: 'LEVELUP.EXE', id: 'LVLUP_HAND', cost: 8, desc: 'Level up the current best hand type permanently.', f: () => addConsumable('LVLUP_HAND') },
+  { tab: 'consumables', rarity: 'rare', name: 'CLONE.DIE', id: 'CLONE_DIE', cost: 7, desc: 'Duplicate one of your dice (adds copy to pool).', f: () => addConsumable('CLONE_DIE') },
+  { tab: 'consumables', rarity: 'rare', name: 'TRANSMUTE', id: 'TRANSMUTE', cost: 6, desc: 'Change a random die to a random material.', f: () => addConsumable('TRANSMUTE') },
+  { tab: 'consumables', rarity: 'rare', name: 'PURIFY.SYS', id: 'PURIFY', cost: 6, desc: 'Gain +50 chips and +0.2x multiplier.', f: () => addConsumable('PURIFY') },
+  { tab: 'consumables', rarity: 'rare', name: 'CRYSTALIZE.MOD', id: 'CRYSTALLIZE', cost: 7, desc: 'Turn all your dice to crystal material.', f: () => addConsumable('CRYSTALLIZE') },
+  { tab: 'consumables', rarity: 'legendary', name: 'JACKPOT.EXE', id: 'JACKPOT_EXE', cost: 12, desc: 'Set ALL dice to 6 instantly.', f: () => addConsumable('JACKPOT_EXE') },
+  { tab: 'consumables', rarity: 'legendary', name: 'OVERLOAD.EXE', id: 'OVERLOAD', cost: 10, desc: 'Multiply base multiplier by 1.5x instantly.', f: () => addConsumable('OVERLOAD') },
+  // UPGRADES
+  { tab: 'upgrades', rarity: 'common', name: 'MULT +0.3', cost: 6, desc: 'Permanently increases base multiplier by 0.3.', effect: 'Base Mult +0.3', f: () => { g.baseMult += 0.3; notify('BASE MULT +0.3', 'good'); } },
+  { tab: 'upgrades', rarity: 'common', name: 'MULT +0.5', cost: 10, desc: 'Permanently increases base multiplier by 0.5.', effect: 'Base Mult +0.5', f: () => { g.baseMult += 0.5; notify('BASE MULT +0.5', 'good'); } },
+  { tab: 'upgrades', rarity: 'common', name: 'CHIPS +5', cost: 5, desc: 'Permanently increases base chips by 5.', effect: 'Base Chips +5', f: () => { g.baseChips += 5; notify('BASE CHIPS +5', 'good'); } },
+  { tab: 'upgrades', rarity: 'common', name: 'CHIPS +10', cost: 9, desc: 'Permanently increases base chips by 10.', effect: 'Base Chips +10', f: () => { g.baseChips += 10; notify('BASE CHIPS +10', 'good'); } },
+  { tab: 'upgrades', rarity: 'uncommon', name: 'REROLL+ UPGRADE', cost: 8, desc: 'Gain +1 max reroll per round permanently.', effect: 'Max Rerolls +1', f: () => { g.maxRerolls++; g.rerolls = g.maxRerolls; notify('MAX REROLLS +1', 'good'); } },
+  { tab: 'upgrades', rarity: 'uncommon', name: 'INTEREST.SYS', cost: 10, desc: 'At round start, earn $1 per $5 in your bank.', effect: '+20% interest/round', f: () => { g.hasInterest = true; notify('INTEREST ENABLED', 'gold'); } },
+  { tab: 'upgrades', rarity: 'uncommon', name: 'STARTING BONUS', cost: 9, desc: 'Begin each round with +8 bonus chips pre-loaded.', effect: '+8 chips on start', f: () => { g.startingChips = (g.startingChips || 0) + 8; notify('+8 STARTING CHIPS', 'good'); } },
+  { tab: 'upgrades', rarity: 'rare', name: 'LVLUP PAIR', cost: 12, desc: 'Level up PAIR hand.', effect: 'Pair LV+1', f: () => { g.handLevels['PAIR'] = (g.handLevels['PAIR'] || 1) + 1; notify('PAIR LV UP!', 'gold'); } },
+  { tab: 'upgrades', rarity: 'rare', name: 'LVLUP THREE OAK', cost: 13, desc: 'Level up THREE OF A KIND hand.', effect: 'Three OAK LV+1', f: () => { g.handLevels['THREE_OF_A_KIND'] = (g.handLevels['THREE_OF_A_KIND'] || 1) + 1; notify('3OAK LV UP!', 'gold'); } },
+  { tab: 'upgrades', rarity: 'rare', name: 'LVLUP STRAIGHT', cost: 14, desc: 'Level up STRAIGHT hand.', effect: 'Straight LV+1', f: () => { g.handLevels['STRAIGHT'] = (g.handLevels['STRAIGHT'] || 1) + 1; notify('STRAIGHT LV UP!', 'gold'); } },
+  { tab: 'upgrades', rarity: 'rare', name: 'LVLUP FULL HOUSE', cost: 14, desc: 'Level up FULL HOUSE hand.', effect: 'Full House LV+1', f: () => { g.handLevels['FULL_HOUSE'] = (g.handLevels['FULL_HOUSE'] || 1) + 1; notify('FULL HOUSE LV UP!', 'gold'); } },
+  { tab: 'upgrades', rarity: 'rare', name: 'LVLUP FOUR OAK', cost: 16, desc: 'Level up FOUR OF A KIND hand.', effect: 'Four OAK LV+1', f: () => { g.handLevels['FOUR_OF_A_KIND'] = (g.handLevels['FOUR_OF_A_KIND'] || 1) + 1; notify('4OAK LV UP!', 'gold'); } },
+  { tab: 'upgrades', rarity: 'legendary', name: 'INTEREST PRIME', cost: 22, desc: 'At round start, earn $1 per $3 in your bank.', effect: '+33% interest/round', f: () => { g.hasInterestPrime = true; notify('PRIME INTEREST ENABLED', 'gold'); } },
+  // DICE MODS
+  { tab: 'dice', rarity: 'common', name: 'STONE DIE (D6)', cost: 5, desc: 'Add a standard stone D6.', effect: '+1 D6 · STONE', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'stone')); initBoard(); notify('+1 STONE D6', 'info'); } },
+  { tab: 'dice', rarity: 'common', name: 'STONE DIE (D8)', cost: 8, desc: 'Add a stone D8.', effect: '+1 D8 · STONE', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6, 7, 8], 'stone')); initBoard(); notify('+1 STONE D8', 'info'); } },
+  { tab: 'dice', rarity: 'common', name: 'STONE DIE (D10)', cost: 11, desc: 'Add a stone D10.', effect: '+1 D10 · STONE', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 'stone')); initBoard(); notify('+1 STONE D10', 'info'); } },
+  { tab: 'dice', rarity: 'uncommon', name: 'GOLD DIE', cost: 10, desc: 'Add a Gold D6. Gives +3 flat chips each roll.', effect: '+3C always · GOLD', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'gold')); initBoard(); notify('+1 GOLD DIE', 'gold'); } },
+  { tab: 'dice', rarity: 'uncommon', name: 'FIRE DIE', cost: 10, desc: 'Add a Fire D6. Grants +1.2 Mult when max face is rolled.', effect: '+1.2M on max · FIRE', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'fire')); initBoard(); notify('+1 FIRE DIE', 'good'); } },
+  { tab: 'dice', rarity: 'uncommon', name: 'CURSED DIE', cost: 9, desc: 'Add a Cursed D6. Rolling 1 gives +6 chips.', effect: '+6C on 1 · CURSED', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'cursed')); initBoard(); notify('+1 CURSED DIE', 'info'); } },
+  { tab: 'dice', rarity: 'uncommon', name: 'WOODEN DIE', cost: 8, desc: 'Add a Wooden D6. Gains +1 max face permanently each round.', effect: 'Grows · WOODEN', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'wooden')); initBoard(); notify('+1 WOODEN DIE', 'good'); } },
+  { tab: 'dice', rarity: 'rare', name: 'GLASS DIE', cost: 14, desc: 'Add a Glass D6. x2 score if never rerolled. SHATTERS if rerolled.', effect: 'x2 or shatter · GLASS', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'glass')); initBoard(); notify('+1 GLASS DIE', 'info'); } },
+  { tab: 'dice', rarity: 'rare', name: 'STEEL DIE', cost: 13, desc: 'Add a Steel D6. Each held steel die grants +1.2 Mult.', effect: '+1.2M held · STEEL', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'steel')); initBoard(); notify('+1 STEEL DIE', 'info'); } },
+  { tab: 'dice', rarity: 'rare', name: 'BRONZE DIE', cost: 12, desc: 'Add a Bronze D6. Acts as a wild for hand detection.', effect: 'WILD · BRONZE', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'bronze')); initBoard(); notify('+1 BRONZE DIE', 'gold'); } },
+  { tab: 'dice', rarity: 'rare', name: 'CRYSTAL DIE', cost: 15, desc: 'Add a Crystal D6. Its pip value is counted twice toward chips.', effect: 'x2 value · CRYSTAL', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'crystal')); initBoard(); notify('+1 CRYSTAL DIE', 'good'); } },
+  { tab: 'dice', rarity: 'legendary', name: 'OBSIDIAN DIE', cost: 18, desc: 'Add an Obsidian D6. Grants +0.25 Mult per die in your entire pool.', effect: '+0.25M/die · OBS', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'obsidian')); initBoard(); notify('+1 OBSIDIAN DIE', 'good'); } },
+  
+  { tab: 'dice', rarity: 'rare', name: 'SILVER DIE', cost: 12, desc: 'Add a Silver D6. Gains +1 chip per round passively.', effect: '+1C/round · SLV', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'silver')); initBoard(); notify('+1 SILVER DIE', 'good'); } },
+  
+  { tab: 'dice', rarity: 'legendary', name: 'EMERALD DIE', cost: 20, desc: 'Add an Emerald D6. The rarest die. Grants +1.3x multiplier.', effect: '+1.3M · EMR', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'emerald')); initBoard(); notify('+1 EMERALD DIE · ULTRA RARE', 'gold'); } },
+  
+  { tab: 'dice', rarity: 'rare', name: 'RUBY DIE', cost: 14, desc: 'Add a Ruby D6. Gains +2 chips for each other ruby die held.', effect: '+2C/ruby · RBY', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'ruby')); initBoard(); notify('+1 RUBY DIE', 'good'); } },
+  
+  { tab: 'dice', rarity: 'rare', name: 'SAPPHIRE DIE', cost: 13, desc: 'Add a Sapphire D6. Adds +2 chips per die showing same value.', effect: '+2C/match · SAP', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'sapphire')); initBoard(); notify('+1 SAPPHIRE DIE', 'good'); } },
+  
+  { tab: 'dice', rarity: 'legendary', name: 'DIAMOND DIE', cost: 19, desc: 'Add a Diamond D6. Grants +4 Mult if hand has Five-of-a-Kind.', effect: '+4M 5-K · DIA', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'diamond')); initBoard(); notify('+1 DIAMOND DIE', 'gold'); } },
+  
+  { tab: 'dice', rarity: 'legendary', name: 'PLUTONIUM DIE', cost: 17, desc: 'Add a Plutonium D6. Gains +0.15x Mult per other plutonium die.', effect: '+0.15M/plu · PLU', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'plutonium')); initBoard(); notify('+1 PLUTONIUM DIE', 'gold'); } },
+  
+  { tab: 'dice', rarity: 'rare', name: 'VOID DIE', cost: 15, desc: 'Add a Void D6. Gains value equal to reroll count each round.', effect: 'Value=Rerolls · VOD', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'void')); initBoard(); notify('+1 VOID DIE', 'good'); } },
+  
+  { tab: 'dice', rarity: 'rare', name: 'TITANIUM DIE', cost: 14, desc: 'Add a Titanium D6. Grants +1.1x Mult per hand level permanently.', effect: '+1.1M/lvl · TIT', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'titanium')); initBoard(); notify('+1 TITANIUM DIE', 'good'); } },
+  { tab: 'dice', rarity: 'uncommon', name: 'FORGE: →GOLD', cost: 12, desc: 'Convert one Stone die into a Gold die.', effect: 'Stone→Gold', f: () => convertDie('stone', 'gold') },
+  { tab: 'dice', rarity: 'uncommon', name: 'FORGE: →FIRE', cost: 12, desc: 'Convert one Stone die into a Fire die.', effect: 'Stone→Fire', f: () => convertDie('stone', 'fire') },
+  { tab: 'dice', rarity: 'uncommon', name: 'FORGE: →WOODEN', cost: 9, desc: 'Convert one Stone die into a Wooden die.', effect: 'Stone→Wooden', f: () => convertDie('stone', 'wooden') },
+  { tab: 'dice', rarity: 'rare', name: 'FORGE: →CRYSTAL', cost: 16, desc: 'Convert any die into a Crystal die.', effect: 'Any→Crystal', f: () => convertDie(null, 'crystal') },
+  { tab: 'dice', rarity: 'rare', name: 'FORGE: →STEEL', cost: 14, desc: 'Convert any die into a Steel die.', effect: 'Any→Steel', f: () => convertDie(null, 'steel') },
+  { tab: 'dice', rarity: 'rare', name: 'FORGE: →BRONZE', cost: 13, desc: 'Convert any die into a Bronze (wild) die.', effect: 'Any→Bronze', f: () => convertDie(null, 'bronze') },
+  { tab: 'dice', rarity: 'legendary', name: 'FORGE: →OBSIDIAN', cost: 20, desc: 'Convert any die into an Obsidian die.', effect: 'Any→Obsidian', f: () => convertDie(null, 'obsidian') },
+  { tab: 'dice', rarity: 'rare', name: 'SHATTER PROOF', cost: 12, desc: 'Permanently protect all Glass dice — they no longer shatter on reroll.', effect: 'Glass immune to shatter', f: () => { g.glassShatterProof = true; notify('GLASS IS NOW SHATTERPROOF', 'info'); } },
+  // NEW OP JOKERS
+  { tab: 'jokers', rarity: 'legendary', name: 'HEXDUPER', id: 'HEXDUPER', cost: 18, desc: 'During scoring, any die showing 6 is duplicated instantly.', effect: 'Dupe 6s on score', f: () => addJoker({ cost: 18, id: 'HEXDUPER', name: 'HEXDUPER', desc: 'Dupe 6s on score', rarity: 'legendary' }) },
+  { tab: 'jokers', rarity: 'legendary', name: 'SIXER.LORD', id: 'SIXER_LORD', cost: 16, desc: 'Each 6 rolled gives +12 Chips AND +0.8 Mult. Stacks per six.', effect: '+12C +0.8M per 6', f: () => addJoker({ cost: 16, id: 'SIXER_LORD', name: 'SIXER.LORD', desc: '+12C +0.8M per 6', rarity: 'legendary' }) },
+  { tab: 'jokers', rarity: 'legendary', name: 'AVALANCHE', id: 'AVALANCHE', cost: 15, desc: 'Each die above its own average face adds +0.4 Mult.', effect: '+0.4M per above-avg die', f: () => addJoker({ cost: 15, id: 'AVALANCHE', name: 'AVALANCHE', desc: '+0.4M per above-avg die', rarity: 'legendary' }) },
+  { tab: 'jokers', rarity: 'legendary', name: 'CHAIN.REACTOR', id: 'CHAIN_REACTOR', cost: 17, desc: 'Each pair of matching dice multiplies Mult by x1.15. Stacks!', effect: 'x1.15M per pair (stack)', f: () => addJoker({ cost: 17, id: 'CHAIN_REACTOR', name: 'CHAIN.REACTOR', desc: 'x1.15M per pair (stack)', rarity: 'legendary' }) },
+  { tab: 'jokers', rarity: 'rare', name: 'VOID.ECHO', id: 'VOID_ECHO', cost: 12, desc: 'Each Void die gives +1.5 Mult. Synergizes with Void dice.', effect: '+1.5M per void die', f: () => addJoker({ cost: 12, id: 'VOID_ECHO', name: 'VOID.ECHO', desc: '+1.5M per void die', rarity: 'rare' }) },
+  { tab: 'jokers', rarity: 'legendary', name: 'SUPREME.BNKR', id: 'SUPREME_BANKER', cost: 20, desc: 'Gain chips equal to ⅓ of your bank each score. Very powerful.', effect: '+Bank/3 chips', f: () => addJoker({ cost: 20, id: 'SUPREME_BANKER', name: 'SUPREME.BNKR', desc: '+Bank/3 chips', rarity: 'legendary' }) },
+  { tab: 'jokers', rarity: 'rare', name: 'POLYMORPH', id: 'POLYMORPH', cost: 13, desc: 'For each unique material in your pool: +3 Chips, +0.5 Mult.', effect: '+3C +0.5M per material', f: () => addJoker({ cost: 13, id: 'POLYMORPH', name: 'POLYMORPH', desc: '+3C +0.5M per material', rarity: 'rare' }) },
+  { tab: 'jokers', rarity: 'legendary', name: 'CRITICAL.HIT', id: 'CRITICAL_HIT', cost: 19, desc: '30% chance on score to CRIT — instantly x2.5 Mult!', effect: '30% → x2.5M crit', f: () => addJoker({ cost: 19, id: 'CRITICAL_HIT', name: 'CRITICAL.HIT', desc: '30% → x2.5M crit', rarity: 'legendary' }) },
+  { tab: 'jokers', rarity: 'rare', name: 'RESONANCE', id: 'RESONANCE', cost: 11, desc: '+0.3 Mult per joker you own (including this one). Scales with build.', effect: '+0.3M per joker', f: () => addJoker({ cost: 11, id: 'RESONANCE', name: 'RESONANCE', desc: '+0.3M per joker', rarity: 'rare' }) },
+  // NEW UPGRADES
+  { tab: 'upgrades', rarity: 'legendary', name: 'TURBO REROLLS', cost: 18, desc: 'Gain +2 max rerolls permanently.', effect: 'Max Rerolls +2', f: () => { g.maxRerolls += 2; g.rerolls = Math.min(g.rerolls + 2, g.maxRerolls); notify('MAX REROLLS +2', 'good'); updateUI(); } },
+  { tab: 'upgrades', rarity: 'legendary', name: 'CHIPS +30', cost: 20, desc: 'Permanently gain +30 base chips. Massive flat bonus.', effect: 'Base Chips +30', f: () => { g.baseChips += 30; notify('BASE CHIPS +30', 'gold'); } },
+  { tab: 'upgrades', rarity: 'legendary', name: 'MULT x1.3', cost: 24, desc: 'Multiply your base multiplier by 1.3 permanently.', effect: 'Base Mult x1.3', f: () => { g.baseMult *= 1.3; notify(`BASE MULT x1.3 → ${g.baseMult.toFixed(2)}`, 'gold'); } },
+  { tab: 'upgrades', rarity: 'rare', name: 'LVLUP 5-OAK', cost: 20, desc: 'Level up FIVE OF A KIND hand.', effect: 'Five OAK LV+1', f: () => { g.handLevels['FIVE_OF_A_KIND'] = (g.handLevels['FIVE_OF_A_KIND'] || 1) + 1; notify('5OAK LV UP!', 'gold'); } },
+  { tab: 'upgrades', rarity: 'legendary', name: 'GLOBAL LV UP', cost: 28, desc: 'Level up ALL hand types by 1.', effect: 'All Hands LV+1', f: () => { Object.keys(HANDS).forEach(k => { g.handLevels[k] = (g.handLevels[k]||1)+1; }); notify('ALL HANDS LEVELED UP!', 'gold'); shake('xl'); } },
+];
+
+function convertDie(fromMat, toMat) {
+  const target = fromMat
+    ? g.dice.find(d => d.material === fromMat)
+    : g.dice.find(d => d.material !== toMat);
+  if (!target) { notify(`NO ELIGIBLE DIE FOUND`, 'bad'); return; }
+  target.material = toMat;
+  if (toMat === 'wooden') target.woodenBonus = 0;
+  initBoard();
+  notify(`DIE CONVERTED → ${toMat.toUpperCase()}`, 'gold');
+}
+
+function addJoker(jokerDef) {
+  if (g.jokers.length >= 5) return;
+  if (g.jokers.find(j => j.id === jokerDef.id)) { notify('JOKER ALREADY OWNED', 'bad'); return; }
+  g.jokers.push(jokerDef);
+  renderJokers();
+}
+
+function sellJoker(id) {
+  const idx = g.jokers.findIndex(j => j.id === id);
+  if (idx === -1) return;
+  const j = g.jokers[idx];
+  const sellPrice = Math.floor((j.cost || 6) / 2);
+  g.jokers.splice(idx, 1);
+  g.bank += sellPrice;
+  updateUI();
+  renderJokers();
+  flashSell(j.name, sellPrice);
+  notify(`SOLD: ${j.name} +$${sellPrice}`, 'gold');
+  calculateScore();
+}
+
+function flashSell(name, price) {
+  const flash = document.getElementById('purchase-flash');
+  const lines = document.getElementById('pf-lines');
+  if (pfTimer) { clearTimeout(pfTimer); pfTimer = null; }
+  lines.innerHTML = '';
+  let cmdEl = document.createElement('span');
+  cmdEl.className = 'pf-line pf-cmd';
+  lines.appendChild(cmdEl);
+  const cmd = `market --sell-joker "${name}"`;
+  let ci = 0;
+  const typeCmd = () => {
+    if (ci < cmd.length) { cmdEl.textContent += cmd[ci++]; setTimeout(typeCmd, 16 + Math.random() * 8); }
+  };
+  typeCmd();
+  const d = cmd.length * 18 + 30;
+  setTimeout(() => {
+    const el = document.createElement('span');
+    el.className = 'pf-line pf-ok';
+    el.textContent = `  Sold for $${price}. Credits updated.`;
+    lines.appendChild(el);
+  }, d);
+  flash.classList.remove('hidden', 'hiding');
+  flash.classList.add('visible');
+  pfTimer = setTimeout(() => {
+    flash.classList.remove('visible');
+    flash.classList.add('hiding');
+    setTimeout(() => { flash.classList.add('hidden'); flash.classList.remove('hiding'); }, 220);
+    pfTimer = null;
+  }, d + 900);
+}
+
+function renderJokers() {
+  const list = document.getElementById('joker-list');
+  list.innerHTML = '';
+  const inShop = !document.getElementById('screen-shop').classList.contains('hidden');
+  g.jokers.forEach(j => {
+    const card = document.createElement('div');
+    card.className = `joker-card joker-rarity-${j.rarity}`;
+    const sellPrice = Math.floor((j.cost || 6) / 2);
+    card.innerHTML = `<span class="jname">${j.name}</span>${j.desc}` +
+      (inShop ? `<span class="joker-sell-btn" onclick="sellJoker('${j.id}')">SELL $${sellPrice}</span>` : '');
+    list.appendChild(card);
+  });
+  document.getElementById('joker-count').innerText = g.jokers.length;
+}
+
+// UI Helpers
+function updateUI() {
+  document.getElementById('round-ui').innerText = g.round;
+  document.getElementById('ante-ui').innerText = g.ante;
+  document.getElementById('target-ui').innerText = g.target;
+  document.getElementById('bank-ui').innerText = g.bank;
+  document.getElementById('rerolls-ui').innerText = g.rerolls;
+
+  const rollBtn = document.getElementById('roll-btn');
+  const cashBtn = document.getElementById('cash-btn');
+  const shopBank = document.getElementById('shop-bank-ui');
+
+  if (rollBtn) rollBtn.disabled = g.firstRollDone && g.rerolls <= 0;
+  if (cashBtn) cashBtn.disabled = !g.firstRollDone;
+  if (shopBank) shopBank.innerText = g.bank;
+}
+
+function updateScoreBar(current) {
+  const pct = Math.min(100, Math.floor((g.roundScore + (current || 0)) / g.target * 100));
+  document.getElementById('score-bar-inner').style.width = pct + '%';
+  document.getElementById('score-progress-txt').innerText = `${g.roundScore} / ${g.target}`;
+  if (pct >= 100) {
+    const inner = document.getElementById('score-bar-inner');
+    inner.classList.remove('bar-quota-hit');
+    void inner.offsetWidth;
+    inner.classList.add('bar-quota-hit');
+  }
+}
+
+function buildAntePips() {
+  const container = document.getElementById('ante-pips');
+  container.innerHTML = '';
+  for (let i = 1; i <= MAX_ANTE; i++) {
+    const pip = document.createElement('div');
+    pip.className = `ante-pip ${i < g.ante ? 'done' : ''}`;
+    container.appendChild(pip);
+  }
+}
+
+function shake(size) {
+  const el = document.getElementById('gc');
+  const cls = 'shake-' + size;
+  el.classList.remove('shake-sm', 'shake-lg', 'shake-xl');
+  void el.offsetWidth;
+  el.classList.add(cls);
+  el.addEventListener('animationend', () => el.classList.remove(cls), { once: true });
+}
+
+function notify(msg, type = 'info') {
+  const container = document.getElementById('notif');
+  const el = document.createElement('div');
+  el.className = `notif-msg notif-${type}`;
+  el.innerText = msg;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 2600);
+}
+
+function popScore(text, anchor) {
+  const pop = document.createElement('div');
+  pop.className = 'score-pop';
+  pop.innerText = text;
+  pop.style.color = '#ffd700';
+  pop.style.left = anchor.offsetLeft + anchor.offsetWidth / 2 - 30 + 'px';
+  pop.style.top = anchor.offsetTop - 10 + 'px';
+  document.getElementById('gc').appendChild(pop);
+  setTimeout(() => pop.remove(), 1050);
+}
+
+// ── DICE BURST VFX (like Dice a Million) ──
+function diceBurst(dieEl, color = 'var(--ng)', type = 'score') {
+  if (!dieEl) return;
+
+  // Flash overlay inside die
+  const flash = document.createElement('div');
+  flash.className = 'die-flash-overlay';
+  const flashColors = {
+    score: 'rgba(57,255,20,0.55)',
+    dupe:  'rgba(255,215,0,0.6)',
+    curse: 'rgba(255,58,58,0.6)',
+    effect:'rgba(191,95,255,0.55)',
+    max:   'rgba(255,100,0,0.6)'
+  };
+  flash.style.setProperty('--fc', flashColors[type] || flashColors.score);
+  dieEl.appendChild(flash);
+  setTimeout(() => flash.remove(), 280);
+
+  // Rotating square burst appended to body (escapes overflow:hidden on .die)
+  const rect = dieEl.getBoundingClientRect();
+  const cx = rect.left + rect.width  / 2;
+  const cy = rect.top  + rect.height / 2;
+  const sz = Math.max(rect.width, rect.height);
+
+  const sqColors = {
+    score: 'var(--ng)',
+    dupe:  'var(--gold)',
+    curse: 'var(--red)',
+    effect:'var(--purple)',
+    max:   '#ff6a00'
+  };
+  const sqColor = sqColors[type] || 'var(--ng)';
+
+  // Two concentric squares — outer bigger, inner tighter, slight delay offset
+  [1.5, 1.15].forEach((scale, i) => {
+    const sq = document.createElement('div');
+    sq.className = 'die-burst-sq';
+    const side = sz * scale;
+    const dur  = 0.28 + i * 0.03;
+    sq.style.cssText = `width:${side}px;height:${side}px;left:${cx - side/2}px;top:${cy - side/2}px;--bsc:${sqColor};--bsd:${dur}s;animation-delay:${i*0.03}s;`;
+    document.body.appendChild(sq);
+    setTimeout(() => sq.remove(), (dur + 0.1) * 1000);
+  });
+}
+
+// Burst all active dice after a delay sequence
+function burstDiceSequence(type = 'score', delayBetween = 80) {
+  const dieEls = document.querySelectorAll('.die:not(.blank):not(.shattered)');
+  dieEls.forEach((el, i) => {
+    setTimeout(() => diceBurst(el, null, type), i * delayBetween);
+  });
+}
+
+// AMBIENT GLITCH (reduced frequency for performance)
+setInterval(() => {
+  if (Math.random() > 0.93) {
+    document.getElementById('gc').classList.add('glitching');
+    setTimeout(() => document.getElementById('gc').classList.remove('glitching'), 220);
+  }
+}, 5000);
+
+// TERMINAL CUTSCENE ENGINE
+function runTerminal(script, onComplete) {
+  const screen = document.getElementById('screen-terminal');
+  const linesEl = document.getElementById('term-lines');
+  const cursor = document.getElementById('term-cursor');
+  linesEl.innerHTML = '';
+  cursor.style.display = 'inline-block';
+  screen.classList.remove('hidden');
+  let i = 0;
+  function next() {
+    if (i >= script.length) {
+      cursor.style.display = 'none';
+      setTimeout(() => {
+        screen.classList.add('hidden');
+        linesEl.innerHTML = '';
+        if (onComplete) onComplete();
+      }, 500);
+      return;
+    }
+    const entry = script[i++];
+    if (entry.type === 'pause') {
+      setTimeout(next, entry.delay || 400);
+      return;
+    }
+    if (entry.type === 'blank') {
+      const el = document.createElement('span');
+      el.className = 'term-line blank';
+      el.textContent = ' ';
+      linesEl.appendChild(el);
+      setTimeout(next, entry.delay || 80);
+      return;
+    }
+    const el = document.createElement('span');
+    el.className = `term-line ${entry.type}` + (entry.style ? ` ${entry.style}` : '');
+    linesEl.appendChild(el);
+    cursor.parentNode.insertBefore(cursor, el.nextSibling);
+    if (entry.type === 'prompt') {
+      const text = entry.text || '';
+      const cd = entry.charDelay !== undefined ? entry.charDelay : 38;
+      let ci = 0;
+      function typeChar() {
+        if (ci < text.length) {
+          el.textContent += text[ci++];
+          linesEl.scrollTop = linesEl.scrollHeight;
+          setTimeout(typeChar, cd + (Math.random() * cd * 0.4 - cd * 0.2));
+        } else {
+          setTimeout(next, entry.delay || 120);
+        }
+      }
+      setTimeout(typeChar, entry.startDelay || 0);
+    } else {
+      el.textContent = entry.text || '';
+      linesEl.scrollTop = linesEl.scrollHeight;
+      setTimeout(next, entry.delay || 60);
+    }
+  }
+  next();
+}
+
+// SCRIPT BUILDERS
+function termScriptUplink(score, reward, roundNum, anteNum) {
+  const quota = g.target;
+  const excess = Math.max(0, score - quota);
+  return [
+    { type: 'prompt', text: 'polyhedral --uplink --submit-score', charDelay: 30 },
+    { type: 'blank' },
+    { type: 'output', text: 'Connecting to POLYHEDRAL scoring network...', delay: 80 },
+    { type: 'output', text: '████████████████ 100%', delay: 120, style: 'dim' },
+    { type: 'blank' },
+    { type: 'output', text: `SESSION  : ANTE_${anteNum}  CYCLE_${roundNum}`, delay: 60 },
+    { type: 'output', text: `QUOTA    : ${quota} pts`, delay: 60 },
+    { type: 'output', text: `SCORED   : ${score} pts`, delay: 60, style: score >= quota ? 'gold' : 'red' },
+    { type: 'output', text: `SURPLUS  : +${excess} pts`, delay: 60, style: 'dim' },
+    { type: 'blank' },
+    { type: 'output', text: 'Quota status: ' + (score >= quota ? '[ PASSED ]' : '[ FAILED ]'), delay: 80, style: score >= quota ? 'bright' : 'red' },
+    { type: 'blank' },
+    { type: 'prompt', text: `polyhedral --credit-transfer --amount=${reward}`, charDelay: 28 },
+    { type: 'blank' },
+    { type: 'output', text: `Transfer approved. +$${reward} credited to account.`, delay: 100, style: 'gold' },
+    { type: 'blank' },
+    { type: 'prompt', text: 'polyhedral --open-market', charDelay: 35 },
+    { type: 'blank' },
+    { type: 'output', text: 'MARKET_UPLINK established. Hardware available.', delay: 80 },
+    { type: 'pause', delay: 300 },
+  ];
+}
+
+function termScriptNewRound(roundNum, anteNum, target, newAnte) {
+  const lines = [
+    { type: 'prompt', text: 'polyhedral --next-cycle', charDelay: 32 },
+    { type: 'blank' },
+  ];
+  if (newAnte) {
+    lines.push({ type: 'output', text: `Ante ${anteNum - 1} complete. Escalating threat level...`, delay: 100, style: 'red' });
+    lines.push({ type: 'output', text: '████████████████████████', delay: 80, style: 'red' });
+    lines.push({ type: 'blank' });
+    lines.push({ type: 'output', text: `ANTE_${anteNum} initialised.`, delay: 80, style: 'bright' });
+    lines.push({ type: 'output', text: `New quota threshold: ${target} pts`, delay: 60, style: 'gold' });
+  } else {
+    lines.push({ type: 'output', text: `Cycle ${roundNum - 1} archived.`, delay: 80, style: 'dim' });
+    lines.push({ type: 'output', text: `Loading cycle ${roundNum}...`, delay: 80 });
+    lines.push({ type: 'output', text: `Quota: ${target} pts`, delay: 60, style: 'gold' });
+  }
+  lines.push({ type: 'blank' });
+  lines.push({ type: 'prompt', text: 'polyhedral --roll-init', charDelay: 30 });
+  lines.push({ type: 'blank' });
+  lines.push({ type: 'output', text: 'Dice pool loaded. Ready to roll.', delay: 80, style: 'bright' });
+  lines.push({ type: 'pause', delay: 200 });
+  return lines;
+}
+
+function termScriptGameOver(ante, round, totalScore, jokerCount) {
+  return [
+    { type: 'output', text: 'CRITICAL FAULT DETECTED', delay: 0, style: 'red' },
+    { type: 'output', text: '███████████████████████', delay: 60, style: 'red' },
+    { type: 'blank' },
+    { type: 'prompt', text: 'polyhedral --diagnose --emergency', charDelay: 24 },
+    { type: 'blank' },
+    { type: 'output', text: `Failure point: ANTE_${ante}  CYCLE_${round}`, delay: 80, style: 'red' },
+    { type: 'output', text: `Quota not met. Session terminated.`, delay: 60, style: 'red' },
+    { type: 'blank' },
+    { type: 'output', text: '── SESSION REPORT ──', delay: 80, style: 'dim' },
+    { type: 'output', text: `Total score  : ${totalScore}`, delay: 50 },
+    { type: 'output', text: `Jokers owned : ${jokerCount}`, delay: 50 },
+    { type: 'output', text: `Ante reached : ${ante} / 7`, delay: 50 },
+    { type: 'blank' },
+    { type: 'output', text: 'Core memory dump initiated...', delay: 120, style: 'dim' },
+    { type: 'output', text: 'PROCESS TERMINATED.', delay: 80, style: 'red' },
+    { type: 'pause', delay: 500 },
+  ];
+}
+
+function termScriptWin(totalScore, bank) {
+  return [
+    { type: 'output', text: 'ALL ANTES CLEARED', delay: 0, style: 'gold' },
+    { type: 'output', text: '████████████████████████████', delay: 80, style: 'gold' },
+    { type: 'blank' },
+    { type: 'prompt', text: 'polyhedral --verify-completion --full', charDelay: 26 },
+    { type: 'blank' },
+    { type: 'output', text: 'Verifying ante records...', delay: 100, style: 'dim' },
+    { type: 'output', text: '[1/7] .... PASSED', delay: 70, style: 'dim' },
+    { type: 'output', text: '[2/7] .... PASSED', delay: 70, style: 'dim' },
+    { type: 'output', text: '[3/7] .... PASSED', delay: 70, style: 'dim' },
+    { type: 'output', text: '[4/7] .... PASSED', delay: 70, style: 'dim' },
+    { type: 'output', text: '[5/7] .... PASSED', delay: 70, style: 'dim' },
+    { type: 'output', text: '[6/7] .... PASSED', delay: 70, style: 'dim' },
+    { type: 'output', text: '[7/7] .... PASSED', delay: 70, style: 'gold' },
+    { type: 'blank' },
+    { type: 'output', text: 'SYSTEM CLEARED.', delay: 80, style: 'bright' },
+    { type: 'output', text: `Final score  : ${totalScore}`, delay: 60, style: 'gold' },
+    { type: 'output', text: `Credits left : $${bank}`, delay: 60, style: 'gold' },
+    { type: 'blank' },
+    { type: 'prompt', text: 'polyhedral --congratulations', charDelay: 30 },
+    { type: 'blank' },
+    { type: 'output', text: 'You have defeated POLYHEDRAL.', delay: 100, style: 'bright' },
+    { type: 'output', text: 'Well played.', delay: 80, style: 'dim' },
+    { type: 'pause', delay: 600 },
+  ];
+}
+
+// PURCHASE FLASH
+let pfTimer = null;
+function flashPurchase(item) {
+  if (typeof SFX !== 'undefined') SFX.buy();
+  const flash = document.getElementById('purchase-flash');
+  const lines = document.getElementById('pf-lines');
+  if (pfTimer) { clearTimeout(pfTimer); pfTimer = null; }
+  const cmdMap = {
+    jokers: `market --install-joker "${item.name}"`,
+    consumables: `market --acquire-item "${item.name}"`,
+    upgrades: `market --apply-upgrade "${item.name}"`,
+    dice: `market --forge-die "${item.name}"`,
+  };
+  const cmd = cmdMap[item.tab] || `market --purchase "${item.name}"`;
+  const rarityLabels = { common: 'COMMON', uncommon: 'UNCOMMON', rare: 'RARE', legendary: 'LEGENDARY' };
+  const rar = rarityLabels[item.rarity] || item.rarity.toUpperCase();
+  lines.innerHTML = '';
+  const addLine = (text, cls, delay) => setTimeout(() => {
+    const el = document.createElement('span');
+    el.className = `pf-line ${cls}`;
+    el.textContent = text;
+    lines.appendChild(el);
+  }, delay);
+  let cmdEl = document.createElement('span');
+  cmdEl.className = 'pf-line pf-cmd';
+  lines.appendChild(cmdEl);
+  let ci = 0;
+  const typeCmd = () => {
+    if (ci < cmd.length) { cmdEl.textContent += cmd[ci++]; setTimeout(typeCmd, 18 + Math.random() * 10); }
+  };
+  typeCmd();
+  const typeDelay = cmd.length * 20 + 40;
+  addLine(`  [${rar}]  ${item.effect || item.desc.slice(0, 40)}`, 'pf-dim', typeDelay);
+  addLine(`  -$${item.cost}  ·  balance: $${g.bank}`, 'pf-ok', typeDelay + 50);
+  flash.classList.remove('hidden', 'hiding');
+  flash.classList.add('visible');
+  pfTimer = setTimeout(() => {
+    flash.classList.remove('visible');
+    flash.classList.add('hiding');
+    setTimeout(() => {
+      flash.classList.add('hidden');
+      flash.classList.remove('hiding');
+    }, 220);
+    pfTimer = null;
+  }, typeDelay + 900);
+}
+
+// ROUND PROGRESSION
+function enterShop() {
+  if (MP.active && !MP.eliminated) {
+    if (!g.firstRollDone) { notify('ROLL FIRST', 'bad'); return; }
+    const score = calculateScore(true);
+    g.roundScore += score;
+    g.totalScore += score;
+    g.handsPlayed++;
+    triggerJokerEvent('onScore', score);
+    popScore('+' + score, document.getElementById('score-total'));
+    shake(score > 500 ? 'xl' : score > 150 ? 'lg' : 'sm');
+    burstDiceSequence('score', 60);
+    updateScoreBar();
+    mpSubmitScore(score);
+    return;
+  }
+  _spEnterShop();
+}
+
+function _spEnterShop() {
+  if (!g.firstRollDone) { notify('ROLL FIRST', 'bad'); return; }
+  if (typeof SFX !== 'undefined') SFX.cashIn();
+  _lastDisplayedScore = 0;
+  const score = calculateScore(true);
+  g.roundScore += score;
+  g.totalScore += score;
+  g.handsPlayed++;
+  triggerJokerEvent('onScore', score);
+  popScore('+' + score, document.getElementById('score-total'));
+  shake(score > 500 ? 'xl' : score > 150 ? 'lg' : 'sm');
+  burstDiceSequence('score', 60);
+  updateScoreBar();
+  if (g.roundScore < g.target) {
+    setTimeout(() => {
+      const script = termScriptGameOver(g.ante, g.round, g.totalScore, g.jokers.length);
+      runTerminal(script, () => {
+        document.getElementById('screen-over').classList.remove('hidden');
+        document.getElementById('go-stats').innerHTML =
+          `ANTE: ${g.ante} &nbsp;|&nbsp; CYCLE: ${g.round}<br>FINAL SCORE: ${g.totalScore}<br>JOKERS ACQUIRED: ${g.jokers.length}`;
+      });
+    }, 400);
+    return;
+  }
+  const reward = Math.max(3, Math.min(15, Math.floor(score / 10)));
+  g.bank += reward;
+  g.shopRerollCost = 5;
+  shopRerollCount = 0;
+  currentShopTab = 'jokers';
+  currentShopItems = {};
+  const script = termScriptUplink(score, reward, g.round, g.ante);
+  runTerminal(script, () => {
+    document.getElementById('shop-bank-ui').innerText = g.bank;
+    document.getElementById('screen-shop').classList.remove('hidden');
+    document.querySelectorAll('.shop-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'jokers'));
+    genShopForTab('jokers');
+    renderShopContent();
+  });
+}
+
+function startNextRound() {
+  const newAnte = g.round >= 3;
+  g.round++;
+  if (g.round > 3) { g.ante++; g.round = 1; }
+  if (g.ante > MAX_ANTE) { winGame(); return; }
+  g.target = getQuota(g.ante, g.round);
+  g.roundScore = 0;
+  g.rerolls = g.maxRerolls;
+  g.firstRollDone = false;
+  g.baseChips = 0;
+  g.shopRerollCost = 5;
+  currentShopItems = {};
+  if (g.hasInterestPrime) { const earn = Math.floor(g.bank / 3); g.bank += earn; if (earn > 0) notify(`+$${earn} PRIME INTEREST`, 'gold'); }
+  else if (g.hasInterest) { const earn = Math.floor(g.bank / 5); g.bank += earn; if (earn > 0) notify(`+$${earn} INTEREST`, 'gold'); }
+  if (g.startingChips) g.baseChips += g.startingChips;
+  g.dice.forEach(d => {
+    if (d.material === 'wooden') {
+      d.woodenBonus = (d.woodenBonus || 0) + 1;
+      d.sides = Array.from({ length: 6 + d.woodenBonus }, (_, i) => i + 1);
+    }
+  });
+  g.glassRerolled = false;
+  g.dice.forEach(d => { d.held = false; d.v = null; if (d.shattered) d.shattered = false; });
+  const script = termScriptNewRound(g.round, g.ante, g.target, newAnte);
+  runTerminal(script, () => {
+    if (pfTimer) { clearTimeout(pfTimer); pfTimer = null; }
+    document.getElementById('purchase-flash').classList.add('hidden');
+    document.getElementById('screen-shop').classList.add('hidden');
+    document.getElementById('roll-btn').disabled = false;
+    document.getElementById('cash-btn').disabled = true;
+    document.getElementById('rerolls-ui').innerText = g.rerolls;
+    document.getElementById('hand-name').innerText = '–';
+    document.getElementById('score-total').innerText = '0';
+    _lastDisplayedScore = 0;
+    document.getElementById('score-chips').innerHTML = '';
+    document.getElementById('score-bar-inner').style.width = '0%';
+    document.getElementById('score-progress-txt').innerText = `0 / ${g.target}`;
+    buildAntePips();
+    initBoard();
+    updateUI();
+    try {
+      const data = serializeGame();
+      localStorage.setItem(SAVE_KEY + activeSlot, JSON.stringify(data));
+    } catch (e) { }
+  });
+}
+
+function winGame() {
+  shake('xl');
+  const script = termScriptWin(g.totalScore, g.bank);
+  runTerminal(script, () => {
+    document.getElementById('screen-win').classList.remove('hidden');
+    document.getElementById('win-stats').innerHTML =
+      `ALL ${MAX_ANTE} ANTES CLEARED<br>TOTAL SCORE: ${g.totalScore}<br>CREDITS REMAINING: $${g.bank}`;
+  });
+}
+
+// SAVE/LOAD SYSTEM
+const SAVE_KEY = 'polyhedral_save_';
+const NUM_SLOTS = 3;
+let activeSlot = 0;
+let menuSelectedSlot = 0;
+
+function getSaveSlots() {
+  const slots = [];
+  for (let i = 0; i < NUM_SLOTS; i++) {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY + i);
+      slots.push(raw ? JSON.parse(raw) : null);
+    } catch (e) { slots.push(null); }
+  }
+  return slots;
+}
+
+function serializeGame() {
+  return {
+    ante: g.ante, round: g.round,
+    bank: g.bank, target: g.target,
+    baseMult: g.baseMult, baseChips: g.baseChips,
+    rerolls: g.rerolls, maxRerolls: g.maxRerolls,
+    roundScore: g.roundScore, totalScore: g.totalScore,
+    handsPlayed: g.handsPlayed,
+    handLevels: { ...g.handLevels },
+    jokers: g.jokers.map(j => ({ ...j })),
+    consumables: [...g.consumables],
+    dice: g.dice.map(d => ({
+      v: d.v, held: d.held, shattered: d.shattered,
+      material: d.material, sides: [...d.sides],
+      woodenBonus: d.woodenBonus || 0,
+    })),
+    hasInterest: g.hasInterest || false,
+    hasInterestPrime: g.hasInterestPrime || false,
+    startingChips: g.startingChips || 0,
+    glassShatterProof: g.glassShatterProof || false,
+    savedAt: Date.now(),
+  };
+}
+
+function deserializeGame(data) {
+  g.ante = data.ante; g.round = data.round;
+  g.bank = data.bank; g.target = data.target;
+  g.baseMult = data.baseMult; g.baseChips = data.baseChips;
+  g.rerolls = data.rerolls; g.maxRerolls = data.maxRerolls;
+  g.roundScore = data.roundScore; g.totalScore = data.totalScore;
+  g.handsPlayed = data.handsPlayed || 0;
+  g.handLevels = { ...g.handLevels, ...data.handLevels };
+  g.jokers = data.jokers || [];
+  g.consumables = data.consumables || [];
+  g.hasInterest = data.hasInterest || false;
+  g.hasInterestPrime = data.hasInterestPrime || false;
+  g.startingChips = data.startingChips || 0;
+  g.glassShatterProof = data.glassShatterProof || false;
+  g.dice = (data.dice || []).map(d => ({
+    v: d.v, held: false, shattered: d.shattered || false,
+    material: d.material || 'stone',
+    sides: d.sides || [1, 2, 3, 4, 5, 6],
+    woodenBonus: d.woodenBonus || 0,
+  }));
+  g.firstRollDone = false;
+  g.glassRerolled = false;
+}
+
+function saveCurrentGame() {
+  try {
+    const data = serializeGame();
+    localStorage.setItem(SAVE_KEY + activeSlot, JSON.stringify(data));
+    notify('GAME SAVED · SLOT ' + (activeSlot + 1), 'good');
+  } catch (e) {
+    notify('SAVE FAILED', 'bad');
+  }
+}
+
+function deleteSave(slot) {
+  localStorage.removeItem(SAVE_KEY + slot);
+}
+
+function slotSummary(data) {
+  if (!data) return { name: 'EMPTY', detail: 'no save data', hasData: false };
+  const d = new Date(data.savedAt);
+  const timeStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return {
+    name: `ANTE ${data.ante}  CYCLE ${data.round}`,
+    detail: `$${data.bank} · ${data.totalScore}pts · ${data.jokers.length} jokers · ${timeStr}`,
+    hasData: true,
+  };
+}
+
+// MAIN MENU SYSTEM
+function renderSaveSlots() {
+  const slots = getSaveSlots();
+  const container = document.getElementById('save-slots');
+  container.innerHTML = '';
+  slots.forEach((data, i) => {
+    const sum = slotSummary(data);
+    const div = document.createElement('div');
+    div.className = 'save-slot' + (i === menuSelectedSlot ? ' selected' : '');
+    div.innerHTML = `
+      <div class="slot-num">${i + 1}</div>
+      <div class="slot-info">
+        <div class="slot-name">${sum.name}</div>
+        <div class="slot-detail">${sum.detail}</div>
+      </div>
+      <div class="slot-badge ${sum.hasData ? 'has-save' : 'empty'}">${sum.hasData ? 'SAVED' : 'EMPTY'}</div>
+    `;
+    div.onclick = () => selectSlot(i);
+    container.appendChild(div);
+  });
+  const slots2 = getSaveSlots();
+  document.getElementById('menu-load-btn').disabled = !slots2[menuSelectedSlot];
+}
+
+function selectSlot(i) {
+  menuSelectedSlot = i;
+  renderSaveSlots();
+}
+
+function menuNewGame(slot) {
+  activeSlot = slot;
+  deleteSave(slot);
+  const script = [
+    { type: 'prompt', text: `polyhedral --new-game --slot=${slot + 1}`, charDelay: 28 },
+    { type: 'blank' },
+    { type: 'output', text: 'Initialising new session...', delay: 80 },
+    { type: 'output', text: `Save slot ${slot + 1} cleared.`, delay: 60, style: 'dim' },
+    { type: 'output', text: 'Dice pool: 5x D6 · STONE', delay: 60 },
+    { type: 'output', text: `Ante 1 loaded  ·  Quota: ${ANTE_TABLE[0].quotas[0]} pts`, delay: 80, style: 'bright' },
+    { type: 'blank' },
+    { type: 'output', text: 'Good luck.', delay: 80, style: 'dim' },
+    { type: 'pause', delay: 300 },
+  ];
+  runMenuTerminal(script, () => {
+    document.getElementById('screen-menu').classList.add('hidden');
+    startFreshGame();
+  });
+}
+
+function menuLoadGame(slot) {
+  const slots = getSaveSlots();
+  const data = slots[slot];
+  if (!data) { notify('NO SAVE DATA', 'bad'); return; }
+  activeSlot = slot;
+  const script = [
+    { type: 'prompt', text: `polyhedral --load --slot=${slot + 1}`, charDelay: 28 },
+    { type: 'blank' },
+    { type: 'output', text: 'Reading save data...', delay: 80 },
+    { type: 'output', text: `Ante ${data.ante}  ·  Cycle ${data.round}`, delay: 60, style: 'bright' },
+    { type: 'output', text: `Score: ${data.totalScore}  ·  Credits: $${data.bank}`, delay: 60 },
+    { type: 'output', text: `Jokers: ${data.jokers.length}  ·  Dice: ${data.dice.length}`, delay: 60 },
+    { type: 'blank' },
+    { type: 'output', text: 'Session restored. Welcome back.', delay: 80, style: 'bright' },
+    { type: 'pause', delay: 300 },
+  ];
+  runMenuTerminal(script, () => {
+    deserializeGame(data);
+    document.getElementById('screen-menu').classList.add('hidden');
+    resumeGame();
+  });
+}
+
+function goToMenu() {
+  ['screen-shop', 'screen-over', 'screen-win', 'screen-terminal',
+    'screen-mp-lobby', 'screen-mp-wait', 'screen-mp-results',
+    'screen-mp-eliminated', 'mp-hud'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
+  });
+  if (MP.active) {
+    MP.cleanListeners();
+    try { window._fb?.remove(MP.ref(MP.playerPath())); } catch (e) { }
+    MP.active = false; MP.roomCode = null;
+  }
+  document.getElementById('screen-menu').classList.remove('hidden');
+  document.getElementById('menu-slots-wrap').classList.remove('hidden');
+  document.getElementById('menu-boot-term').style.display = 'none';
+  showModeSelect();
+}
+
+function startFreshGame() {
+  Object.assign(g, {
+    ante: 1, round: 1, rerolls: 3, maxRerolls: 3,
+    bank: 4, target: 100, runScore: 0,
+    baseMult: 1.0, baseChips: 0,
+    dice: [], jokers: [], consumables: [],
+    firstRollDone: false, glassRerolled: false,
+    roundScore: 0, shopRerollCost: 5,
+    handsPlayed: 0, totalScore: 0,
+    hasInterest: false, hasInterestPrime: false,
+    startingChips: 0, glassShatterProof: false,
+    handLevels: { PAIR: 1, TWO_PAIR: 1, THREE_OF_A_KIND: 1, STRAIGHT: 1, FULL_HOUSE: 1, FOUR_OF_A_KIND: 1, FIVE_OF_A_KIND: 1, SIX_OF_A_KIND: 1, SEVEN_OF_A_KIND: 1, EIGHT_OF_A_KIND: 1, NINE_OF_A_KIND: 1, TEN_OF_A_KIND: 1, HIGH_CARD: 1 },
+  });
+  initGame();
+}
+
+function resumeGame() {
+  renderJokers();
+  updateCons();
+  buildAntePips();
+  initBoard();
+  updateUI();
+  document.getElementById('roll-btn').disabled = false;
+  document.getElementById('cash-btn').disabled = true;
+  document.getElementById('hand-name').innerText = '–';
+  document.getElementById('score-total').innerText = '0';
+  document.getElementById('score-chips').innerHTML = '';
+  document.getElementById('score-bar-inner').style.width = '0%';
+  document.getElementById('score-progress-txt').innerText = `0 / ${g.target}`;
+}
+
+function runMenuTerminal(script, onComplete) {
+  const linesEl = document.getElementById('menu-term-lines');
+  const cursor = document.getElementById('menu-term-cursor');
+  linesEl.innerHTML = '';
+  cursor.style.display = 'inline-block';
+  let i = 0;
+  function next() {
+    if (i >= script.length) {
+      cursor.style.display = 'none';
+      setTimeout(onComplete, 200);
+      return;
+    }
+    const entry = script[i++];
+    if (entry.type === 'pause') { setTimeout(next, entry.delay || 400); return; }
+    if (entry.type === 'blank') {
+      const el = document.createElement('span');
+      el.className = 'mterm-line'; el.textContent = ' ';
+      linesEl.appendChild(el);
+      setTimeout(next, entry.delay || 60);
+      return;
+    }
+    const el = document.createElement('span');
+    el.className = 'mterm-line mt-' + (entry.type === 'prompt' ? 'cmd' : (entry.style || 'normal'));
+    linesEl.appendChild(el);
+    linesEl.parentNode.insertBefore(cursor, el.nextSibling);
+    if (entry.type === 'prompt') {
+      const text = entry.text || ''; const cd = entry.charDelay || 34; let ci = 0;
+      function typeChar() {
+        if (ci < text.length) { el.textContent += text[ci++]; linesEl.scrollTop = linesEl.scrollHeight; setTimeout(typeChar, cd + (Math.random() * cd * 0.4 - cd * 0.2)); }
+        else setTimeout(next, entry.delay || 100);
+      }
+      setTimeout(typeChar, entry.startDelay || 0);
+    } else {
+      el.textContent = entry.text || '';
+      linesEl.scrollTop = linesEl.scrollHeight;
+      setTimeout(next, entry.delay || 60);
+    }
+  }
+  next();
+}
+
+function bootMenu() {
+  const slots = getSaveSlots();
+  const hasSave = slots.some(s => s !== null);
+  const bootScript = [
+    { type: 'output', text: 'POLYHEDRAL BIOS', delay: 0, style: 'bright' },
+    { type: 'output', text: '━━━━━━━━━━━━━━━━━━━━━━━━', delay: 40, style: 'dim' },
+    { type: 'output', text: 'Checking save memory...', delay: 100, style: 'dim' },
+    { type: 'output', text: hasSave
+        ? `Found ${slots.filter(Boolean).length} save file(s).`
+        : 'No save data found.', delay: 80 },
+    { type: 'blank' },
+    { type: 'prompt', text: 'polyhedral --load-ui', charDelay: 30 },
+    { type: 'blank' },
+    { type: 'output', text: 'UI ready. Select a mode to begin.', delay: 80, style: 'bright' },
+    { type: 'pause', delay: 200 },
+  ];
+  runMenuTerminal(bootScript, () => {
+    document.getElementById('menu-slots-wrap').classList.remove('hidden');
+    showModeSelect();
+  });
+}
+
+function runBootAnimation(onComplete) {
+  const linesEl = document.getElementById('boot-lines');
+  const cursor = document.getElementById('boot-cursor');
+  const barInner = document.getElementById('boot-bar-inner');
+  const barPct = document.getElementById('boot-bar-pct');
+  function setBar(pct) {
+    barInner.style.width = pct + '%';
+    barPct.textContent = pct + '%';
+  }
+  function addLine(text, cls, delay) {
+    return new Promise(res => setTimeout(() => {
+      const el = document.createElement('span');
+      el.className = 'bline ' + (cls || 'bline-dim');
+      el.textContent = text;
+      linesEl.appendChild(el);
+      linesEl.scrollTop = linesEl.scrollHeight;
+      res();
+    }, delay));
+  }
+  async function run() {
+    await addLine('POLYHEDRAL BIOS', 'bline-bright', 0);
+    await addLine('Copyright (c) POLY SYSTEMS — All rights reserved', 'bline-dim', 60);
+    await addLine('', 'bline-dim', 30);
+    await addLine('CPU ............ DICE-ENGINE-X   1.8 GHz', 'bline-dim', 120); setBar(8);
+    await addLine('RAM ............ 512K ROLL BUFFER', 'bline-dim', 90); setBar(16);
+    await addLine('STORAGE ........ POLY_FLASH  v4.1', 'bline-dim', 90); setBar(22);
+    await addLine('', 'bline-dim', 20);
+    await addLine('Initialising dice physics engine...', 'bline-dim', 100); setBar(28);
+    await addLine('  [OK]  Randomiser seeded', 'bline-indent', 70); setBar(34);
+    await addLine('  [OK]  Material renderer loaded', 'bline-indent', 70); setBar(40);
+    await addLine('  [OK]  Hand detection matrix ready', 'bline-indent', 70); setBar(46);
+    await addLine('', 'bline-dim', 20);
+    await addLine('Loading shop catalog...', 'bline-dim', 100); setBar(52);
+    await addLine('  [OK]  Jokers registered', 'bline-indent', 60); setBar(57);
+    await addLine('  [OK]  Consumables registered', 'bline-indent', 60); setBar(62);
+    await addLine('  [OK]  Die materials registered', 'bline-indent', 60); setBar(67);
+    await addLine('', 'bline-dim', 20);
+    await addLine('Checking save memory...', 'bline-dim', 110); setBar(74);
+    const slots = getSaveSlots();
+    const hasSave = slots.some(s => s !== null);
+    const saveCount = slots.filter(Boolean).length;
+    if (hasSave) {
+      await addLine(`  [OK]  ${saveCount} save slot(s) found`, 'bline-indent', 70); setBar(80);
+    } else {
+      await addLine('  [--]  No save data', 'bline-indent', 70); setBar(80);
+    }
+    await addLine('', 'bline-dim', 20);
+    await addLine('Running integrity check...', 'bline-dim', 100); setBar(87);
+    await addLine('  [OK]  All systems nominal', 'bline-indent', 80); setBar(94);
+    await addLine('', 'bline-dim', 20);
+    setBar(100);
+    await addLine('POLYHEDRAL OS ready.', 'bline-ok', 120);
+    cursor.style.display = 'none';
+    await new Promise(res => setTimeout(res, 700));
+    const screen = document.getElementById('screen-boot');
+    screen.classList.add('wipe-out');
+    await new Promise(res => setTimeout(res, 560));
+    screen.style.display = 'none';
+    onComplete();
+  }
+  run();
+}
+
+// MULTIPLAYER ENGINE (FIXED WAITING SCREEN)
+const MP = {
+  active: false, roomCode: null, playerId: null, playerName: null,
+  isHost: false, players: {}, eliminated: false,
+  totalScores: {}, listeners: [],
+  phase: 'lobby', waitingType: null, _waitInterval: null,
+  db() { return window._fb?.db; },
+  ref(p) { return window._fb?.ref(window._fb.db, p); },
+  async set(p, v) { return window._fb?.set(this.ref(p), v); },
+  async get(p) { return window._fb?.get(this.ref(p)); },
+  async update(p, v) { return window._fb?.update(this.ref(p), v); },
+  listen(p, cb) { let r = this.ref(p); window._fb?.onValue(r, cb); this.listeners.push(r); return r; },
+  cleanListeners() { this.listeners.forEach(r => window._fb?.off(r)); this.listeners = []; },
+  async remove(p) { return window._fb?.remove(this.ref(p)); },
+  roomPath(s = '') { return `rooms/${this.roomCode}${s ? '/' + s : ''}`; },
+  playerPath(s = '') { return `rooms/${this.roomCode}/players/${this.playerId}${s ? '/' + s : ''}`; },
+};
+
+function mpGenId() { return Math.random().toString(36).slice(2, 10).toUpperCase(); }
+function mpGenName() {
+  const a = ['ALPHA', 'BETA', 'GAMMA', 'DELTA', 'SIGMA', 'OMEGA', 'PRIME', 'ULTRA'];
+  return a[Math.floor(Math.random() * a.length)] + '_' + Math.floor(Math.random() * 9000 + 1000);
+}
+
+function showSingleplayerSlots() {
+  document.getElementById('menu-mode-select').classList.add('hidden');
+  document.getElementById('menu-mp-panel').classList.add('hidden');
+  document.getElementById('menu-sp-panel').classList.remove('hidden');
+  renderSaveSlots();
+}
+
+function showMultiplayerMenu() {
+  document.getElementById('menu-mode-select').classList.add('hidden');
+  document.getElementById('menu-sp-panel').classList.add('hidden');
+  if (window._fb) { _showMpPanel(); return; }
+  notify('CONNECTING TO NETWORK...', 'info');
+  const onReady = () => { window.removeEventListener('firebase-ready', onReady); _showMpPanel(); };
+  window.addEventListener('firebase-ready', onReady);
+  setTimeout(() => {
+    window.removeEventListener('firebase-ready', onReady);
+    if (!window._fb) notify('FIREBASE UNAVAILABLE — CHECK CONNECTION', 'bad');
+    else _showMpPanel();
+  }, 5000);
+}
+
+function _showMpPanel() {
+  document.getElementById('menu-mp-panel').classList.remove('hidden');
+  document.getElementById('mp-create-panel').classList.add('hidden');
+  document.getElementById('mp-join-panel').classList.add('hidden');
+}
+
+function mpShowCreate() {
+  document.getElementById('mp-create-panel').classList.remove('hidden');
+  document.getElementById('mp-join-panel').classList.add('hidden');
+  document.getElementById('mp-create-code').value = '';
+}
+
+function mpShowJoin() {
+  document.getElementById('mp-join-panel').classList.remove('hidden');
+  document.getElementById('mp-create-panel').classList.add('hidden');
+  document.getElementById('mp-join-code').value = '';
+}
+
+async function mpQuickMatch() {
+  const code = mpGenId().slice(0, 4);
+  MP.playerId = mpGenId();
+  MP.playerName = mpGenName();
+  try {
+    const snap = await MP.get('public_queue');
+    const queue = snap?.val() || {};
+    const existing = Object.values(queue).find(r => r.playerCount < 4 && r.open);
+    if (existing) { mpJoinRoom(existing.code); }
+    else {
+      await MP.set(`public_queue/${code}`, { code, playerCount: 1, open: true, ts: Date.now() });
+      await mpCreateRoom(code, true);
+    }
+  } catch (e) { notify('CONNECTION ERROR', 'bad'); console.error(e); }
+}
+
+async function mpCreateRoom(forcedCode, isPublic) {
+  const code = (forcedCode || document.getElementById('mp-create-code').value).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (code.length !== 4) { notify('ENTER 4-CHAR CODE', 'bad'); return; }
+  if (!MP.playerId) { MP.playerId = mpGenId(); MP.playerName = mpGenName(); }
+  MP.roomCode = code;
+  MP.isHost = true;
+  MP.active = false;
+  const termScript = [
+    { type: 'prompt', text: `polyhedral --create-room --code=${code}`, charDelay: 28 },
+    { type: 'blank' },
+    { type: 'output', text: 'Connecting to POLYHEDRAL network...', delay: 80 },
+    { type: 'output', text: 'Registering room...', delay: 100 },
+  ];
+  runMenuTerminal(termScript, async () => {
+    try {
+      await MP.set(MP.roomPath(), {
+        code, host: MP.playerId, phase: 'lobby',
+        created: Date.now(), public: !!isPublic,
+        ante: 1, round: 1, shopItems: null,
+      });
+      await MP.set(MP.playerPath(), {
+        name: MP.playerName, host: true,
+        score: 0, roundScore: 0, diceCount: 5,
+        eliminated: false, ready: false, joinedAt: Date.now(),
+      });
+      showLobby();
+    } catch (e) { notify('FAILED TO CREATE ROOM', 'bad'); console.error(e); }
+  });
+}
+
+async function mpJoinRoom(code) {
+  if (!code) code = document.getElementById('mp-join-code').value;
+  code = code.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (code.length !== 4) { notify('ENTER 4-CHAR CODE', 'bad'); return; }
+  if (!MP.playerId) { MP.playerId = mpGenId(); MP.playerName = mpGenName(); }
+  MP.roomCode = code;
+  MP.isHost = false;
+  const termScript = [
+    { type: 'prompt', text: `polyhedral --join-room --code=${code}`, charDelay: 28 },
+    { type: 'blank' },
+    { type: 'output', text: 'Locating room...', delay: 100 },
+  ];
+  runMenuTerminal(termScript, async () => {
+    try {
+      const snap = await MP.get(MP.roomPath());
+      const room = snap?.val();
+      if (!room) { notify('ROOM NOT FOUND', 'bad'); return; }
+      const players = room.players || {};
+      if (Object.keys(players).length >= 4) { notify('ROOM FULL', 'bad'); return; }
+      if (room.phase !== 'lobby') { notify('GAME ALREADY STARTED', 'bad'); return; }
+      await MP.set(MP.playerPath(), {
+        name: MP.playerName, host: false,
+        score: 0, roundScore: 0, diceCount: 5,
+        eliminated: false, ready: false, joinedAt: Date.now(),
+      });
+      showLobby();
+    } catch (e) { notify('FAILED TO JOIN ROOM', 'bad'); console.error(e); }
+  });
+}
+
+function showLobby() {
+  document.getElementById('screen-menu').classList.add('hidden');
+  document.getElementById('screen-mp-lobby').classList.remove('hidden');
+  document.getElementById('mp-lobby-code-display').textContent = MP.roomCode;
+  const startBtn = document.getElementById('mp-start-btn');
+  startBtn.classList.toggle('hidden', !MP.isHost);
+  MP.listen(MP.roomPath('players'), snap => { MP.players = snap?.val() || {}; renderLobbyPlayers(); });
+  MP.listen(MP.roomPath('phase'), snap => { if (snap?.val() === 'rolling') mpStartGame(); });
+  document.getElementById('mp-lobby-status').textContent = MP.isHost ? 'Waiting for players · You are the host' : 'Waiting for host to start...';
+}
+
+function renderLobbyPlayers() {
+  const el = document.getElementById('mp-lobby-players');
+  el.innerHTML = '';
+  const room = Object.entries(MP.players);
+  for (let i = 0; i < 4; i++) {
+    const [pid, p] = room[i] || [null, null];
+    const div = document.createElement('div');
+    div.className = 'mp-player-row';
+    if (p) {
+      const isHost = MP.players && Object.values(MP.players).find(x => x.host) && pid === Object.keys(MP.players).find(k => MP.players[k].host);
+      div.innerHTML = `
+        <div class="mp-player-dot ${isHost ? 'host' : 'player'}"></div>
+        <span class="mp-player-name">${p.name}</span>
+        <span class="mp-player-tag">${pid === MP.playerId ? '[YOU]' : ''} ${p.host ? '[HOST]' : ''}</span>
+      `;
+    } else {
+      div.innerHTML = `<div class="mp-player-dot empty"></div><span class="mp-player-name" style="opacity:0.3">— WAITING —</span>`;
+    }
+    el.appendChild(div);
+  }
+  const count = Object.keys(MP.players).length;
+  document.getElementById('mp-start-btn').disabled = count < 2;
+  document.getElementById('mp-lobby-status').textContent = MP.isHost ? `${count}/4 players · ${count >= 2 ? 'Ready to start!' : 'Need at least 2'}` : 'Waiting for host to start...';
+}
+
+async function mpHostStart() {
+  if (!MP.isHost) return;
+  await MP.update(MP.roomPath(), { phase: 'rolling', ante: 1, round: 1 });
+}
+
+async function mpLeaveRoom() {
+  MP.cleanListeners();
+  try { await MP.remove(MP.playerPath()); } catch (e) { }
+  MP.active = false; MP.roomCode = null;
+  document.getElementById('screen-mp-lobby').classList.add('hidden');
+  document.getElementById('screen-menu').classList.remove('hidden');
+  showModeSelect();
+}
+
+function mpStartGame() {
+  document.getElementById('screen-mp-lobby').classList.add('hidden');
+  MP.eliminated = false;
+  MP.totalScores = {};
+  MP.phase = 'rolling';
+  Object.keys(MP.players).forEach(pid => MP.totalScores[pid] = 0);
+  startFreshGame();
+  document.getElementById('mp-hud').classList.remove('hidden');
+  document.getElementById('mp-hud-code').textContent = `ROOM: ${MP.roomCode}`;
+  MP.listen(MP.roomPath('players'), snap => { MP.players = snap?.val() || {}; renderMpHud(); checkWaitingDone(); });
+  MP.listen(MP.roomPath('shopItems'), snap => { const items = snap?.val(); if (items) MP.pendingShopItems = items; });
+  MP.listen(MP.roomPath('phase'), snap => {
+    const phase = snap?.val();
+    if (phase === 'results') { MP.get(MP.roomPath('players')).then(s => { MP.players = s?.val() || {}; showMpResults(); }); }
+    if (phase === 'shop') openMpShop();
+    if (phase === 'nextround') mpAdvanceRound();
+  });
+  listenForCurses();
+  const termScript = [
+    { type: 'prompt', text: `polyhedral --mp-session --room=${MP.roomCode}`, charDelay: 25 },
+    { type: 'blank' },
+    { type: 'output', text: `Room: ${MP.roomCode}  ·  Players: ${Object.keys(MP.players).length}`, delay: 80 },
+    { type: 'output', text: 'Ante 1 · Cycle 1', delay: 60, style: 'bright' },
+    { type: 'output', text: `Quota: ${getQuota(1, 1)} pts`, delay: 60, style: 'gold' },
+    { type: 'blank' },
+    { type: 'output', text: 'Good luck. Beat your opponents.', delay: 80 },
+    { type: 'pause', delay: 300 },
+  ];
+  runTerminal(termScript, () => { });
+}
+
+function renderMpHud() {
+  const el = document.getElementById('mp-hud-players');
+  el.innerHTML = '';
+  Object.entries(MP.players).forEach(([pid, p]) => {
+    if (pid === MP.playerId) return;
+    const div = document.createElement('div');
+    div.className = `hud-player${p.eliminated ? ' elim' : ''}`;
+    div.innerHTML = `
+      <div class="hud-player-dot" style="background:${p.eliminated ? 'var(--red)' : 'var(--ng)'}"></div>
+      <div class="hud-player-info">
+        <b>${p.name.split('_')[0]}</b><br>
+        🎲×${p.diceCount || 5} · $${p.score || 0}
+        ${p.eliminated ? '<br><span style="color:var(--red);font-size:0.4rem">ELIM</span>' : ''}
+      </div>
+    `;
+    el.appendChild(div);
+  });
+}
+
+async function mpSubmitScore(score) {
+  if (!MP.active) return;
+  const quota = getQuota(g.ante, g.round);
+  const passed = score >= quota;
+  const newScore = (MP.totalScores[MP.playerId] || 0) + score;
+  MP.totalScores[MP.playerId] = newScore;
+  await MP.update(MP.playerPath(), {
+    roundScore: score, score: newScore,
+    eliminated: !passed, ready: true, diceCount: g.dice.length,
+  });
+  if (!passed) { MP.eliminated = true; showMpEliminated(score); }
+  else { showMpWaiting('score'); }
+  setTimeout(() => checkWaitingDone(), 500);
+}
+
+function showMpWaiting(type) {
+  const screen = document.getElementById('screen-mp-wait');
+  const lines = document.getElementById('mp-wait-lines');
+  const info = document.getElementById('mp-wait-info');
+  lines.innerHTML = '';
+  screen.classList.remove('hidden');
+  MP.waitingType = type;
+  const script = [
+    { type: 'prompt', text: `polyhedral --sync --wait-${type}`, charDelay: 22 },
+    { type: 'blank' },
+    { type: 'output', text: `Waiting for all players to complete ${type === 'score' ? 'score submission' : 'shop'}...`, delay: 80 },
+  ];
+  let i = 0;
+  function nextLine() {
+    if (i >= script.length) return;
+    const entry = script[i++];
+    if (entry.type === 'blank') { lines.innerHTML += '<span class="mw-line"> </span>'; setTimeout(nextLine, 50); return; }
+    const el = document.createElement('span');
+    el.className = 'mw-line' + (entry.style === 'bright' ? ' mw-bright' : entry.style === 'gold' ? ' mw-gold' : '');
+    if (entry.type === 'prompt') {
+      el.textContent = '> ';
+      lines.appendChild(el);
+      let ci = 0;
+      const t = entry.text;
+      const type2 = () => { if (ci < t.length) { el.textContent += t[ci++]; setTimeout(type2, 20); } else setTimeout(nextLine, entry.delay || 80); };
+      type2();
+    } else {
+      el.textContent = entry.text;
+      lines.appendChild(el);
+      setTimeout(nextLine, entry.delay || 60);
+    }
+  }
+  nextLine();
+  // Replace polling with a live Firebase listener so the waiting player
+  // reacts instantly when any other player's ready flag changes in Firebase,
+  // instead of potentially reading a stale local MP.players snapshot.
+  if (MP._waitUnsub) { MP._waitUnsub(); MP._waitUnsub = null; }
+  if (MP._waitInterval) { clearInterval(MP._waitInterval); MP._waitInterval = null; }
+
+  const playersRef = window._fb.ref(window._fb.db, `rooms/${MP.roomCode}/players`);
+  let _unsub = null;
+  _unsub = window._fb.onValue(playersRef, (snap) => {
+    const players = snap?.val() || {};
+    MP.players = players; // keep local copy in sync with Firebase
+    const total = Object.keys(players).length;
+    const ready = Object.values(players).filter(p => p.ready === true).length;
+    const remaining = total - ready;
+    info.textContent = `WAITING FOR ${remaining} MORE PLAYER(S) ...`;
+    if (remaining === 0 && total > 0) {
+      if (_unsub) { _unsub(); _unsub = null; }
+      MP._waitUnsub = null;
+      checkWaitingDone();
+    }
+  });
+  MP._waitUnsub = _unsub;
+}
+
+function hideMpWaiting() {
+  if (MP._waitInterval) { clearInterval(MP._waitInterval); MP._waitInterval = null; }
+  if (MP._waitUnsub) { MP._waitUnsub(); MP._waitUnsub = null; }
+  document.getElementById('screen-mp-wait').classList.add('hidden');
+}
+
+function checkWaitingDone() {
+  if (!MP.active) return;
+  const players = MP.players || {};
+  const activePlayers = Object.values(players).filter(p => !p.eliminated);
+  const eliminatedPlayers = Object.values(players).filter(p => p.eliminated);
+  const allActiveReady = activePlayers.every(p => p.ready === true);
+  const allEliminatedReady = eliminatedPlayers.every(p => p.ready === true);
+  const allReady = allActiveReady && allEliminatedReady;
+  if (allReady) {
+    if (MP.phase === 'rolling') {
+      MP.phase = 'results';
+      if (MP.isHost) MP.update(MP.roomPath(), { phase: 'results' });
+      hideMpWaiting();
+      showMpResults();
+    } else if (MP.phase === 'shop') {
+      MP.phase = 'nextround';
+      if (MP.isHost) MP.update(MP.roomPath(), { phase: 'nextround' });
+      hideMpWaiting();
+      mpAdvanceRound();
+    }
+  }
+}
+
+function showMpResults() {
+  if (MP._waitInterval) clearInterval(MP._waitInterval);
+  hideMpWaiting();
+  const players = MP.players || {};
+  const sorted = Object.entries(players).sort((a, b) => (b[1].roundScore || 0) - (a[1].roundScore || 0));
+  sorted.forEach(([pid, p]) => { MP.totalScores[pid] = (MP.totalScores[pid] || 0) + (p.roundScore || 0); });
+  const screen = document.getElementById('screen-mp-results');
+  screen.classList.remove('hidden');
+  document.getElementById('mp-results-title').textContent = `ANTE ${g.ante} · CYCLE ${g.round} RESULTS`;
+  let roundHtml = '<table class="mp-results-table"><stdio<th>#</th><th>PLAYER</th><th>ROUND</th><th>STATUS</th></tr>';
+  sorted.forEach(([pid, p], i) => {
+    const rank = ['rank-1', 'rank-2', 'rank-3'][i] || '';
+    const me = pid === MP.playerId ? 'me' : '';
+    const elim = p.eliminated ? 'elim' : '';
+    roundHtml += `<tr class="${me} ${elim}"><td class="${rank}">${i + 1}</td><td>${p.name}${pid === MP.playerId ? ' [YOU]' : ''}</td><td>${p.roundScore || 0}</td><td>${p.eliminated ? 'ELIM' : '✓'}</td></tr>`;
+  });
+  roundHtml += '</table>';
+  document.getElementById('mp-results-round').innerHTML = roundHtml;
+  const sortedTotal = Object.entries(MP.totalScores).sort((a, b) => b[1] - a[1]);
+  let totalHtml = '<table class="mp-results-table" style="margin-top:12px">脯<th>#</th><th>PLAYER</th><th>TOTAL</th></tr>';
+  sortedTotal.forEach(([pid, score], i) => {
+    const rank = ['rank-1', 'rank-2', 'rank-3'][i] || '';
+    const me = pid === MP.playerId ? 'me' : '';
+    const name = (MP.players[pid]?.name) || pid;
+    totalHtml += `<tr class="${me}"><td class="${rank}">${i + 1}</td><td>${name}${pid === MP.playerId ? ' [YOU]' : ''}</td><td>${score}</td></tr>`;
+  });
+  totalHtml += '</table>';
+  document.getElementById('mp-results-total').innerHTML = totalHtml;
+  runTerminal([
+    { type: 'output', text: '── ROUND COMPLETE ──', delay: 0, style: 'bright' },
+    { type: 'output', text: `CYCLE COMPLETE · ${sorted.length} players ranked`, delay: 60, style: 'dim' },
+    { type: 'output', text: `Winner: ${sorted[0][1].name} · ${sorted[0][1].roundScore} pts`, delay: 60, style: 'gold' },
+    { type: 'pause', delay: 600 },
+  ], () => { });
+}
+
+async function mpResultsNext() {
+  document.getElementById('screen-mp-results').classList.add('hidden');
+  if (MP.isHost) {
+    const shopData = { jokers: [], consumables: [], upgrades: [], dice: [] };
+    // Reset ready flags for ALL players FIRST, then change phase.
+    // This prevents a race where the phase listener triggers openMpShop on
+    // waiting clients before ready:false has propagated, keeping them stuck.
+    const resetUpdates = {};
+    Object.keys(MP.players).forEach(pid => {
+      resetUpdates[`rooms/${MP.roomCode}/players/${pid}/ready`] = false;
+    });
+    await window._fb.update(window._fb.ref(window._fb.db, ''), resetUpdates);
+    MP.phase = 'shop';
+    await MP.update(MP.roomPath(), { phase: 'shop', shopItems: shopData });
+  } else { showMpWaiting('shop'); }
+}
+
+function openMpShop() {
+  hideMpWaiting();
+  MP.pendingShopItems = {};
+  currentShopItems = {
+    jokers: [{ name: 'MP Joker', cost: 5, tab: 'jokers', rarity: 'common', desc: 'Shared shop item', sold: false, f: () => addJoker({ name: 'MP Joker', cost: 5, id: 'MPJ', desc: 'Shared Joker', rarity: 'common' }) }],
+    consumables: [], upgrades: [], dice: []
+  };
+  document.getElementById('shop-bank-ui').innerText = g.bank;
+  document.getElementById('screen-shop').classList.remove('hidden');
+  genShopForTab('jokers');
+  renderShopContent();
+  mpPatchShopFooter();
+  MP.listen(MP.roomPath('shopItems'), snap => {
+    const data = snap?.val();
+    if (data) {
+      Object.entries(data).forEach(([tab, arr]) => {
+        if (currentShopItems[tab]) {
+          arr.forEach((remote, i) => { if (remote.sold && currentShopItems[tab][i]) currentShopItems[tab][i].sold = true; });
+        }
+      });
+      renderShopContent();
+    }
+  });
+}
+
+function mpPatchShopFooter() {
+  const btn = document.querySelector('.shop-footer .btn-big');
+  if (btn) {
+    btn.querySelector('span').textContent = '✓ READY';
+    btn.onclick = mpShopReady;
+  }
+}
+
+async function mpShopReady() {
+  await MP.update(MP.playerPath(), { ready: true });
+  showMpWaiting('shop');
+}
+
+function mpAdvanceRound() {
+  hideMpWaiting();
+  if (MP.isHost) {
+    Object.keys(MP.players).forEach(pid => {
+      if (!MP.players[pid].eliminated) { MP.update(`rooms/${MP.roomCode}/players/${pid}`, { ready: false, roundScore: 0 }); }
+    });
+  }
+  MP.phase = 'rolling';
+  startNextRound();
+}
+
+function showMpEliminated(score) {
+  document.getElementById('screen-mp-eliminated').classList.remove('hidden');
+  document.getElementById('mp-elim-stats').innerHTML = `Score: ${score}<br>Quota: ${getQuota(g.ante, g.round)}<br>You have been eliminated.`;
+  const board = document.getElementById('mp-elim-scoreboard');
+  board.innerHTML = '<div class="menu-section-label">// REMAINING PLAYERS</div>';
+  Object.entries(MP.players).filter(([, p]) => !p.eliminated).forEach(([pid, p]) => {
+    const div = document.createElement('div');
+    div.className = 'mp-player-row';
+    div.innerHTML = `<div class="mp-player-dot player"></div><span>${p.name}</span><span style="margin-left:auto">$${p.score || 0}</span>`;
+    board.appendChild(div);
+  });
+}
+
+function showModeSelect() {
+  document.getElementById('menu-sp-panel').classList.add('hidden');
+  document.getElementById('menu-mp-panel').classList.add('hidden');
+  document.getElementById('menu-mode-select').classList.remove('hidden');
+}
+
+// ══════════════════════════════════════════════════════
+// GAME FEEL UPGRADES
+// ══════════════════════════════════════════════════════
+
+const SFX = (() => {
+  let ctx = null;
+  const getCtx = () => {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  };
+  function playTone(freq, type, vol, dur, detune = 0, delayMs = 0) {
+    setTimeout(() => {
+      try {
+        const c = getCtx();
+        const osc = c.createOscillator();
+        const gain = c.createGain();
+        osc.connect(gain); gain.connect(c.destination);
+        osc.type = type; osc.frequency.value = freq; osc.detune.value = detune;
+        gain.gain.setValueAtTime(vol, c.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + dur);
+        osc.start(c.currentTime); osc.stop(c.currentTime + dur);
+      } catch(e) {}
+    }, delayMs);
+  }
+  function noise(dur, vol = 0.08) {
+    try {
+      const c = getCtx();
+      const buf = c.createBuffer(1, c.sampleRate * dur, c.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      const src = c.createBufferSource();
+      const gain = c.createGain();
+      src.buffer = buf; src.connect(gain); gain.connect(c.destination);
+      gain.gain.setValueAtTime(vol, c.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + dur);
+      src.start(c.currentTime);
+    } catch(e) {}
+  }
+  return {
+    roll()  { noise(0.04, 0.12); playTone(180+Math.random()*60,'square',0.07,0.04); playTone(280+Math.random()*80,'square',0.05,0.03,0,15); },
+    land(v) { const f=120+v*18; noise(0.025,0.07); playTone(f,'sine',0.12,0.08); playTone(f*2,'triangle',0.04,0.06,0,10); },
+    hold()  { playTone(880,'square',0.06,0.05); playTone(1320,'sine',0.08,0.08,0,10); playTone(660,'triangle',0.04,0.1,0,20); },
+    unhold(){ playTone(440,'square',0.05,0.04); playTone(330,'sine',0.04,0.06,0,8); },
+    score() { [0,80,160].forEach((d,i)=>{ playTone([523,659,784][i],'sine',0.1-i*0.02,0.15,0,d); }); },
+    legendary() {
+      playTone(110,'sawtooth',0.15,0.3); playTone(220,'square',0.1,0.25,0,30);
+      playTone(440,'sine',0.12,0.2,0,80); playTone(880,'sine',0.08,0.3,0,140);
+      noise(0.08,0.05);
+    },
+    buy()   { playTone(660,'sine',0.1,0.1); playTone(880,'sine',0.08,0.12,0,60); playTone(1100,'triangle',0.06,0.15,0,120); },
+    error() { playTone(200,'sawtooth',0.1,0.08); playTone(150,'sawtooth',0.12,0.12,0,60); noise(0.06,0.08); },
+    shatter(){ noise(0.15,0.15); playTone(800,'sawtooth',0.08,0.1); playTone(400,'square',0.07,0.15,0,30); playTone(200,'sine',0.05,0.2,0,80); },
+    cashIn(){ [0,40,80,120,160,220].forEach((d,i)=>{ playTone([523,587,659,698,784,1047][i],'sine',0.09,0.12,0,d); }); noise(0.03,0.04); }
+  };
+})();
+
+// Animated score counter
+let _lastDisplayedScore = 0;
+function animateCounter(el, from, to, dur = 300) {
+  const start = performance.now();
+  if (from === to) { el.innerText = to; return; }
+  function step(now) {
+    const p = Math.min((now - start) / dur, 1);
+    const e = 1 - Math.pow(1 - p, 3);
+    el.innerText = Math.round(from + (to - from) * e);
+    if (p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// INITIALIZATION
+runBootAnimation(() => bootMenu());
+
+// Expose global functions
+window.showSingleplayerSlots = showSingleplayerSlots;
+window.showMultiplayerMenu = showMultiplayerMenu;
+window.menuNewGame = menuNewGame;
+window.menuLoadGame = menuLoadGame;
+window.showModeSelect = showModeSelect;
+window.mpQuickMatch = mpQuickMatch;
+window.mpShowCreate = mpShowCreate;
+window.mpShowJoin = mpShowJoin;
+window.mpCreateRoom = mpCreateRoom;
+window.mpJoinRoom = mpJoinRoom;
+window.mpHostStart = mpHostStart;
+window.mpLeaveRoom = mpLeaveRoom;
+window.mpResultsNext = mpResultsNext;
+window.runRoll = runRoll;
+window.enterShop = enterShop;
+window.switchTab = switchTab;
+window.rerollShop = rerollShop;
+window.saveCurrentGame = saveCurrentGame;
+window.startNextRound = startNextRound;
+window.goToMenu = goToMenu;
+window.sellJoker = sellJoker;
+
+// RAINBOW CHEAT CODE
+let keyBuffer = '';
+
+function rainbowDice() {
+  const materialKeys = Object.keys(MATERIALS).filter(m => m !== 'stone');
+  
+  g.dice.forEach((die, idx) => {
+    if (!die.blank) {
+      // Random material except stone
+      die.material = materialKeys[Math.floor(Math.random() * materialKeys.length)];
+      
+      // Update the die element in the DOM
+      const dieEls = document.querySelectorAll('.die');
+      if (idx < dieEls.length) {
+        const dieEl = dieEls[idx];
+        // Remove old material classes
+        Object.keys(MATERIALS).forEach(m => {
+          dieEl.classList.remove(`mat-${m}`);
+        });
+        // Add new material class
+        dieEl.classList.add(`mat-${die.material}`);
+      }
+    }
+  });
+  
+  notify('RAINBOW EFFECT ACTIVATED', 'gold');
+  shake('lg');
+}
+
+// GODMODE CHEAT CODE
+function activateGodMode() {
+  // 1. Max upgrades
+  g.baseChips    += 2000;
+  g.baseMult     += 100.0;
+  g.maxRerolls    = 10;
+  g.rerolls       = 10;
+  g.bank         += 999;
+  g.hasInterest   = true;
+  g.hasInterestPrime = true;
+  g.startingChips += 50;
+  g.glassShatterProof = true;
+
+  // 2. Level up all hands to max
+  Object.keys(g.handLevels).forEach(k => { g.handLevels[k] = 5; });
+
+  // 3. Clear existing dice and add 20 of the best dice, pre-rolled to 6
+  g.dice = [];
+  const godDice = [
+    'diamond','diamond','emerald','emerald','plutonium',
+    'plutonium','obsidian','obsidian','crystal','crystal',
+    'ruby','ruby','sapphire','sapphire','steel',
+    'steel','gold','gold','fire','void',
+    'diamond','diamond','emerald','emerald','plutonium',
+    'plutonium','obsidian','obsidian','crystal','crystal',
+    'ruby','ruby','sapphire','sapphire','steel',
+    'steel','gold','gold','fire','void'
+  ];
+  godDice.forEach(mat => {
+    const d = makeDie([1,2,3,4,5,6], mat);
+    d.v = 6; // pre-roll to 6 so they're visible immediately
+    g.dice.push(d);
+  });
+
+  // 4. Mark first roll done so dice render with values
+  g.firstRollDone = true;
+  document.getElementById('cash-btn').disabled = false;
+  document.getElementById('roll-btn').disabled = false;
+  document.getElementById('rerolls-ui').innerText = g.rerolls;
+
+  // 5. Fill joker slots with the 5 best legendary jokers
+  g.jokers = [
+    { id: 'HEXDUPER',     name: 'HEXDUPER',      desc: 'Dupe 6s on score',       rarity: 'legendary', cost: 18 },
+    { id: 'MIRRORDICE',   name: 'MIRRORDICE.SYS', desc: '3.2M all same',         rarity: 'legendary', cost: 20 },
+    { id: 'GODMODE',      name: 'GODMODE.EXE',    desc: 'M×roundScore×0.08',     rarity: 'legendary', cost: 25 },
+    { id: 'CHAINREACTOR', name: 'CHAIN.REACTOR',  desc: 'x1.15M per pair stack', rarity: 'legendary', cost: 17 },
+    { id: 'ALLIN',        name: 'ALL-IN.EXE',     desc: 'x1.8M on quads',        rarity: 'legendary', cost: 18 }
+  ];
+
+  // 6. Rebuild board and UI
+  initBoard();
+  calculateScore();
+  updateUI();
+  renderJokers();
+
+  // 7. Visual fanfare
+  shakeXl();
+  setTimeout(() => burstDiceSequence('dupe', 20, 60), 100);
+  notify('⚡ GODMODE ACTIVATED ⚡', 'gold');
+  setTimeout(() => notify('20 ELITE DICE + 5 JOKERS + MAX UPGRADES', 'gold'), 600);
+}
+
+// Keyboard listener for rainbow cheat
+document.addEventListener('keydown', (e) => {
+  // Only during active gameplay (when play screen is visible)
+  const playScreen = document.getElementById('screen-play');
+  if (playScreen && !playScreen.classList.contains('hidden')) {
+    keyBuffer += e.key.toLowerCase();
+    
+    // Keep buffer to last 7 characters (length of "rainbow")
+    if (keyBuffer.length > 7) {
+      keyBuffer = keyBuffer.slice(-7);
+    }
+    
+    // Check if rainbow was typed
+    if (keyBuffer.includes('rainbow')) {
+      rainbowDice();
+      keyBuffer = ''; // Clear buffer
+    }
+    // Check if "godmode" was typed
+    if (keyBuffer.includes('godmode')) {
+      activateGodMode();
+      keyBuffer = ''; // Clear buffer
+    }
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,112 @@
+{
+  stone: { name: 'STONE', label: 'STN', desc: 'Standard die. No special effect.', color: '#39ff14' },
+  gold: { name: 'GOLD', label: 'GLD', desc: '+3 chips flat whenever this die is rolled.', color: '#ffd700' },
+  fire: { name: 'FIRE', label: 'FIR', desc: '+1.2 Mult if this die rolls its maximum face.', color: '#ff6a00' },
+  cursed: { name: 'CURSED', label: 'CRS', desc: '+6 chips if this die rolls a 1.', color: '#d080ff' },
+  glass: { name: 'GLASS', label: 'GLS', desc: 'x2 score if not rerolled this round. Shatters if rerolled.', color: '#c8f0ff' },
+  steel: { name: 'STEEL', label: 'STL', desc: '+1.2 Mult for each steel die you hold.', color: '#aabbcc' },
+  bronze: { name: 'BRONZE', label: 'BRZ', desc: 'Acts as a wild — counts as any value for hand detection.', color: '#e09040' },
+  crystal: { name: 'CRYSTAL', label: 'CRY', desc: 'Its pip value counts twice toward chips.', color: '#ff99ff' },
+  obsidian: { name: 'OBSIDIAN', label: 'OBS', desc: '+0.25 Mult per die in your pool (scales with pool size).', color: '#ff6633' },
+  wooden: { name: 'WOODEN', label: 'WOD', desc: 'Gains +1 to max face permanently each round.', color: '#c8854a' },
+  silver: { name: 'SILVER', label: 'SLV', desc: 'Gains +1 chip per round. High consistency.', color: '#e8e8e8' },
+  emerald: { name: 'EMERALD', label: 'EMR', desc: '+1.3x multiplier. Most powerful material.', color: '#00ff88' },
+  ruby: { name: 'RUBY', label: 'RBY', desc: 'Gains +2 chips for each other ruby die held.', color: '#ff1744' },
+  sapphire: { name: 'SAPPHIRE', label: 'SAP', desc: '+2 chips per die showing same value as this one.', color: '#0080ff' },
+  diamond: { name: 'DIAMOND', label: 'DIA', desc: '+4 Mult if hand has 5-of-a-kind.', color: '#ffffff' },
+  plutonium: { name: 'PLUTONIUM', label: 'PLU', desc: 'Starts glowing. +0.15x Mult per other plutonium die.', color: '#88ff00' },
+  void: { name: 'VOID', label: 'VOD', desc: 'Gains value equal to reroll count each round.', color: '#4a0080' },
+  titanium: { name: 'TITANIUM', label: 'TIT', desc: '+1.1 Mult per hand level. Synergizes with upgrades.', color: '#cccccc' },
+};
+
+function initGame() {
+  g.dice = [
+    makeDie([1, 2, 3, 4, 5, 6], 'stone'),
+    makeDie([1, 2, 3, 4, 5, 6], 'stone'),
+    makeDie([1, 2, 3, 4, 5, 6], 'stone'),
+    makeDie([1, 2, 3, 4, 5, 6], 'stone'),
+    makeDie([1, 2, 3, 4, 5, 6], 'stone'),
+  ];
+  g.target = getQuota(g.ante, g.round);
+  updateUI(); initBoard();
+  buildAntePips();
+}
+
+function initBoard() {
+  const box = document.getElementById('dice-box');
+  box.innerHTML = '';
+  g.dice.forEach((d, i) => {
+    const div = document.createElement('div');
+    const mat = d.material || 'stone';
+    const matDef = MATERIALS[mat] || MATERIALS.stone;
+    const isBlank = d.v === null;
+    const isShattered = d.shattered;
+    div.className = [
+      'die',
+      isBlank ? 'blank' : '',
+      d.held ? 'held' : '',
+      `mat-${mat}`,
+      isShattered ? 'shattered' : '',
+    ].filter(Boolean).join(' ');
+    div.title = `${matDef.name}: ${matDef.desc}`;
+    const sideRange = d.sides[0] + '–' + d.sides[d.sides.length - 1];
+    div.innerHTML = `
+      <span class="die-val">${isBlank ? '' : d.v}</span>
+      <span class="die-label">${matDef.label} · ${sideRange}</span>
+    `;
+    div.onclick = () => {
+      if (isShattered) return;
+      if (g.firstRollDone && d.v !== null) {
+        d.held = !d.held;
+        initBoard();
+        calculateScore();
+      }
+    };
+    box.appendChild(div);
+  });
+  calculateScore();
+  updateCons();
+}
+
+function runRoll(free = false) {
+  if (g.rerolls <= 0 && g.firstRollDone && !free) return;
+  if (!g.firstRollDone) {
+    g.firstRollDone = true;
+    document.getElementById('cash-btn').disabled = false;
+  } else if (!free) {
+    g.rerolls--;
+    g.glassRerolled = true;
+  }
+
+  const box = document.getElementById('dice-box');
+  const divs = box.querySelectorAll('.die');
+
+  g.dice.forEach((d, i) => {
+    if (!d.held) {
+      if (d.material === 'glass' && g.firstRollDone && !free && !g.glassShatterProof) {
+        d.shattered = true;
+        d.v = null;
+        notify('GLASS DIE SHATTERED!', 'bad');
+        return;
+      }
+      d.v = d.sides[Math.floor(Math.random() * d.sides.length)];
+      divs[i]?.classList.add('rolling');
+      setTimeout(() => divs[i]?.classList.remove('rolling'), 450);
+    }
+  });
+
+  triggerJokerEvent('onRoll');
+  shake('sm');
+  document.getElementById('rerolls-ui').innerText = g.rerolls;
+  if (g.rerolls <= 0) document.getElementById('roll-btn').disabled = true;
+  setTimeout(() => { initBoard(); }, 80);
+}
+
+function getHandInfo() {
+  const bronzeDice = g.dice.filter(d => d.material === 'bronze' && d.v !== null && !d.shattered);
+  const normalDice = g.dice.filter(d => d.material !== 'bronze' && d.v !== null && !d.shattered);
+  const vals = normalDice.map(d => d.v).sort((a, b) => a - b);
+  const wildCount = bronzeDice.length;
+  if (!vals.length && !wildCount) return { key: 'HIGH_CARD', handName: '–', chips: 0, mult: 0, vals: [] };
+  let counts = {};
+  vals.forEach(v =

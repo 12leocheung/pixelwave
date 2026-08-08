@@ -1,0 +1,76 @@
+SHOP_CATALOG.filter(item => item.tab === tab);
+  const shuffled = [...all].sort(() => 0.5 - Math.random());
+  const count = tab === 'jokers' ? 4 : tab === 'upgrades' ? 3 : tab === 'dice' ? 4 : 3;
+  return shuffled.slice(0, count).map(item => ({ ...item, sold: false }));
+}
+
+function renderShopContent() {
+  genShopForTab(currentShopTab);
+  const items = currentShopItems[currentShopTab];
+  const container = document.getElementById('shop-content');
+  container.innerHTML = '';
+  const title = document.createElement('div');
+  title.className = 'shop-section-title';
+  const labels = { jokers: 'PASSIVE JOKERS', consumables: 'CONSUMABLE ITEMS', upgrades: 'PERMANENT UPGRADES', dice: 'DICE MODIFICATIONS' };
+  title.innerText = labels[currentShopTab] || currentShopTab;
+  container.appendChild(title);
+  const grid = document.createElement('div');
+  grid.className = 'shop-grid';
+  items.forEach((item) => {
+    const card = document.createElement('div');
+    const rarityClass = `sc-${item.rarity}`;
+    const cantAfford = !item.sold && g.bank < item.cost;
+    card.className = ['shop-card', rarityClass, item.sold ? 'sold' : '', cantAfford ? 'cant-afford' : ''].filter(Boolean).join(' ');
+    card.innerHTML = `
+      <span class="stype">${item.tab.toUpperCase()} · ${item.rarity.toUpperCase()}</span>
+      <div class="sname">${item.name}</div>
+      <div class="sdesc">${item.desc}</div>
+      <div class="sprice">$${item.cost}</div>
+      <div class="seffect">${item.effect || ''}</div>
+    `;
+    if (!item.sold) {
+      card.onclick = () => {
+        if (g.bank < item.cost) { notify('INSUFFICIENT CREDITS', 'bad'); return; }
+        if (item.tab === 'jokers' && g.jokers.length >= 5) { notify('JOKER SLOTS FULL (5 MAX)', 'bad'); return; }
+        if (item.tab === 'consumables' && !addConsumable(item.id)) return;
+        g.bank -= item.cost;
+        item.sold = true;
+        item.f();
+        document.getElementById('shop-bank-ui').innerText = g.bank;
+        updateUI();
+        flashPurchase(item);
+        renderShopContent();
+        shake('sm');
+      };
+    }
+    grid.appendChild(card);
+  });
+  container.appendChild(grid);
+}
+
+function rerollShop() {
+  const cost = g.shopRerollCost;
+  if (g.bank < cost) { notify('INSUFFICIENT CREDITS', 'bad'); return; }
+  g.bank -= cost;
+  shopRerollCount++;
+  g.shopRerollCost = 5 + shopRerollCount * 3;
+  currentShopItems[currentShopTab] = generateShopItems(currentShopTab);
+  document.getElementById('shop-bank-ui').innerText = g.bank;
+  document.getElementById('reroll-cost-ui').innerText = g.shopRerollCost;
+  updateUI();
+  renderShopContent();
+  shake('sm');
+}
+
+// SHOP CATALOG (full as original)
+const SHOP_CATALOG = [
+  // JOKERS
+  { tab: 'jokers', rarity: 'common', name: 'SNIPER.MOD', id: 'SNIPER', cost: 4, desc: 'Gain +1.2 Mult whenever a 6 appears in your roll.', effect: '+1.2M on 6', f: () => addJoker({ cost: 4, id: 'SNIPER', name: 'SNIPER.MOD', desc: '+1.2M on 6', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'GAMBLER.MOD', id: 'GAMBLER', cost: 4, desc: 'Gain +6 Chips whenever a 1 appears.', effect: '+6C on 1', f: () => addJoker({ cost: 4, id: 'GAMBLER', name: 'GAMBLER.MOD', desc: '+6C on 1', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'HEDGER.LOG', id: 'HEDGER', cost: 5, desc: 'Gain +1 Chip for each die in your roll.', effect: '+1C per die', f: () => addJoker({ cost: 5, id: 'HEDGER', name: 'HEDGER.LOG', desc: '+1C/die', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'OVERCLOCK.EXE', id: 'OVERCLOCK', cost: 6, desc: 'Always gain +0.6 Mult regardless of hand.', effect: '+0.6M always', f: () => addJoker({ cost: 6, id: 'OVERCLOCK', name: 'OVERCLOCK.EXE', desc: '+0.6M always', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'ENTROPY.DLL', id: 'ENTROPY', cost: 5, desc: 'Gain 0–3 random bonus Chips each score. Glitches on roll.', effect: '0-3C chaos', f: () => addJoker({ cost: 5, id: 'ENTROPY', name: 'ENTROPY.DLL', desc: 'chaos chips', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'SYMMETRY.SYS', id: 'SYMMETRY', cost: 5, desc: 'Gain +5 Chips if all dice values are in ascending order.', effect: '+5C if sorted', f: () => addJoker({ cost: 5, id: 'SYMMETRY', name: 'SYMMETRY.SYS', desc: '+5C sorted', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'LOWBALL.EXE', id: 'LOWBALL', cost: 4, desc: 'Gain +1 Chip for every die showing a value of 3 or less.', effect: '+1C per low die', f: () => addJoker({ cost: 4, id: 'LOWBALL', name: 'LOWBALL.EXE', desc: '+1C low dice', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'COUNTER.LOG', id: 'COUNTER', cost: 5, desc: 'Gain +0.8 Mult for each unique die value showing.', effect: '+0.8M per unique val', f: () => addJoker({ cost: 5, id: 'COUNTER', name: 'COUNTER.LOG', desc: '+0.8M unique vals', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'ECHO.MOD', id: 'ECHO', cost: 5, desc: 'Gain +2 Chips for each pair of matching

@@ -1,0 +1,103 @@
+DICE ITEMS IN SHOP_CATALOG
+============================================================
+
+Tab: jokers, Name: CLONE.DIE
+{ tab: 'jokers', rarity: 'common', name: 'SNIPER.MOD', id: 'SNIPER', cost: 4, desc: 'Gain +1.2 Mult whenever a 6 appears in your roll.', effect: '+1.2M on 6', f: () => addJoker({ cost: 4, id: 'SNIPER', name: 'SNIPER.MOD', desc: '+1.2M on 6', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'GAMBLER.MOD', id: 'GAMBLER', cost: 4, desc: 'Gain +6 Chips whenever a 1 appears.', effect: '+6C on 1', f: () => addJoker({ cost: 4, id: 'GAMBLER', name: 'GAMBLER.MOD', desc: '+6C on 1', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'HEDGER.LOG', id: 'HEDGER', cost: 5, desc: 'Gain +1 Chip for each die in your roll.', effect: '+1C per die', f: () => addJoker({ cost: 5, id: 'HEDGER', name: 'HEDGER.LOG', desc: '+1C/die', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'OVERCLOCK.EXE', id: 'OVERCLOCK', cost: 6, desc: 'Always gain +0.6 Mult regardless of hand.', effect: '+0.6M always', f: () => addJoker({ cost: 6, id: 'OVERCLOCK', name: 'OVERCLOCK.EXE', desc: '+0.6M always', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'ENTROPY.DLL', id: 'ENTROPY', cost: 5, desc: 'Gain 0–3 random bonus Chips each score. Glitches on roll.', effect: '0-3C chaos', f: () => addJoker({ cost: 5, id: 'ENTROPY', name: 'ENTROPY.DLL', desc: 'chaos chips', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'SYMMETRY.SYS', id: 'SYMMETRY', cost: 5, desc: 'Gain +5 Chips if all dice values are in ascending order.', effect: '+5C if sorted', f: () => addJoker({ cost: 5, id: 'SYMMETRY', name: 'SYMMETRY.SYS', desc: '+5C sorted', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'LOWBALL.EXE', id: 'LOWBALL', cost: 4, desc: 'Gain +1 Chip for every die showing a value of 3 or less.', effect: '+1C per low die', f: () => addJoker({ cost: 4, id: 'LOWBALL', name: 'LOWBALL.EXE', desc: '+1C low dice', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'COUNTER.LOG', id: 'COUNTER', cost: 5, desc: 'Gain +0.8 Mult for each unique die value showing.', effect: '+0.8M per unique val', f: () => addJoker({ cost: 5, id: 'COUNTER', name: 'COUNTER.LOG', desc: '+0.8M unique vals', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'common', name: 'ECHO.MOD', id: 'ECHO', cost: 5, desc: 'Gain +2 Chips for each pair of matching dice.', effect: '+2C per pair', f: () => addJoker({ cost: 5, id: 'ECHO', name: 'ECHO.MOD', desc: '+2C per match', rarity: 'common' }) },
+  { tab: 'jokers', rarity: 'uncommon', name: 'DOUBLER.EXE', id: 'DOUBLER', cost: 7, desc: 'Pairs and Two Pair give +1.6 Mult.', effect: '+1.6M on pairs', f: () => addJoker({ cost: 7, id: 'DOUBLER', name: 'DOUBLER.EXE', desc: '+1.6M pairs', rarity: 'uncommon' }) },
+  { tab: 'jokers', rarity: 'uncommon', name: 'TRIPWIRE.MOD', id: 'TRIPWIRE', cost: 8, desc: 'Three of a Kind and Full House give +2.0 Mult.', effect: '+2.0M on trips', f: () => addJoker({ cost: 8, id: 'TRIPWIRE', name: 'TRIPWIRE.MOD', desc: '+2.0M trips', rarity: 'uncommon' }) },
+  { tab: 'jokers', rarity: 'uncommon', name: 'STRAIGHTER.EXE', id: 'STRAIGHTER', cost: 8, desc: 'Straights grant +10 bonus Chips.', effect: '+10C on straights', f: () => addJoker({ cost: 8, id: 'STRAIGHTER', name: 'STRAIGHTER.EXE', desc: '+10C straight', rarity: 'uncommon' }) },
+  { tab: 'jokers', rarity: 'uncommon', name: 'HIGHROLLER.DLL', id: 'HIGHROLLER', cost: 9, desc: 'Gain Chips equal to the highest die value.', effect: '+max val chips', f: () => addJoker({ cost: 9, id: 'HIGHROLLER', name: 'HIGHROLLER.DLL', desc: '+max C', rarity: 'uncommon' }) },
+  { tab: 'jokers', rarity: 'uncommon', name: 'BANKER.EXE', id: 'BANKER', cost: 10, desc: 'Gain bonus Chips equal to 16% of your credits.', effect: 'Chips = bank/6', f: () => addJoker({ cost: 10, id: 'BANKER', name: 'BANKER.EXE', desc: 'bank% chips', rarity: 'uncommon' }) },
+  { tab: 'jokers', rarity: 'uncommon', name: 'DEBUGGER.MOD', id: 'DEBUGGER', cost: 8, desc: 'Gain +0.8 Mult if you still have all rerolls when scoring.', effect: '+0.8M full rerolls', f: () => addJoker({ cost: 8, id: 'DEBUGGER', name: 'DEBUGGER.MOD', desc: '+0.8M no rerolls', rarity: 'uncommon' }) },
+  { tab: 'jokers', rarity: 'uncommon', name: 'SCAVENGER.EXE', id: 'SCAVENGER', cost: 7, desc: 'Gain +2 Chips for each die NOT held when scoring.', effect: '+2C per free die', f: () => addJoker({ cost: 7, id: 'SCAVENGER', name: 'SCAVENGER.EXE', desc: '+2C unheld dice', rarity: 'uncommon' }) },
+  { tab: 'jokers', rarity: 'uncommon', name: 'ACCUMULATOR.DLL', id: 'ACCUMULATOR', cost: 9, desc: 'Gain +0.4 Mult for each reroll you used this round.', effect: '+0.4M per reroll', f: () => addJoker({ cost: 9, id: 'ACCUMULATOR', name: 'ACCUMULATOR.DLL', desc: '+0.4M/reroll', rarity: 'uncommon' }) },
+  { tab: 'jokers', rarity: 'uncommon', name: 'TWINPEAK.MOD', id: 'TWINPEAK', cost: 8, desc: 'If your highest and lowest dice differ by 1 or less, gain +2.4 Mult.', effect: '+2.4M tight spread', f: () => addJoker({ cost: 8, id: 'TWINPEAK', name: 'TWINPEAK.MOD', desc: '+2.4M tight spread', rarity: 'uncommon' }) },
+  { tab: 'jokers', rarity: 'rare', name: 'VALIDATOR.EXE', id: 'VALIDATOR', cost: 12, desc: 'Gain +2.0 Mult if ALL dice show even numbers.', effect: '+2.0M all even', f: () => addJoker({ cost: 12, id: 'VALIDATOR', name: 'VALIDATOR.EXE', desc: '+2.0M all even', rarity: 'rare' }) },
+  { tab: 'jokers', rarity: 'rare', name: 'PRIME.CORE', id: 'PRIME', cost: 13, desc: 'Gain +1.2M and +8C if all dice are prime numbers.', effect: '+1.2M+8C all prime', f: () => addJoker({ cost: 13, id: 'PRIME', name: 'PRIME.CORE', desc: 'prime bonus', rarity: 'rare' }) },
+  { tab: 'jokers', rarity: 'rare', name: 'OVERKILL.MOD', id: 'OVERKILL', cost: 12, desc: 'Gain +1.2 Mult once round score exceeds 50% of quota.', effect: '+1.2M at halfway', f: () => addJoker({ cost: 12, id: 'OVERKILL', name: 'OVERKILL.MOD', desc: '+1.2M halfway', rarity: 'rare' }) },
+  { tab: 'jokers', rarity: 'rare', name: 'FIREWALL.DLL', id: 'FIREWALL', cost: 11, desc: 'Gain +0.25 Mult for each joker you own.', effect: '+0.25M per joker', f: () => addJoker({ cost: 11, id: 'FIREWALL', name: 'FIREWALL.DLL', desc: '+0.25M/joker', rarity: 'rare' }) },
+  { tab: 'jokers', rarity: 'rare', name: 'PALINDROME.SYS', id: 'PALINDROME', cost: 11, desc: 'Gain +3 Chips if dice values read same forwards & backwards.', effect: '+3C palindrome', f: () => addJoker({ cost: 11, id: 'PALINDROME', name: 'PALINDROME.SYS', desc: '+3C palindrome', rarity: 'rare' }) },
+  { tab: 'jokers', rarity: 'rare', name: 'MATERIALIZER.EXE', id: 'MATERIALIZER', cost: 13, desc: 'Gain +1 Chip for each distinct die material in your pool.', effect: '+1C per material', f: () => addJoker({ cost: 13, id: 'MATERIALIZER', name: 'MATERIALIZER.EXE', desc: '+1C/material', rarity: 'rare' }) },
+  { tab: 'jokers', rarity: 'rare', name: 'THRESHOLD.MOD', id: 'THRESHOLD', cost: 12, desc: 'Gain +1.6 Mult if your score formula chips exceed 30.', effect: '+1.6M if chips>30', f: () => addJoker({ cost: 12, id: 'THRESHOLD', name: 'THRESHOLD.MOD', desc: '+1.6M chips>30', rarity: 'rare' }) },
+  { tab: 'jokers', rarity: 'legendary', name: 'ALL-IN.EXE', id: 'ALLIN', cost: 18, desc: 'MULTIPLY your Mult by 1.8 on Four of a Kind or better.', effect: 'x1.8M on quads+', f: () => addJoker({ cost: 18, id: 'ALLIN', name: 'ALL-IN.EXE', desc: 'x1.8M quads+', rarity: 'legendary' }) },
+  { tab: 'jokers', rarity: 'legendary', name: 'MIRRORDICE.SYS', id: 'MIRRORDICE', cost: 20, desc: 'Gain +3.2 Mult if all dice show the same value.', effect: '+3.2M all matching', f: () => addJoker({ cost: 20, id: 'MIRRORDICE', name: 'MIRRORDICE.SYS', desc: '+3.2M all same', rarity: 'legendary' }) },
+  { tab: 'jokers', rarity: 'legendary', name: 'GODMODE.EXE', id: 'GODMODE', cost: 25, desc: 'Gain +0.08 Mult for every point of score already banked this ante.', effect: '+M=roundScore*0.08', f: () => addJoker({ cost: 25, id: 'GODMODE', name: 'GODMODE.EXE', desc: '+M=roundScore*0.08', rarity: 'legendary' }) },
+  // CONSUMABLES
+  { tab: 'consumables', rarity: 'common', name: 'DEBUG.EXE', id: 'DEBUG_EXE', cost: 3, desc: 'Restore all rerolls instantly.', f: () => addConsumable('DEBUG_EXE') },
+  { tab: 'consumables', rarity: 'common', name: 'DICE_SWAP', id: 'DICE_SWAP', cost: 3, desc: 'Free reroll of all un-held dice.', f: () => addConsumable('DICE_SWAP') },
+  { tab: 'consumables', rarity: 'common', name: 'PATCH.FIX', id: 'PATCH_FIX', cost: 4, desc: '+20 bonus chips applied this round.', f: () => addConsumable('PATCH_FIX') },
+  { tab: 'consumables', rarity: 'common', name: 'DUPE_CHIP', id: 'DUPE_CHIP', cost: 3, desc: '+10 bonus chips applied immediately.', f: () => addConsumable('DUPE_CHIP') },
+  { tab: 'consumables', rarity: 'uncommon', name: 'BOOST.MOD', id: 'BOOST_MOD', cost: 5, desc: '+0.5x base mult this round.', f: () => addConsumable('BOOST_MOD') },
+  { tab: 'consumables', rarity: 'uncommon', name: 'CREDIT_HACK', id: 'CREDIT_HACK', cost: 3, desc: 'Steal $8 credits from the system.', f: () => addConsumable('CREDIT_HACK') },
+  { tab: 'consumables', rarity: 'uncommon', name: 'REORDER.SYS', id: 'REORDER_SYS', cost: 5, desc: 'Sort all dice values in ascending order.', f: () => addConsumable('REORDER_SYS') },
+  { tab: 'consumables', rarity: 'uncommon', name: 'MAGNET.EXE', id: 'MAGNET_EXE', cost: 5, desc: 'Set all dice to their maximum face value.', f: () => addConsumable('MAGNET_EXE') },
+  { tab: 'consumables', rarity: 'uncommon', name: 'BURN.ALL', id: 'BURN_ALL', cost: 5, desc: 'Convert all dice to fire material.', f: () => addConsumable('BURN_ALL') },
+  { tab: 'consumables', rarity: 'uncommon', name: 'FORTIFY.EXE', id: 'FORTIFY', cost: 5, desc: 'Convert all dice to steel material.', f: () => addConsumable('FORTIFY') },
+  { tab: 'consumables', rarity: 'uncommon', name: 'VOID.TOUCH', id: 'VOID_TOUCH', cost: 4, desc: 'Gain chips equal to 5x your reroll count.', f: () => addConsumable('VOID_TOUCH') },
+  { tab: 'consumables', rarity: 'rare', name: 'LEVELUP.EXE', id: 'LVLUP_HAND', cost: 8, desc: 'Level up the current best hand type permanently.', f: () => addConsumable('LVLUP_HAND') },
+  { tab: 'consumables', rarity: 'rare', name: 'CLONE.DIE', id: 'CLONE_DIE', cost: 7, desc: 'Duplicate one of your dice (adds copy to pool).', f: () => addConsumable('CLONE_DIE') }
+
+Tab: consumables, Name: STONE DIE (D6)
+{ tab: 'consumables', rarity: 'rare', name: 'TRANSMUTE', id: 'TRANSMUTE', cost: 6, desc: 'Change a random die to a random material.', f: () => addConsumable('TRANSMUTE') },
+  { tab: 'consumables', rarity: 'rare', name: 'PURIFY.SYS', id: 'PURIFY', cost: 6, desc: 'Gain +50 chips and +0.2x multiplier.', f: () => addConsumable('PURIFY') },
+  { tab: 'consumables', rarity: 'rare', name: 'CRYSTALIZE.MOD', id: 'CRYSTALLIZE', cost: 7, desc: 'Turn all your dice to crystal material.', f: () => addConsumable('CRYSTALLIZE') },
+  { tab: 'consumables', rarity: 'legendary', name: 'JACKPOT.EXE', id: 'JACKPOT_EXE', cost: 12, desc: 'Set ALL dice to 6 instantly.', f: () => addConsumable('JACKPOT_EXE') },
+  { tab: 'consumables', rarity: 'legendary', name: 'OVERLOAD.EXE', id: 'OVERLOAD', cost: 10, desc: 'Multiply base multiplier by 1.5x instantly.', f: () => addConsumable('OVERLOAD') },
+  // UPGRADES
+  { tab: 'upgrades', rarity: 'common', name: 'MULT +0.3', cost: 6, desc: 'Permanently increases base multiplier by 0.3.', effect: 'Base Mult +0.3', f: () => { g.baseMult += 0.3; notify('BASE MULT +0.3', 'good'); } },
+  { tab: 'upgrades', rarity: 'common', name: 'MULT +0.5', cost: 10, desc: 'Permanently increases base multiplier by 0.5.', effect: 'Base Mult +0.5', f: () => { g.baseMult += 0.5; notify('BASE MULT +0.5', 'good'); } },
+  { tab: 'upgrades', rarity: 'common', name: 'CHIPS +5', cost: 5, desc: 'Permanently increases base chips by 5.', effect: 'Base Chips +5', f: () => { g.baseChips += 5; notify('BASE CHIPS +5', 'good'); } },
+  { tab: 'upgrades', rarity: 'common', name: 'CHIPS +10', cost: 9, desc: 'Permanently increases base chips by 10.', effect: 'Base Chips +10', f: () => { g.baseChips += 10; notify('BASE CHIPS +10', 'good'); } },
+  { tab: 'upgrades', rarity: 'uncommon', name: 'REROLL+ UPGRADE', cost: 8, desc: 'Gain +1 max reroll per round permanently.', effect: 'Max Rerolls +1', f: () => { g.maxRerolls++; g.rerolls = g.maxRerolls; notify('MAX REROLLS +1', 'good'); } },
+  { tab: 'upgrades', rarity: 'uncommon', name: 'INTEREST.SYS', cost: 10, desc: 'At round start, earn $1 per $5 in your bank.', effect: '+20% interest/round', f: () => { g.hasInterest = true; notify('INTEREST ENABLED', 'gold'); } },
+  { tab: 'upgrades', rarity: 'uncommon', name: 'STARTING BONUS', cost: 9, desc: 'Begin each round with +8 bonus chips pre-loaded.', effect: '+8 chips on start', f: () => { g.startingChips = (g.startingChips || 0) + 8; notify('+8 STARTING CHIPS', 'good'); } },
+  { tab: 'upgrades', rarity: 'rare', name: 'LVLUP PAIR', cost: 12, desc: 'Level up PAIR hand.', effect: 'Pair LV+1', f: () => { g.handLevels['PAIR'] = (g.handLevels['PAIR'] || 1) + 1; notify('PAIR LV UP!', 'gold'); } },
+  { tab: 'upgrades', rarity: 'rare', name: 'LVLUP THREE OAK', cost: 13, desc: 'Level up THREE OF A KIND hand.', effect: 'Three OAK LV+1', f: () => { g.handLevels['THREE_OF_A_KIND'] = (g.handLevels['THREE_OF_A_KIND'] || 1) + 1; notify('3OAK LV UP!', 'gold'); } },
+  { tab: 'upgrades', rarity: 'rare', name: 'LVLUP STRAIGHT', cost: 14, desc: 'Level up STRAIGHT hand.', effect: 'Straight LV+1', f: () => { g.handLevels['STRAIGHT'] = (g.handLevels['STRAIGHT'] || 1) + 1; notify('STRAIGHT LV UP!', 'gold'); } },
+  { tab: 'upgrades', rarity: 'rare', name: 'LVLUP FULL HOUSE', cost: 14, desc: 'Level up FULL HOUSE hand.', effect: 'Full House LV+1', f: () => { g.handLevels['FULL_HOUSE'] = (g.handLevels['FULL_HOUSE'] || 1) + 1; notify('FULL HOUSE LV UP!', 'gold'); } },
+  { tab: 'upgrades', rarity: 'rare', name: 'LVLUP FOUR OAK', cost: 16, desc: 'Level up FOUR OF A KIND hand.', effect: 'Four OAK LV+1', f: () => { g.handLevels['FOUR_OF_A_KIND'] = (g.handLevels['FOUR_OF_A_KIND'] || 1) + 1; notify('4OAK LV UP!', 'gold'); } },
+  { tab: 'upgrades', rarity: 'legendary', name: 'INTEREST PRIME', cost: 22, desc: 'At round start, earn $1 per $3 in your bank.', effect: '+33% interest/round', f: () => { g.hasInterestPrime = true; notify('PRIME INTEREST ENABLED', 'gold'); } },
+  // DICE MODS
+  { tab: 'dice', rarity: 'common', name: 'STONE DIE (D6)', cost: 5, desc: 'Add a standard stone D6.', effect: '+1 D6 · STONE', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'stone')); initBoard(); notify('+1 STONE D6', 'info'); }
+
+Tab: dice, Name: STONE DIE (D8)
+{ tab: 'dice', rarity: 'common', name: 'STONE DIE (D8)', cost: 8, desc: 'Add a stone D8.', effect: '+1 D8 · STONE', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6, 7, 8], 'stone')); initBoard(); notify('+1 STONE D8', 'info'); }
+
+Tab: dice, Name: STONE DIE (D10)
+{ tab: 'dice', rarity: 'common', name: 'STONE DIE (D10)', cost: 11, desc: 'Add a stone D10.', effect: '+1 D10 · STONE', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 'stone')); initBoard(); notify('+1 STONE D10', 'info'); }
+
+Tab: dice, Name: GOLD DIE
+{ tab: 'dice', rarity: 'uncommon', name: 'GOLD DIE', cost: 10, desc: 'Add a Gold D6. Gives +3 flat chips each roll.', effect: '+3C always · GOLD', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'gold')); initBoard(); notify('+1 GOLD DIE', 'gold'); }
+
+Tab: dice, Name: FIRE DIE
+{ tab: 'dice', rarity: 'uncommon', name: 'FIRE DIE', cost: 10, desc: 'Add a Fire D6. Grants +1.2 Mult when max face is rolled.', effect: '+1.2M on max · FIRE', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'fire')); initBoard(); notify('+1 FIRE DIE', 'good'); }
+
+Tab: dice, Name: CURSED DIE
+{ tab: 'dice', rarity: 'uncommon', name: 'CURSED DIE', cost: 9, desc: 'Add a Cursed D6. Rolling 1 gives +6 chips.', effect: '+6C on 1 · CURSED', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'cursed')); initBoard(); notify('+1 CURSED DIE', 'info'); }
+
+Tab: dice, Name: WOODEN DIE
+{ tab: 'dice', rarity: 'uncommon', name: 'WOODEN DIE', cost: 8, desc: 'Add a Wooden D6. Gains +1 max face permanently each round.', effect: 'Grows · WOODEN', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'wooden')); initBoard(); notify('+1 WOODEN DIE', 'good'); }
+
+Tab: dice, Name: GLASS DIE
+{ tab: 'dice', rarity: 'rare', name: 'GLASS DIE', cost: 14, desc: 'Add a Glass D6. x2 score if never rerolled. SHATTERS if rerolled.', effect: 'x2 or shatter · GLASS', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'glass')); initBoard(); notify('+1 GLASS DIE', 'info'); }
+
+Tab: dice, Name: STEEL DIE
+{ tab: 'dice', rarity: 'rare', name: 'STEEL DIE', cost: 13, desc: 'Add a Steel D6. Each held steel die grants +1.2 Mult.', effect: '+1.2M held · STEEL', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'steel')); initBoard(); notify('+1 STEEL DIE', 'info'); }
+
+Tab: dice, Name: BRONZE DIE
+{ tab: 'dice', rarity: 'rare', name: 'BRONZE DIE', cost: 12, desc: 'Add a Bronze D6. Acts as a wild for hand detection.', effect: 'WILD · BRONZE', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'bronze')); initBoard(); notify('+1 BRONZE DIE', 'gold'); }
+
+Tab: dice, Name: CRYSTAL DIE
+{ tab: 'dice', rarity: 'rare', name: 'CRYSTAL DIE', cost: 15, desc: 'Add a Crystal D6. Its pip value is counted twice toward chips.', effect: 'x2 value · CRYSTAL', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'crystal')); initBoard(); notify('+1 CRYSTAL DIE', 'good'); }
+
+Tab: dice, Name: OBSIDIAN DIE
+{ tab: 'dice', rarity: 'legendary', name: 'OBSIDIAN DIE', cost: 18, desc: 'Add an Obsidian D6. Grants +0.25 Mult per die in your entire pool.', effect: '+0.25M/die · OBS', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'obsidian')); initBoard(); notify('+1 OBSIDIAN DIE', 'good'); }
+

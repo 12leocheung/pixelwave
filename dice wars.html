@@ -296,8 +296,8 @@
   /* BOARD */
   #game-board {
     display: grid;
-    grid-template-columns: repeat(16, 36px);
-    grid-template-rows: repeat(16, 36px);
+    grid-template-columns: repeat(18, 36px);
+    grid-template-rows: repeat(18, 36px);
     border: 3px solid var(--border-heavy);
     background: var(--no-mans);
     position: relative;
@@ -872,10 +872,11 @@
       <button class="action-btn" id="btn-collect" onclick="doCollect()">📦 Collect Resource <span class="ap-cost">1 AP</span></button>
       <button class="action-btn" id="btn-heal" onclick="doHeal()">💊 Heal in Hospital <span class="ap-cost">1 AP</span></button>
       <button class="action-btn" id="btn-craft" onclick="openCraftModal()">🔨 Craft <span class="ap-cost">1 AP</span></button>
-      <button class="action-btn" id="btn-new-soldier" onclick="doNewSoldier()">➕ New Soldier <span class="ap-cost">2 AP</span></button>
+      <button class="action-btn" id="btn-new-soldier" onclick="doNewSoldier()">➕ New Soldier <span class="ap-cost" id="new-soldier-ap-cost">2 AP</span></button>
       <button class="action-btn" id="btn-inventory" onclick="openItemUseModal()">🎒 Use Item <span class="ap-cost">1 AP</span></button>
       <button class="action-btn" id="btn-surrender" onclick="doSurrender()">🏳 Surrender (0 AP)</button>
       <button class="action-btn" id="btn-hostage" onclick="activateHostageMode()">⛓ Take Hostage <span class="ap-cost">1 AP</span></button>
+      <button class="action-btn" id="btn-trade" onclick="openTradeModal()">🤝 Trade <span class="ap-cost">1 AP</span></button>
     </div>
 
     <button id="btn-end-turn" onclick="endTurn()">END TURN ▶</button>
@@ -936,6 +937,39 @@
     <div class="modal-title">🎒 Use Item</div>
     <button class="modal-close" onclick="closeModal('modal-item-use')">×</button>
     <div id="item-use-list" class="recipe-list"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-trade">
+  <div class="modal-box" style="width:min(480px,95vw)">
+    <div class="modal-title">🤝 Propose a Trade</div>
+    <button class="modal-close" onclick="closeModal('modal-trade')">×</button>
+    <div class="lobby-section">
+      <h3>Trade With</h3>
+      <div id="trade-target-list" class="lobby-players"></div>
+    </div>
+    <div class="lobby-section">
+      <h3>You Give</h3>
+      <div class="res-grid" id="trade-give-resources"></div>
+      <div id="trade-give-items" style="margin-top:6px;"></div>
+    </div>
+    <div class="lobby-section">
+      <h3>You Want</h3>
+      <div class="res-grid" id="trade-want-resources"></div>
+      <div id="trade-want-items" style="margin-top:6px;"></div>
+    </div>
+    <button class="btn btn-primary" onclick="sendTradeOffer()">Send Offer (1 AP)</button>
+    <button class="btn btn-secondary" onclick="closeModal('modal-trade')">Cancel</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-trade-incoming">
+  <div class="modal-box">
+    <div class="modal-title">🤝 Trade Offer</div>
+    <button class="modal-close" onclick="closeModal('modal-trade-incoming')">×</button>
+    <p style="font-size:0.9rem;color:var(--ink);margin-bottom:10px;" id="trade-incoming-text"></p>
+    <button class="btn btn-primary" onclick="respondToTrade(true)">Accept</button>
+    <button class="btn btn-danger" onclick="respondToTrade(false)">Decline</button>
   </div>
 </div>
 
@@ -1098,9 +1132,9 @@ function rbSetTab(tab) {
 // =====================================================================
 
 const FACTIONS = {
-  red:   { name:'Fire',  color:'#c0392b', bg:'rgba(192,57,43,0.13)',  bonus:'attack+1' },
+  red:   { name:'Fire',  color:'#c0392b', bg:'rgba(192,57,43,0.13)',  bonus:'splash_adjacent' },
   blue:  { name:'Water', color:'#1a6b9a', bg:'rgba(26,107,154,0.13)', bonus:'heal+1' },
-  green: { name:'Earth', color:'#2d6a2d', bg:'rgba(45,106,45,0.13)',  bonus:'free_castle_craft' },
+  green: { name:'Earth', color:'#2d6a2d', bg:'rgba(45,106,45,0.13)',  bonus:'craft_0ap' },
   white: { name:'Air',   color:'#7a7a9a', bg:'rgba(122,122,154,0.13)',bonus:'move4' },
 };
 
@@ -1110,33 +1144,33 @@ const RES_EMOJI  = { wood:'🪵', metal:'⚙', chemicals:'🧪', herbs:'🌿', e
 
 const RECIPES = [
   // Weapons (Armoury)
-  { id:'sword',      name:'Sword',      isItem:false, dmg:2, range:1, cost:{wood:1,metal:2},                    room:'armoury', ability:'If this attack defeats an enemy, immediately deal 1 damage to an additional adjacent enemy.' },
-  { id:'bow',        name:'Bow',        isItem:false, dmg:1, range:5, cost:{wood:3,herbs:1},                    room:'armoury', ability:'If attacking an enemy at exactly maximum range (5), this attack deals +1 damage.' },
-  { id:'gun',        name:'Gun',        isItem:false, dmg:2, range:6, minRange:5, cost:{metal:3,chemicals:2,wood:1}, room:'armoury', ability:'Range 5–6 only. Cannot be dodged, blocked, or mitigated by any character abilities.' },
-  { id:'spear',      name:'Spear',      isItem:false, dmg:2, range:2, cost:{wood:3,metal:2},                    room:'armoury', ability:'Can attack two enemies at once if they are standing in a straight line within your range.' },
+  { id:'sword',      name:'Sword',      isItem:false, dmg:2, range:1, cost:{wood:1,metal:2},                    room:'armoury', ability:'If this defeats an enemy, immediately deal 1 damage to an additional adjacent enemy.' },
+  { id:'spear',      name:'Spear',      isItem:false, dmg:2, range:2, cost:{wood:3,metal:2},                    room:'armoury', ability:'Can attack two enemies at once if they are standing in a straight line within range.' },
+  { id:'bow',        name:'Bow',        isItem:false, dmg:1, range:6, cost:{wood:2,metal:1,herbs:1},           room:'armoury', ability:'If attacking an enemy at exactly max range (6 squares), this deals +1 damage.' },
+  { id:'gun',        name:'Gun',        isItem:false, dmg:2, range:6, cost:{metal:3,chemicals:2,wood:1},       room:'armoury', ability:'This weapon cannot be dodged, blocked, or mitigated by abilities.' },
   // Weapons (Lab)
-  { id:'grenade',    name:'Grenade',    isItem:false, dmg:2, range:4, cost:{metal:3,chemicals:2},               room:'lab',     ability:'Deals 2 damage to the target square, and 1 damage to all immediately adjacent squares (including teammates!).' },
-  { id:'equalizer',  name:'Equalizer',  isItem:false, dmg:0, range:3, cost:{metal:3,chemicals:2,energy:2,herbs:1}, room:'lab',  ability:'Compare face values. If the enemy has more health than you, reduce their health to match yours.' },
-  { id:'pusher',     name:'Pusher',     isItem:false, dmg:1, range:5, cost:{metal:3,chemicals:2,energy:2},      room:'lab',     ability:'Target is pushed 2 squares directly away from attacker. Cannot push through walls.' },
+  { id:'pusher',     name:'Pusher',     isItem:false, dmg:1, range:5, cost:{metal:1,chemicals:1,energy:1},      room:'lab',     ability:'Target is pushed 2 squares directly away from the attacker.' },
+  { id:'grenade',    name:'Grenade',    isItem:false, dmg:2, range:4, cost:{chemicals:2,metal:1},               room:'lab',     ability:'Deals 2 damage to target square, and 1 damage to all adjacent squares (including diagonals and teammates!).' },
+  { id:'equalizer',  name:'Equalizer',  isItem:false, dmg:0, range:3, cost:{metal:1,chemicals:1,energy:1,herbs:1}, room:'lab',  ability:'Compare face values. If the enemy has more health, reduce their health to match yours.' },
   // Items (Lab)
-  { id:'bandage',    name:'Bandage',    isItem:true, apCost:1, cost:{herbs:3},                           room:'lab', ability:'Heal 2 HP at any time.' },
-  { id:'smoke_grenade',name:'Smoke Grenade',isItem:true, apCost:0, cost:{chemicals:2,herbs:1,energy:1},  room:'lab', ability:'Play when targeted by an attack to dodge all damage. Instantly move to any free adjacent square.' },
-  { id:'stim_shot',  name:'Stim Shot',  isItem:true, apCost:0, cost:{chemicals:3,herbs:2,energy:1},      room:'lab', ability:'Gain an extra 2 AP this turn.' },
-  { id:'prox_mine',  name:'Prox. Mine', isItem:true, apCost:1, cost:{metal:3,chemicals:3},               room:'lab', ability:'Place on your square. If anyone enters within a 2-square radius, everyone in that radius takes 3 damage.' },
-  { id:'healing_mist',name:'Heal Mist', isItem:true, apCost:1, cost:{chemicals:3,herbs:2},               room:'lab', ability:'Place on your square. Heals anyone (friend or foe) 2 HP per turn. Lasts 3 turns.' },
-  { id:'flashbang',  name:'Flashbang',  isItem:true, apCost:1, cost:{chemicals:2,metal:1,energy:1},      room:'lab', ability:'Target a 3×3 area. Enemies caught cannot make ranged attacks (range > 2) on their next turn.' },
-  { id:'extractor',  name:'Extractor',  isItem:true, apCost:1, cost:{metal:2,energy:1},                  room:'lab', ability:'Place in an extraction zone to automatically collect that zone\'s resource once per turn. Has 1 HP — can be destroyed.' },
+  { id:'bandage',    name:'Bandage',    isItem:true, apCost:1, cost:{herbs:2},                           room:'lab', ability:'Heal 2 HP at any time.' },
+  { id:'smoke_grenade',name:'Smoke Grenade',isItem:true, apCost:0, cost:{chemicals:1,herbs:1,energy:1},  room:'lab', ability:'Play when targeted by an attack to dodge all damage. Instantly move to any free adjacent square.' },
+  { id:'stim_shot',  name:'Stim Shot',  isItem:true, apCost:0, cost:{herbs:2,chemicals:1,energy:1},      room:'lab', ability:'Gain an extra 2 AP this turn.' },
+  { id:'prox_mine',  name:'Prox. Mine', isItem:true, apCost:1, cost:{metal:1,chemicals:2,energy:1},      room:'lab', ability:'Place on your square. If an enemy enters within a 2-square radius, everyone not on your team in that radius takes 3 damage.' },
+  { id:'healing_mist',name:'Heal Mist', isItem:true, apCost:1, cost:{chemicals:1,herbs:2},               room:'lab', ability:'Place on your square. Heals anyone (friend or foe) 2 HP per turn. Lasts 3 turns.' },
+  { id:'flashbang',  name:'Flashbang',  isItem:true, apCost:1, cost:{chemicals:1,metal:1,energy:1},      room:'lab', ability:'Target a 3x3 area. Enemies caught cannot make ranged attacks (range > 2) next turn.' },
+  { id:'extractor',  name:'Extractor',  isItem:true, apCost:1, cost:{metal:1,chemicals:1,energy:1,wood:1}, room:'lab', ability:'Place an extractor of your colour in an extraction zone to collect that zone\'s resource once every turn. Starts with 6 HP.' },
 ];
 
-const BOARD_SIZE = 16;
+const BOARD_SIZE = 18;
 
 // Extraction zones: 4x4 corners of the full board (outside No Man's Land)
 // Each zone provides a specific resource type
 const EXTRACTION_ZONES = [
   { id:'ez_nw', r1:0,  r2:3,  c1:0,  c2:3,  resource:'wood',      label:'🪵' },
-  { id:'ez_ne', r1:0,  r2:3,  c1:12, c2:15, resource:'metal',     label:'⚙' },
-  { id:'ez_sw', r1:12, r2:15, c1:0,  c2:3,  resource:'herbs',     label:'🌿' },
-  { id:'ez_se', r1:12, r2:15, c1:12, c2:15, resource:'energy',    label:'⚡' },
+  { id:'ez_ne', r1:0,  r2:3,  c1:14, c2:17, resource:'metal',     label:'⚙' },
+  { id:'ez_sw', r1:14, r2:17, c1:0,  c2:3,  resource:'herbs',     label:'🌿' },
+  { id:'ez_se', r1:14, r2:17, c1:14, c2:17, resource:'energy',    label:'⚡' },
 ];
 
 function getExtractionZoneAt(r, c) {
@@ -1144,17 +1178,17 @@ function getExtractionZoneAt(r, c) {
 }
 
 const CASTLES = {
-  red:   { rows:[0,5],  cols:[5,15],  faction:'red',   name:'Red Castle'   },
-  blue:  { rows:[0,5],  cols:[10,15], faction:'blue',  name:'Blue Castle'  },
-  green: { rows:[10,15],cols:[5,10],  faction:'green', name:'Green Castle' },
-  white: { rows:[5,15], cols:[0,5],   faction:'white', name:'White Castle' },
+  red:   { rows:[0,3],  cols:[4,13],  faction:'red',   name:'Red Castle'   },
+  blue:  { rows:[4,13], cols:[14,17], faction:'blue',  name:'Blue Castle'  },
+  green: { rows:[14,17],cols:[4,13],  faction:'green', name:'Green Castle' },
+  white: { rows:[4,13], cols:[0,3],   faction:'white', name:'White Castle' },
 };
 
 const CASTLE_ZONES = {
-  red: { r1: 0, r2: 3, c1: 4, c2: 11 },
-  blue: { r1: 4, r2: 11, c1: 12, c2: 15 },
-  green: { r1: 12, r2: 15, c1: 4, c2: 11 },
-  white: { r1: 4, r2: 11, c1: 0, c2: 3 }
+  red:   { r1: 0,  r2: 3,  c1: 4,  c2: 13 },
+  blue:  { r1: 4,  r2: 13, c1: 14, c2: 17 },
+  green: { r1: 14, r2: 17, c1: 4,  c2: 13 },
+  white: { r1: 4,  r2: 13, c1: 0,  c2: 3  }
 };
 
 function getCastleRooms(faction) {
@@ -1164,31 +1198,31 @@ function getCastleRooms(faction) {
   switch (faction) {
     case "red":
       return {
-        hospital: { r1:0, r2:1, c1:4, c2:7 },
-        prison:   { r1:0, r2:1, c1:8, c2:11 },
-        armoury:  { r1:2, r2:3, c1:4, c2:7 },
-        lab:      { r1:2, r2:3, c1:8, c2:11 }
+        hospital: { r1:0, r2:1, c1:4,  c2:8  },
+        prison:   { r1:0, r2:1, c1:9,  c2:13 },
+        armoury:  { r1:2, r2:3, c1:4,  c2:8  },
+        lab:      { r1:2, r2:3, c1:9,  c2:13 }
       };
     case "blue":
       return {
-        hospital: { r1:4, r2:7,  c1:14, c2:15 },
-        prison:   { r1:8, r2:11, c1:14, c2:15 },
-        armoury:  { r1:4, r2:7,  c1:12, c2:13 },
-        lab:      { r1:8, r2:11, c1:12, c2:13 }
+        hospital: { r1:4,  r2:8,  c1:16, c2:17 },
+        prison:   { r1:9,  r2:13, c1:16, c2:17 },
+        armoury:  { r1:4,  r2:8,  c1:14, c2:15 },
+        lab:      { r1:9,  r2:13, c1:14, c2:15 }
       };
     case "green":
       return {
-        hospital: { r1:14, r2:15, c1:8, c2:11 },
-        prison:   { r1:14, r2:15, c1:4, c2:7 },
-        armoury:  { r1:12, r2:13, c1:8, c2:11 },
-        lab:      { r1:12, r2:13, c1:4, c2:7 }
+        hospital: { r1:16, r2:17, c1:9,  c2:13 },
+        prison:   { r1:16, r2:17, c1:4,  c2:8  },
+        armoury:  { r1:14, r2:15, c1:9,  c2:13 },
+        lab:      { r1:14, r2:15, c1:4,  c2:8  }
       };
     case "white":
       return {
-        hospital: { r1:8, r2:11, c1:0, c2:1 },
-        prison:   { r1:4, r2:7,  c1:0, c2:1 },
-        armoury:  { r1:8, r2:11, c1:2, c2:3 },
-        lab:      { r1:4, r2:7,  c1:2, c2:3 }
+        hospital: { r1:9,  r2:13, c1:0, c2:1 },
+        prison:   { r1:4,  r2:8,  c1:0, c2:1 },
+        armoury:  { r1:9,  r2:13, c1:2, c2:3 },
+        lab:      { r1:4,  r2:8,  c1:2, c2:3 }
       };
   }
 }
@@ -1217,6 +1251,8 @@ let G = {
   aiPlayerId: null,
   maxPlayers: 3,
   surrenderedUnits: new Set(), // unitIds that have surrendered
+  pendingTradeOffer: null, // incoming offer awaiting my response
+  tradeTargetId: null,     // target selected in the trade-builder modal
 };
 
 // =====================================================================
@@ -1386,6 +1422,22 @@ function handlePeerData(data, fromId) {
     case 'faction_taken':
       alert('That element has already been chosen. Please select another one.');
       break;
+    case 'trade_offer':
+      handleIncomingTradeOffer(data.offer);
+      if(isHost) {
+        Object.values(connections).forEach(c => {
+          if(c.peer !== fromId) { try { c.send(data); } catch(e){} }
+        });
+      }
+      break;
+    case 'trade_response':
+      handleIncomingTradeResponse(data.offer, data.accepted);
+      if(isHost) {
+        Object.values(connections).forEach(c => {
+          if(c.peer !== fromId) { try { c.send(data); } catch(e){} }
+        });
+      }
+      break;
   }
 }
 
@@ -1494,10 +1546,10 @@ function initGame(players) {
 
 function getSpawnPositions(faction, count) {
   const positionsByFaction = {
-    red: [ {r:3,c:6}, {r:3,c:7}, {r:3,c:8}, {r:3,c:9} ],
-    blue: [ {r:6,c:12}, {r:7,c:12}, {r:8,c:12}, {r:9,c:12} ],
-    green: [ {r:12,c:6}, {r:12,c:7}, {r:12,c:8}, {r:12,c:9} ],
-    white: [ {r:6,c:3}, {r:7,c:3}, {r:8,c:3}, {r:9,c:3} ]
+    red:   [ {r:3,c:7}, {r:3,c:8}, {r:3,c:9}, {r:3,c:10} ],
+    blue:  [ {r:7,c:13}, {r:8,c:13}, {r:9,c:13}, {r:10,c:13} ],
+    green: [ {r:14,c:7}, {r:14,c:8}, {r:14,c:9}, {r:14,c:10} ],
+    white: [ {r:7,c:4}, {r:8,c:4}, {r:9,c:4}, {r:10,c:4} ]
   };
   return positionsByFaction[faction].slice(0, count);
 }
@@ -1565,26 +1617,99 @@ function getRoomAt(r, c) {
 }
 
 function isTradeZone(r, c) {
-  const B = BOARD_SIZE - 1;
-  return (r <= 3 && c <= 3) ||           // top-left
-         (r <= 3 && c >= B-3) ||          // top-right
-         (r >= B-3 && c <= 3) ||          // bottom-left
-         (r >= B-3 && c >= B-3);          // bottom-right
+  return false; // Under new rules, trading can be done with anyone anywhere
+}
+
+function getAllUnitsAt(r, c) {
+  const list = [];
+  G.players.forEach(p => {
+    p.units.forEach(u => {
+      if (u.r === r && u.c === c) {
+        list.push({ player: p, unit: u });
+      }
+    });
+  });
+  return list;
+}
+
+function isPrisonGuarded(faction) {
+  const rooms = getCastleRooms(faction);
+  const prisonZone = rooms.prison;
+  const owner = G.players.find(p => p.faction === faction);
+  if (!owner) return false;
+  return owner.units.some(u =>
+    u.r >= prisonZone.r1 && u.r <= prisonZone.r2 &&
+    u.c >= prisonZone.c1 && u.c <= prisonZone.c2 &&
+    !u.prisoner
+  );
 }
 
 function isOccupied(r, c, excludeUnitId=null) {
   for(const p of G.players) {
     for(const u of p.units) {
-      if(u.r===r && u.c===c && u.id !== excludeUnitId) return true;
+      if(u.r===r && u.c===c && u.id !== excludeUnitId) {
+        if (u.surrendered && !u.prisoner) {
+          // Surrendered units that are not yet prisoners can be stepped on!
+          continue;
+        }
+        return true;
+      }
     }
   }
   return false;
+}
+
+function getReachableCells(startR, startC, maxMove, unitId) {
+  const visited = new Set();
+  const reachable = new Map(); // key -> dist
+  const queue = [{r: startR, c: startC, d: 0}];
+  const key = (r, c) => `${r},${c}`;
+  visited.add(key(startR, startC));
+  
+  while(queue.length > 0) {
+    const curr = queue.shift();
+    if(curr.d > 0) {
+      reachable.set(key(curr.r, curr.c), curr.d);
+    }
+    if(curr.d >= maxMove) continue;
+    
+    for(let dr=-1; dr<=1; dr++) {
+      for(let dc=-1; dc<=1; dc++) {
+        if(dr===0 && dc===0) continue;
+        const nr = curr.r + dr;
+        const nc = curr.c + dc;
+        if(nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE) {
+          const k = key(nr, nc);
+          if(!visited.has(k) && !isOccupied(nr, nc, unitId)) {
+            visited.add(k);
+            queue.push({r: nr, c: nc, d: curr.d + 1});
+          }
+        }
+      }
+    }
+  }
+  return reachable;
 }
 
 function getUnitAt(r, c) {
   for(const p of G.players) {
     for(const u of p.units) {
       if(u.r===r && u.c===c) return {player:p, unit:u};
+    }
+  }
+  return null;
+}
+
+function getBlockingUnit(attackerR, attackerC, targetR, targetC, attackerId) {
+  const dr = targetR - attackerR;
+  const dc = targetC - attackerC;
+  const steps = Math.max(Math.abs(dr), Math.abs(dc));
+  for (let i = 1; i < steps; i++) {
+    const r = Math.round(attackerR + i * (dr / steps));
+    const c = Math.round(attackerC + i * (dc / steps));
+    const unit = getUnitAt(r, c);
+    if (unit) {
+      return unit;
     }
   }
   return null;
@@ -1807,7 +1932,7 @@ function checkVictory() {
 // =====================================================================
 
 function spawnResources() {
-  const nmlR1=4, nmlR2=11, nmlC1=4, nmlC2=11;
+  const nmlR1=4, nmlR2=13, nmlC1=4, nmlC2=13;
   const weightedPool = ['wood','wood','wood','metal','metal','metal','chemicals','chemicals','herbs','herbs','energy'];
   let attempts = 0;
 
@@ -1847,7 +1972,17 @@ function selectUnit(playerId, unitId) {
   const p = G.players.find(x=>x.id===playerId);
   if(!p || p.id !== G.myId) return;
   const u = p.units.find(x=>x.id===unitId);
-  if(!u || u.prisoner) return;
+  if(!u) return;
+  if(u.prisoner) {
+    // A prisoner can only be selected if the prison it's in is unguarded!
+    const roomInfo = getRoomAt(u.r, u.c);
+    if(roomInfo && roomInfo.room === 'prison') {
+      if(isPrisonGuarded(roomInfo.faction)) {
+        addLog("This prison is guarded! Prisoner cannot escape.");
+        return;
+      }
+    }
+  }
   
   G.selectedUnit = {playerId, unitId};
   G.mode = null;
@@ -2045,33 +2180,46 @@ function doUseItem(itemId) {
   finishAction();
 }
 
+function findNewSoldierSpawn(faction) {
+  const canonical = getSpawnPositions(faction, 4).filter(p => !isOccupied(p.r, p.c));
+  if(canonical.length) return canonical[0];
+  const z = CASTLE_ZONES[faction];
+  for(let r=z.r1; r<=z.r2; r++) {
+    for(let c=z.c1; c<=z.c2; c++) {
+      if(!isOccupied(r, c)) return {r, c};
+    }
+  }
+  return null;
+}
+
 function doNewSoldier() {
   if(!isMyTurn()) return;
   const cp = currentPlayer();
-  if(cp.ap < 2) { addLog('Need 2 AP for new soldier!'); return; }
-  
+  const apCost = cp.faction === 'green' ? 1 : 2;
+  if(cp.ap < apCost) { addLog(`Need ${apCost} AP for new soldier!`); return; }
+
+  if(cp.units.length >= 10) { addLog('Soldier cap reached (10)!'); return; }
+
   const rooms = getCastleRooms(cp.faction);
   const labZone = rooms.lab;
   const inLab = cp.units.some(u =>
     u.r>=labZone.r1 && u.r<=labZone.r2 && u.c>=labZone.c1 && u.c<=labZone.c2
   );
   if(!inLab) { addLog('A unit must be in your Lab to spawn soldiers!'); return; }
-  
-  if(cp.resources.wood<1 || cp.resources.metal<1 || cp.resources.chemicals<1 || cp.resources.herbs<1 || cp.resources.energy<1) {
-    addLog('Need 1 of each resource to create a soldier!'); return;
+
+  if(RESOURCES.some(r => (cp.resources[r]||0) < 2)) {
+    addLog('Need 2 of each resource to create a soldier!'); return;
   }
-  
-  // Find a free spawn position not occupied by any unit
-  const allSpawns = getSpawnPositions(cp.faction, 4);
-  const pos = allSpawns.filter(p => !isOccupied(p.r, p.c));
-  if(!pos.length) { addLog('No space to spawn — move your units first!'); return; }
-  
-  RESOURCES.forEach(r => cp.resources[r]--);
-  
+
+  const pos = findNewSoldierSpawn(cp.faction);
+  if(!pos) { addLog('No space to spawn — move your units first!'); return; }
+
+  RESOURCES.forEach(r => cp.resources[r] -= 2);
+
   const newId = cp.faction + '_' + Date.now();
-  cp.units.push({ id:newId, r:pos[0].r, c:pos[0].c, hp:6, maxHp:6, prisoner:false, prisonerId:null, surrendered:false, smoke:false, flashbanged:0 });
-  cp.ap -= 2;
-  addLog(`➕ New soldier created!`, 'log-craft');
+  cp.units.push({ id:newId, r:pos.r, c:pos.c, hp:6, maxHp:6, prisoner:false, prisonerId:null, surrendered:false, smoke:false, flashbanged:0 });
+  cp.ap -= apCost;
+  addLog(`➕ New soldier created!${apCost===1?' (1 AP: Earth bonus)':''}`, 'log-craft');
   finishAction();
 }
 
@@ -2082,6 +2230,226 @@ function doSurrender() {
   unit.surrendered = true;
   G.surrenderedUnits.add(unit.id);
   addLog(`🏳 ${currentPlayer().name}'s unit surrenders!`, 'log-system');
+  finishAction();
+}
+
+// =====================================================================
+// TRADING
+// =====================================================================
+
+function syncOutgoing(data) {
+  if(G.isAIGame) return;
+  if(isHost) broadcastToAll(data);
+  else sendToHost(data);
+}
+
+function tradeItemValue(id) {
+  const r = RECIPES.find(x=>x.id===id);
+  if(!r) return 1;
+  return r.isItem ? 2 : 3;
+}
+
+function tradeCanAfford(player, want, wantItems) {
+  for(const [res,n] of Object.entries(want||{})) {
+    if((player.resources[res]||0) < n) return false;
+  }
+  for(const it of wantItems||[]) {
+    const inv = player.inventory.find(x=>x.id===it.id);
+    if(!inv || inv.count < it.count) return false;
+  }
+  return true;
+}
+
+function removeTradeItems(player, id, count) {
+  const inv = player.inventory.find(x=>x.id===id);
+  if(!inv) return;
+  inv.count -= count;
+  if(inv.count <= 0) player.inventory = player.inventory.filter(x=>x.id!==id);
+}
+function addTradeItems(player, id, count) {
+  const inv = player.inventory.find(x=>x.id===id);
+  if(inv) inv.count += count;
+  else player.inventory.push({id, count});
+}
+
+function applyTradeSwap(fromPlayer, toPlayer, offer) {
+  Object.entries(offer.give||{}).forEach(([res,n]) => {
+    if(n<=0) return;
+    fromPlayer.resources[res] = (fromPlayer.resources[res]||0)-n;
+    toPlayer.resources[res] = (toPlayer.resources[res]||0)+n;
+  });
+  Object.entries(offer.want||{}).forEach(([res,n]) => {
+    if(n<=0) return;
+    toPlayer.resources[res] = (toPlayer.resources[res]||0)-n;
+    fromPlayer.resources[res] = (fromPlayer.resources[res]||0)+n;
+  });
+  (offer.giveItems||[]).forEach(it => {
+    if(it.count<=0) return;
+    removeTradeItems(fromPlayer, it.id, it.count);
+    addTradeItems(toPlayer, it.id, it.count);
+  });
+  (offer.wantItems||[]).forEach(it => {
+    if(it.count<=0) return;
+    removeTradeItems(toPlayer, it.id, it.count);
+    addTradeItems(fromPlayer, it.id, it.count);
+  });
+}
+
+function tradeSummary(resObj, items) {
+  const parts = [];
+  Object.entries(resObj||{}).forEach(([res,n]) => { if(n>0) parts.push(`${n} ${res}`); });
+  (items||[]).forEach(it => {
+    if(it.count>0) { const r=RECIPES.find(x=>x.id===it.id); parts.push(`${it.count} ${r?r.name:it.id}`); }
+  });
+  return parts.join(', ');
+}
+
+function openTradeModal() {
+  if(!isMyTurn()) return;
+  const cp = currentPlayer();
+  if(cp.ap < 1) { addLog('Not enough AP!'); return; }
+  const others = G.players.filter(p => p.id !== cp.id && p.alive);
+  if(!others.length) { addLog('No other players to trade with!'); return; }
+  G.tradeTargetId = others[0].id;
+
+  document.getElementById('trade-target-list').innerHTML = others.map(p => `
+    <div class="lobby-player-row" style="cursor:pointer;${p.id===G.tradeTargetId?'outline:2px solid var(--gold);':''}" data-target-row="${p.id}" onclick="selectTradeTarget('${p.id}')">
+      <div class="lobby-player-dot" style="background:${FACTIONS[p.faction].color}"></div>
+      <span>${p.name}${p.isAI?' 🤖':''}</span>
+    </div>`).join('');
+
+  document.getElementById('trade-give-resources').innerHTML = RESOURCES.map(r => `
+    <div class="res-item">${RES_EMOJI[r]} ${r}
+      <input type="number" min="0" max="${cp.resources[r]||0}" value="0" id="trade-give-${r}" style="width:50px;margin-left:auto;">
+    </div>`).join('');
+
+  document.getElementById('trade-want-resources').innerHTML = RESOURCES.map(r => `
+    <div class="res-item">${RES_EMOJI[r]} ${r}
+      <input type="number" min="0" max="9" value="0" id="trade-want-${r}" style="width:50px;margin-left:auto;">
+    </div>`).join('');
+
+  const giveItemsEl = document.getElementById('trade-give-items');
+  if(!cp.inventory.length) {
+    giveItemsEl.innerHTML = '<div style="font-size:0.8rem;color:var(--ink-light);font-style:italic">No items to offer</div>';
+  } else {
+    giveItemsEl.innerHTML = cp.inventory.map(inv => {
+      const recipe = RECIPES.find(r=>r.id===inv.id);
+      return `<div class="res-item">${recipe?recipe.name:inv.id} (own ${inv.count})
+        <input type="number" min="0" max="${inv.count}" value="0" id="trade-give-item-${inv.id}" style="width:50px;margin-left:auto;">
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('trade-want-items').innerHTML = RECIPES.map(recipe => `
+    <div class="res-item">${recipe.name}
+      <input type="number" min="0" max="5" value="0" id="trade-want-item-${recipe.id}" style="width:50px;margin-left:auto;">
+    </div>`).join('');
+
+  openModal('modal-trade');
+}
+
+function selectTradeTarget(id) {
+  G.tradeTargetId = id;
+  document.querySelectorAll('[data-target-row]').forEach(el => {
+    el.style.outline = el.dataset.targetRow === id ? '2px solid var(--gold)' : 'none';
+  });
+}
+
+function sendTradeOffer() {
+  if(!isMyTurn()) return;
+  const cp = currentPlayer();
+  if(cp.ap < 1) { addLog('Not enough AP!'); return; }
+  if(!G.tradeTargetId) { addLog('Select a player to trade with!'); return; }
+  const targetPlayer = G.players.find(p=>p.id===G.tradeTargetId);
+  if(!targetPlayer) return;
+
+  const give = {}, want = {};
+  RESOURCES.forEach(r => {
+    give[r] = Math.max(0, Math.min(cp.resources[r]||0, parseInt(document.getElementById(`trade-give-${r}`).value)||0));
+    want[r] = Math.max(0, parseInt(document.getElementById(`trade-want-${r}`).value)||0);
+  });
+  const giveItems = cp.inventory.map(inv => {
+    const el = document.getElementById(`trade-give-item-${inv.id}`);
+    const n = el ? Math.max(0, Math.min(inv.count, parseInt(el.value)||0)) : 0;
+    return { id: inv.id, count: n };
+  }).filter(x => x.count > 0);
+  const wantItems = RECIPES.map(recipe => {
+    const el = document.getElementById(`trade-want-item-${recipe.id}`);
+    const n = el ? Math.max(0, parseInt(el.value)||0) : 0;
+    return { id: recipe.id, count: n };
+  }).filter(x => x.count > 0);
+
+  const totalGive = Object.values(give).reduce((a,b)=>a+b,0) + giveItems.reduce((a,x)=>a+x.count,0);
+  const totalWant = Object.values(want).reduce((a,b)=>a+b,0) + wantItems.reduce((a,x)=>a+x.count,0);
+  if(totalGive===0 && totalWant===0) { addLog('Offer is empty!'); return; }
+
+  cp.ap--;
+
+  const offer = { offerId: cp.id+'_'+Date.now(), fromId: cp.id, fromName: cp.name, targetId: targetPlayer.id, give, giveItems, want, wantItems };
+
+  closeModal('modal-trade');
+  addLog(`🤝 ${cp.name} proposes a trade to ${targetPlayer.name}...`, 'log-system');
+
+  if(targetPlayer.isAI) {
+    resolveAITrade(offer, targetPlayer);
+  } else {
+    syncOutgoing({ type:'trade_offer', offer });
+  }
+  finishAction();
+}
+
+function resolveAITrade(offer, aiPlayer) {
+  const giveValue = Object.values(offer.give).reduce((a,b)=>a+b,0) + offer.giveItems.reduce((a,x)=>a+x.count*tradeItemValue(x.id),0);
+  const wantValue = Object.values(offer.want).reduce((a,b)=>a+b,0) + offer.wantItems.reduce((a,x)=>a+x.count*tradeItemValue(x.id),0);
+  const canAfford = tradeCanAfford(aiPlayer, offer.want, offer.wantItems);
+  const accept = canAfford && giveValue >= wantValue;
+  setTimeout(() => {
+    const fromPlayer = G.players.find(p=>p.id===offer.fromId);
+    if(accept && fromPlayer) {
+      applyTradeSwap(fromPlayer, aiPlayer, offer);
+      addLog(`🤝 ${aiPlayer.name} accepted the trade!`, 'log-craft');
+    } else {
+      addLog(`🤝 ${aiPlayer.name} declined the trade.`, 'log-system');
+    }
+    finishAction();
+  }, 500);
+}
+
+function handleIncomingTradeOffer(offer) {
+  if(!offer || offer.targetId !== G.myId) return;
+  G.pendingTradeOffer = offer;
+  const giveStr = tradeSummary(offer.give, offer.giveItems) || 'nothing';
+  const wantStr = tradeSummary(offer.want, offer.wantItems) || 'nothing';
+  document.getElementById('trade-incoming-text').textContent =
+    `${offer.fromName} offers: ${giveStr} — in exchange for: ${wantStr}`;
+  openModal('modal-trade-incoming');
+}
+
+function handleIncomingTradeResponse(offer, accepted) {
+  if(!offer || offer.fromId !== G.myId) return;
+  addLog(accepted ? `🤝 Your trade offer was accepted!` : `🤝 Your trade offer was declined.`, 'log-system');
+}
+
+function respondToTrade(accepted) {
+  const offer = G.pendingTradeOffer;
+  closeModal('modal-trade-incoming');
+  if(!offer) return;
+  const fromPlayer = G.players.find(p=>p.id===offer.fromId);
+  const toPlayer = G.players.find(p=>p.id===G.myId);
+  let finalAccepted = accepted;
+  if(accepted && fromPlayer && toPlayer) {
+    if(!tradeCanAfford(toPlayer, offer.want, offer.wantItems)) {
+      addLog(`🤝 Could not accept trade — you don't have what was requested.`, 'log-system');
+      finalAccepted = false;
+    } else {
+      applyTradeSwap(fromPlayer, toPlayer, offer);
+      addLog(`🤝 Trade with ${offer.fromName} completed!`, 'log-craft');
+    }
+  } else if(!accepted) {
+    addLog(`🤝 Trade offer from ${offer.fromName} declined.`, 'log-system');
+  }
+  G.pendingTradeOffer = null;
+  syncOutgoing({ type:'trade_response', offer, accepted: finalAccepted });
   finishAction();
 }
 
@@ -2139,18 +2507,19 @@ function doCraft(recipe) {
   const cp = currentPlayer();
   const unit = getSelectedUnitObj();
   
-  const isFree = cp.faction === 'green' && isInCastle(unit.r, unit.c, cp.faction);
+  // Deduct resources for everyone
+  Object.entries(recipe.cost).forEach(([res,n]) => { cp.resources[res] -= n; });
   
-  if(!isFree) {
-    Object.entries(recipe.cost).forEach(([res,n]) => { cp.resources[res] -= n; });
+  const isFreeAP = cp.faction === 'green' && isInCastle(unit.r, unit.c, cp.faction);
+  if(!isFreeAP) {
+    cp.ap--;
   }
-  cp.ap--;
   
   const existing = cp.inventory.find(x=>x.id===recipe.id);
   if(existing) existing.count++;
   else cp.inventory.push({ id:recipe.id, count:1 });
   
-  addLog(`🔨 Crafted: ${recipe.name}${isFree?' (free!)':''}`, 'log-craft');
+  addLog(`🔨 Crafted: ${recipe.name}${isFreeAP?' (0 AP)':''}`, 'log-craft');
   finishAction();
 }
 
@@ -2182,18 +2551,60 @@ function onCellClick(r, c) {
     return;
   }
 
+function isCarryingHostage(unit) {
+  return G.players.some(p => p.units.some(u => u.prisoner && u.captorId === unit.id));
+}
+
   if(G.mode === 'move') {
     const selUnit = getSelectedUnitObj();
     if(!selUnit) { G.mode=null; renderBoard(); return; }
     
-    const maxMove = cp.faction === 'white' ? 4 : 3;
-    const dist = chebyshevDist(selUnit.r, selUnit.c, r, c);
+    let maxMove = cp.faction === 'white' ? 4 : 3;
+    if (isCarryingHostage(selUnit)) {
+      maxMove = 2;
+    }
     
-    if(dist > maxMove || dist === 0) { G.mode=null; renderBoard(); return; }
-    if(isOccupied(r,c,selUnit.id)) { addLog('Cell occupied!'); return; }
+    const reachable = getReachableCells(selUnit.r, selUnit.c, maxMove, selUnit.id);
+    const key = `${r},${c}`;
+    
+    if(!reachable.has(key)) { G.mode=null; renderBoard(); return; }
     
     selUnit.r = r;
     selUnit.c = c;
+    
+    // Move any carried hostages along with the unit
+    G.players.forEach(p => {
+      p.units.forEach(u => {
+        if (u.prisoner && u.captorId === selUnit.id) {
+          u.r = r;
+          u.c = c;
+        }
+      });
+    });
+    
+    // Check if the prisoner escaped from prison
+    if (selUnit.prisoner) {
+      const roomInfo = getRoomAt(r, c);
+      if (!roomInfo || roomInfo.room !== 'prison' || roomInfo.faction !== cp.faction) {
+        selUnit.prisoner = false;
+        selUnit.surrendered = false;
+        addLog(`🔓 ${selUnit.id} walked out and escaped from prison!`, 'log-system');
+      }
+    }
+    
+    // Check if captor reached their own prison room with hostages
+    const roomInfo = getRoomAt(r, c);
+    if (roomInfo && roomInfo.room === 'prison' && roomInfo.faction === cp.faction) {
+      G.players.forEach(p => {
+        p.units.forEach(u => {
+          if (u.prisoner && u.captorId === selUnit.id) {
+            u.captorId = null; // Locked up in prison!
+            addLog(`🔒 ${u.id} has been locked in the prison of ${cp.name}!`, 'log-system');
+          }
+        });
+      });
+    }
+    
     cp.ap--;
     addLog(`🚶 Moved to (${r},${c})`, 'log-move');
     
@@ -2247,8 +2658,16 @@ function onCellClick(r, c) {
     if(dist > weapon.range) { addLog(`Out of range! (need ≤${weapon.range})`); return; }
     if(weapon.minRange && dist < weapon.minRange) { addLog(`Too close! ${weapon.name} requires range ≥${weapon.minRange}.`); return; }
     
-    if(isTradeZone(selUnit.r, selUnit.c) || isTradeZone(r,c)) {
-      addLog('No attacking in trade zones!'); return;
+    if(weapon.id !== 'gun') {
+      const blocker = getBlockingUnit(selUnit.r, selUnit.c, r, c, cp.id);
+      if(blocker) {
+        if(blocker.player.id === cp.id) {
+          addLog("Attack blocked! A teammate is in the way.");
+        } else {
+          addLog("Attack blocked! You must target the closest enemy in the way first.");
+        }
+        return;
+      }
     }
     
     if(!isInNoMansLand(selUnit.r, selUnit.c) && !isInNoMansLand(r,c)) {
@@ -2273,16 +2692,23 @@ function onCellClick(r, c) {
   }
   
   if(G.mode === 'hostage') {
-    if(!clickedUnit) { G.mode=null; renderBoard(); return; }
-    const {player:target, unit:targetUnit} = clickedUnit;
-    if(target.id === cp.id) { G.mode=null; return; }
-    if(!targetUnit.surrendered) { addLog('Can only take surrendered enemies hostage!'); return; }
-    
     const selUnit = getSelectedUnitObj();
     if(!selUnit) { G.mode=null; return; }
-    const dist = chebyshevDist(selUnit.r, selUnit.c, r, c);
-    if(dist > 1) { addLog('Must be adjacent to take hostage!'); return; }
     
+    const dist = chebyshevDist(selUnit.r, selUnit.c, r, c);
+    if(dist !== 0) { addLog('Must be on the same square to take hostage!'); return; }
+    
+    // Find if there is a surrendered unit on the same cell
+    const unitsHere = getAllUnitsAt(r, c);
+    const surrenderedUnitObj = unitsHere.find(u => u.unit.surrendered && !u.unit.prisoner);
+    
+    if(!surrenderedUnitObj) {
+      addLog('No surrendered unit on this square to take hostage!');
+      G.mode = null;
+      return;
+    }
+    
+    const {player:target, unit:targetUnit} = surrenderedUnitObj;
     G.pendingHostageTarget = {playerId:target.id, unitId:targetUnit.id};
     openModal('modal-hostage-action');
     G.mode = null;
@@ -2311,7 +2737,7 @@ function performAttack(attacker, defender, defPlayer, atkPlayer, weapon, tr, tc,
     const openCells = [];
     for(let dr=-1; dr<=1; dr++) for(let dc=-1; dc<=1; dc++) {
       let r2 = defender.r+dr, c2 = defender.c+dc;
-      if(r2>=0 && r2<16 && c2>=0 && c2<16 && !isOccupied(r2, c2)) {
+      if(r2>=0 && r2<BOARD_SIZE && c2>=0 && c2<BOARD_SIZE && !isOccupied(r2, c2)) {
          openCells.push({r:r2, c:c2});
       }
     }
@@ -2329,9 +2755,6 @@ function performAttack(attacker, defender, defPlayer, atkPlayer, weapon, tr, tc,
     return;
   }
 
-  // Faction bonus
-  if(atkPlayer.faction === 'red') dmg++;
-  
   // Specific Weapon logic
   if(weapon.id === 'bow') {
     const dist = chebyshevDist(attacker.r, attacker.c, tr, tc);
@@ -2350,7 +2773,7 @@ function performAttack(attacker, defender, defPlayer, atkPlayer, weapon, tr, tc,
     for(let dr=-1; dr<=1; dr++) for(let dc=-1; dc<=1; dc++) {
       if(dr===0 && dc===0) continue;
       const ar=tr+dr, ac=tc+dc;
-      if(ar<0||ar>=16||ac<0||ac>=16) continue;
+      if(ar<0||ar>=BOARD_SIZE||ac<0||ac>=BOARD_SIZE) continue;
       const adj = getUnitAt(ar,ac);
       if(adj) {
         adj.unit.hp = Math.max(0, adj.unit.hp-1);
@@ -2364,17 +2787,17 @@ function performAttack(attacker, defender, defPlayer, atkPlayer, weapon, tr, tc,
     const dc = Math.sign(tc - attacker.c);
     let nr=tr+dr, nc=tc+dc;
     for(let i=0;i<2;i++) {
-      if(nr<0||nr>=16||nc<0||nc>=16||isOccupied(nr,nc,defender.id)) break;
+      if(nr<0||nr>=BOARD_SIZE||nc<0||nc>=BOARD_SIZE||isOccupied(nr,nc,defender.id)) break;
       defender.r=nr; defender.c=nc;
       nr+=dr; nc+=dc;
     }
   }
-  
+
   if(weapon.id === 'spear') {
     const dr = Math.sign(tr - attacker.r);
     const dc = Math.sign(tc - attacker.c);
     const r2=tr+dr, c2=tc+dc;
-    if(r2>=0&&r2<16&&c2>=0&&c2<16) {
+    if(r2>=0&&r2<BOARD_SIZE&&c2>=0&&c2<BOARD_SIZE) {
       const second = getUnitAt(r2,c2);
       if(second && second.player.id !== atkPlayer.id) {
         second.unit.hp = Math.max(0, second.unit.hp - dmg);
@@ -2391,7 +2814,21 @@ function performAttack(attacker, defender, defPlayer, atkPlayer, weapon, tr, tc,
   atkPlayer.ap--;
   
   addLog(`⚔ ${atkPlayer.name} attacks with ${weapon.name}! ${defender.id} takes ${dmg} dmg (${defender.hp} HP left)`, 'log-combat');
-  
+
+  // Fire faction: 1 dmg to everyone adjacent to the enemy being attacked
+  if(atkPlayer.faction === 'red') {
+    for(let dr=-1; dr<=1; dr++) for(let dc=-1; dc<=1; dc++) {
+      if(dr===0 && dc===0) continue;
+      const ar=tr+dr, ac=tc+dc;
+      if(ar<0||ar>=BOARD_SIZE||ac<0||ac>=BOARD_SIZE) continue;
+      const adj = getUnitAt(ar,ac);
+      if(adj && adj.unit.id !== attacker.id) {
+        adj.unit.hp = Math.max(0, adj.unit.hp-1);
+        addLog(`🔥 Fire splash: ${adj.unit.id} -1 HP`, 'log-combat');
+      }
+    }
+  }
+
   if(weapon.id === 'sword' && defender.hp <= 0) {
     for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++) {
       if(dr===0&&dc===0) continue;
@@ -2775,10 +3212,13 @@ function updateUI() {
   document.getElementById('btn-collect').disabled = !hasUnit || !myTurn || cp.ap<1 || inTargetMode;
   document.getElementById('btn-heal').disabled = !hasUnit || !myTurn || cp.ap<1 || inTargetMode;
   document.getElementById('btn-craft').disabled = !hasUnit || !myTurn || cp.ap<1 || inTargetMode;
-  document.getElementById('btn-new-soldier').disabled = !myTurn || cp.ap<2 || inTargetMode;
+  const newSoldierApCost = cp.faction === 'green' ? 1 : 2;
+  document.getElementById('new-soldier-ap-cost').textContent = newSoldierApCost + ' AP';
+  document.getElementById('btn-new-soldier').disabled = !myTurn || cp.ap<newSoldierApCost || cp.units.length>=10 || inTargetMode;
   document.getElementById('btn-inventory').disabled = !hasUnit || !myTurn || !hasItems || inTargetMode;
   document.getElementById('btn-surrender').disabled = !hasUnit || !myTurn || inTargetMode;
   document.getElementById('btn-hostage').disabled = !hasUnit || !myTurn || cp.ap<1 || inTargetMode;
+  document.getElementById('btn-trade').disabled = !myTurn || cp.ap<1 || inTargetMode || !G.players.some(p=>p.id!==cp.id && p.alive);
   document.getElementById('btn-end-turn').disabled = !myTurn || inTargetMode;
   
   const resDisplay = document.getElementById('resource-display');

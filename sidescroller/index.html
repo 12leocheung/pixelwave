@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Neon Strike: Nexus Commander - Big Hitboxes</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Orbitron', sans-serif; user-select: none; }
+        #ui { position: absolute; top: 20px; left: 20px; color: #fff; pointer-events: none; z-index: 10; }
+        .stat { font-size: 18px; color: #0ff; text-shadow: 0 0 10px #0ff; margin-bottom: 5px; }
+        #minimap { position: absolute; top: 20px; right: 20px; width: 150px; height: 150px; border: 2px solid #0ff; background: rgba(0, 20, 20, 0.8); border-radius: 5px; }
+        #hearts-container { display: flex; gap: 8px; margin-top: 10px; }
+        .heart { width: 25px; height: 25px; background: #f0f; clip-path: path('M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'); transition: opacity 0.3s; }
+        .lost { opacity: 0.1; }
+        .enemy-health-wrap { position: absolute; width: 60px; height: 6px; background: #200; border: 1px solid #f0f; pointer-events: none; transform: translate(-50%, -50%); }
+        .enemy-health-bar { width: 100%; height: 100%; background: #f0f; transition: width 0.1s; }
+        #wheel-overlay { position: absolute; inset: 0; display: none; background: rgba(0,0,0,0.85); justify-content: center; align-items: center; z-index: 100; }
+        #wheel { position: relative; width: 500px; height: 500px; border-radius: 50%; border: 4px solid #0ff; display: flex; justify-content: center; align-items: center; }
+        .wheel-item { position: absolute; width: 110px; height: 80px; background: #111; border: 2px solid #0ff; color: #0ff; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; font-size: 11px; border-radius: 10px; pointer-events: auto; text-align: center; transition: 0.2s; }
+        .wheel-item:hover { background: #0ff; color: #000; box-shadow: 0 0 20px #0ff; }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="ui">
+        <div class="stat" id="cash-ui">CASH: $0</div>
+        <div class="stat" id="weapon-ui" style="font-size: 14px; color: #f0f;">WEAPON: PISTOL</div>
+        <div id="hearts-container"><div class="heart" id="h1"></div><div class="heart" id="h2"></div><div class="heart" id="h3"></div></div>
+    </div>
+    <canvas id="minimap"></canvas>
+
+    <div id="wheel-overlay">
+        <div id="wheel">
+            <div class="wheel-item" style="top: 5%;" onclick="buyOrUpgrade('PISTOL', 0)">PISTOL<br>UPGRADE</div>
+            <div class="wheel-item" style="top: 20%; right: 5%;" onclick="buyOrUpgrade('SHOTGUN', 500)">SHOTGUN<br>$500</div>
+            <div class="wheel-item" style="bottom: 20%; right: 5%;" onclick="buyOrUpgrade('RAILGUN', 2500)">RAILGUN<br>$2500</div>
+            <div class="wheel-item" style="bottom: 5%;" onclick="buyOrUpgrade('SPEED', 300)">BOOTS<br>$300</div>
+            <div class="wheel-item" style="bottom: 20%; left: 5%;" onclick="buyOrUpgrade('SMG', 1200)">SMG<br>$1200</div>
+        </div>
+    </div>
+
+<script type="importmap">
+    { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+// --- STATE ---
+let cash = 500, isPaused = false, isFiring = false;
+let lives = 3, invuln = 0, dashCooldown = 0, dashActive = 0;
+let lastFire = 0, pSpeed = 0.16, currentWpn = 'PISTOL', shakeIntensity = 0;
+
+const weapons = {
+    PISTOL: { level: 1, owned: true, fireRate: 350, dmg: 1, color: 0xffff00, shake: 0.05, spread: 0.05, pierce: false },
+    SHOTGUN: { level: 0, owned: false, fireRate: 800, dmg: 1.2, color: 0xffaa00, shake: 0.25, spread: 0.3, pierce: false },
+    SMG: { level: 0, owned: false, fireRate: 100, dmg: 0.4, color: 0x00ffff, shake: 0.03, spread: 0.15, pierce: false },
+    RAILGUN: { level: 0, owned: false, fireRate: 1500, dmg: 15, color: 0xffffff, shake: 1.0, spread: 0, pierce: true }
+};
+
+// --- THREE SETUP ---
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.6, 0.4, 0.85));
+
+const bullets = [], enemies = [], chests = [], particles = [], keys = {};
+const mouse = new THREE.Vector2(), raycaster = new THREE.Raycaster();
+
+function addShake(amt) { shakeIntensity = Math.min(shakeIntensity + amt, 1.5); }
+
+// --- OBJECT FACTORIES ---
+function spawnChest() {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.5), new THREE.MeshStandardMaterial({color: 0x00aaff, emissive: 0x00aaff, emissiveIntensity: 2}));
+    const angle = Math.random()*Math.PI*2;
+    mesh.position.set(Math.cos(angle)*30, 0.75, Math.sin(angle)*30);
+    scene.add(mesh);
+    chests.push(mesh);
+}
+
+function spawnEnemy(isBoss = false) {
+    const group = new THREE.Group();
+    const color = isBoss ? 0xff0000 : 0xff00ff;
+    const scale = isBoss ? 4.5 : 2.0; // Visually larger to match new hitbox
+    const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.5 * scale), new THREE.MeshStandardMaterial({color: color, emissive: color, emissiveIntensity: 2}));
+    group.add(core);
+    const ring = new THREE.Group();
+    for(let i=0; i<4; i++) {
+        const blade = new THREE.Mesh(new THREE.BoxGeometry(0.3*scale, 1.0*scale, 0.3*scale), new THREE.MeshStandardMaterial({color: color}));
+        blade.position.x = 0.9 * scale;
+        const pivot = new THREE.Group(); pivot.rotation.y = (Math.PI/2)*i; pivot.add(blade);
+        ring.add(pivot);
+    }
+    group.add(ring);
+    const angle = Math.random()*Math.PI*2;
+    group.position.set(Math.cos(angle)*40, scale, Math.sin(angle)*40);
+    const ui = document.createElement('div');
+    ui.className = 'enemy-health-wrap';
+    ui.innerHTML = '<div class="enemy-health-bar"></div>';
+    document.body.appendChild(ui);
+    scene.add(group);
+    
+    // Hitbox Radius Increased here
+    enemies.push({ 
+        mesh: group, core, ring, 
+        hp: isBoss ? 200 : 5, max: isBoss ? 200 : 5, 
+        ui, radius: isBoss ? 4.0 : 1.5, // BIGGER HITBOXES
+        offset: Math.random()*100 
+    });
+}
+
+// --- MAP ---
+const buildings = [];
+const bGeo = new THREE.BoxGeometry(5, 12, 5);
+const bMat = new THREE.MeshStandardMaterial({color: 0x111111, emissive: 0x00ffff, emissiveIntensity: 0.05});
+for(let i=0; i<30; i++){
+    const b = new THREE.Mesh(bGeo, bMat);
+    b.position.set((Math.random()-0.5)*80, 6, (Math.random()-0.5)*80);
+    if(b.position.length() > 15) {
+        scene.add(b);
+        buildings.push({ mesh: b, box: new THREE.Box3().setFromObject(b) });
+    }
+}
+scene.add(new THREE.GridHelper(100, 50, 0x222222, 0x111111));
+
+const player = new THREE.Group();
+const pMesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.5, 1), new THREE.MeshStandardMaterial({color: 0x00ffff}));
+player.add(pMesh);
+scene.add(player);
+
+const mapCtx = document.getElementById('minimap').getContext('2d');
+
+// --- INPUTS ---
+window.onkeydown = (e) => {
+    if(e.code === 'KeyQ') { isPaused = true; document.getElementById('wheel-overlay').style.display = 'flex'; }
+    if(e.code === 'ShiftLeft' && dashCooldown <= 0) { dashActive = 15; dashCooldown = 60; invuln = 20; }
+    keys[e.code] = true;
+};
+window.onkeyup = (e) => {
+    if(e.code === 'KeyQ') { isPaused = false; document.getElementById('wheel-overlay').style.display = 'none'; }
+    keys[e.code] = false;
+};
+window.onmousedown = () => isFiring = true;
+window.onmouseup = () => isFiring = false;
+window.onmousemove = (e) => {
+    mouse.x = (e.clientX/window.innerWidth)*2-1;
+    mouse.y = -(e.clientY/window.innerHeight)*2+1;
+};
+
+window.buyOrUpgrade = (type, cost) => {
+    if (type === 'SPEED' && cash >= 300) { cash -= 300; pSpeed += 0.04; }
+    else if (weapons[type]) {
+        const w = weapons[type];
+        if (!w.owned && cash >= cost) { cash -= cost; w.owned = true; currentWpn = type; }
+        else if (w.owned && cash >= 200) { cash -= 200; w.level++; w.fireRate *= 0.9; w.dmg *= 1.2; }
+    }
+    updateUI();
+};
+
+function updateUI() {
+    document.getElementById('cash-ui').innerText = `CASH: $${cash}`;
+    for(let i=1; i<=3; i++) document.getElementById(`h${i}`).className = i <= lives ? 'heart' : 'heart lost';
+}
+
+function checkCollision(pos, radius = 0.6) {
+    const pBox = new THREE.Box3().setFromCenterAndSize(pos, new THREE.Vector3(radius*2, 1, radius*2));
+    for (let b of buildings) if (pBox.intersectsBox(b.box)) return true;
+    return false;
+}
+
+setInterval(() => { if(!isPaused && enemies.length < 12) spawnEnemy(); }, 2000);
+setInterval(() => { if(!isPaused && chests.length < 3) spawnChest(); }, 8000);
+
+// --- MAIN LOOP ---
+function animate() {
+    requestAnimationFrame(animate);
+    if(isPaused) { composer.render(); return; }
+    const time = performance.now() * 0.001;
+    const w = weapons[currentWpn];
+
+    // Shooting
+    if(isFiring && Date.now() - lastFire > w.fireRate) {
+        const count = currentWpn === 'SHOTGUN' ? 5 : 1;
+        for(let i=0; i<count; i++) {
+            const bGeo = currentWpn === 'RAILGUN' ? new THREE.CylinderGeometry(0.1, 0.1, 6) : new THREE.SphereGeometry(0.3);
+            const b = new THREE.Mesh(bGeo, new THREE.MeshBasicMaterial({color: w.color}));
+            b.position.copy(player.position).add(new THREE.Vector3(0, 0.5, 0));
+            const spread = (Math.random()-0.5) * w.spread + (currentWpn === 'SHOTGUN' ? (i-2)*0.15 : 0);
+            const dir = new THREE.Vector3(0,0,1).applyQuaternion(player.quaternion).applyAxisAngle(new THREE.Vector3(0,1,0), spread);
+            if(currentWpn === 'RAILGUN') b.quaternion.copy(player.quaternion).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), Math.PI/2));
+            bullets.push({ mesh: b, vel: dir.multiplyScalar(w.pierce?3.5:1.2), dmg: w.dmg, pierce: w.pierce, hitList: [] });
+            scene.add(b);
+        }
+        addShake(w.shake); lastFire = Date.now();
+    }
+
+    // Movement
+    let speed = dashActive > 0 ? pSpeed*3 : pSpeed;
+    let move = new THREE.Vector3(0,0,0);
+    if(keys['KeyW']) move.z -= speed; if(keys['KeyS']) move.z += speed;
+    if(keys['KeyA']) move.x -= speed; if(keys['KeyD']) move.x += speed;
+    if(!checkCollision(player.position.clone().add(move))) player.position.add(move);
+    if(dashActive > 0) dashActive--; if(dashCooldown > 0) dashCooldown--;
+    if(invuln > 0) { invuln--; pMesh.visible = (invuln % 4 > 1); } else pMesh.visible = true;
+
+    // Camera
+    raycaster.setFromCamera(mouse, camera);
+    const intersect = new THREE.Vector3(); raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0), 0), intersect);
+    player.lookAt(intersect.x, 0.5, intersect.z);
+    camera.position.lerp(new THREE.Vector3(player.position.x, 25, player.position.z + 18), 0.08);
+    if(shakeIntensity > 0) { camera.position.x += (Math.random()-0.5)*shakeIntensity; camera.position.y += (Math.random()-0.5)*shakeIntensity; shakeIntensity *= 0.9; }
+    camera.lookAt(player.position);
+
+    // Collision Logic with Bigger Hitboxes
+    for(let i=bullets.length-1; i>=0; i--) {
+        const b = bullets[i]; b.mesh.position.add(b.vel);
+        if(checkCollision(b.mesh.position, 0.2) || b.mesh.position.length() > 120) { scene.remove(b.mesh); bullets.splice(i, 1); continue; }
+        
+        for(let j=enemies.length-1; j>=0; j--) {
+            const en = enemies[j];
+            // Distance check adjusted for bigger hitboxes
+            if(!b.hitList.includes(en) && b.mesh.position.distanceTo(en.mesh.position) < en.radius + 0.5) {
+                en.hp -= b.dmg; b.hitList.push(en);
+                if(!b.pierce) { scene.remove(b.mesh); bullets.splice(i, 1); } 
+                
+                if(en.hp <= 0) {
+                    if(en.ui.parentNode) en.ui.parentNode.removeChild(en.ui);
+                    scene.remove(en.mesh); 
+                    enemies.splice(j, 1);
+                    cash += 100; updateUI();
+                }
+                if(!b.pierce) break; 
+            }
+        }
+    }
+
+    // Chest Collection
+    for(let i=chests.length-1; i>=0; i--) {
+        chests[i].rotation.y += 0.05;
+        if(player.position.distanceTo(chests[i].position) < 2.5) {
+            scene.remove(chests[i]); chests.splice(i, 1);
+            cash += 500; updateUI();
+        }
+    }
+
+    // Enemy AI
+    enemies.forEach(en => {
+        en.mesh.position.y = en.radius + Math.sin(time*3+en.offset)*0.5;
+        en.ring.rotation.y += 0.05;
+        const toP = new THREE.Vector3().subVectors(player.position, en.mesh.position).normalize();
+        en.mesh.position.add(toP.multiplyScalar(0.06));
+        
+        // Player damage check also updated for bigger hitboxes
+        if(en.mesh.position.distanceTo(player.position) < en.radius + 0.5 && invuln===0) { 
+            lives--; invuln=60; addShake(0.8); updateUI(); 
+            if(lives<=0) location.reload(); 
+        }
+        
+        const sPos = en.mesh.position.clone().add(new THREE.Vector3(0, en.radius + 1, 0)).project(camera);
+        en.ui.style.left = (sPos.x+1)/2*window.innerWidth+'px'; en.ui.style.top = -(sPos.y-1)/2*window.innerHeight+'px';
+        en.ui.firstChild.style.width = (en.hp/en.max)*100 + '%';
+    });
+
+    // Minimap
+    mapCtx.fillStyle = '#001414'; mapCtx.fillRect(0,0,150,150);
+    mapCtx.fillStyle = '#0ff'; mapCtx.fillRect(73, 73, 4, 4);
+    enemies.forEach(en => { let rx = (en.mesh.position.x-player.position.x)*1.5+75; let rz = (en.mesh.position.z-player.position.z)*1.5+75; mapCtx.fillStyle = '#f0f'; if(rx>0&&rx<150&&rz>0&&rz<150) mapCtx.fillRect(rx, rz, 4, 4); });
+
+    composer.render();
+}
+
+updateUI(); animate();
+scene.add(new THREE.AmbientLight(0x444444));
+const sun = new THREE.DirectionalLight(0xffffff, 0.7); sun.position.set(10,20,10); scene.add(sun);
+</script>
+</body>
+</html>

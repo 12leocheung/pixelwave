@@ -1,0 +1,6 @@
+{
+  "appId": "com.leo.porobot",
+  "appName": "po robot",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}

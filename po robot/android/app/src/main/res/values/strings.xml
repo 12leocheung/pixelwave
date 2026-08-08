@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">po robot</string>
+    <string name="title_activity_main">po robot</string>
+    <string name="package_name">com.leo.porobot</string>
+    <string name="custom_url_scheme">com.leo.porobot</string>
+</resources>

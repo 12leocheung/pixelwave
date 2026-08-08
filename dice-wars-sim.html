@@ -318,9 +318,9 @@ nav {
   background: #2a1505; padding: 8px; border: 2px solid #3d2005; border-radius: 4px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
 }
 #replay-board {
-  display: grid; grid-template-columns: repeat(16, 24px); grid-template-rows: repeat(16, 24px); gap: 1px; background: #1a0f05;
+  display: grid; grid-template-columns: repeat(18, 22px); grid-template-rows: repeat(18, 22px); gap: 1px; background: #1a0f05;
 }
-.r-cell { width: 24px; height: 24px; position: relative; }
+.r-cell { width: 22px; height: 22px; position: relative; }
 .r-cell.nomans { background: #d4c4a0; }
 .r-cell.castle-red { background: rgba(192,57,43,0.3); }
 .r-cell.castle-blue { background: rgba(26,107,154,0.3); }
@@ -354,8 +354,8 @@ nav {
   .hero, .controls, .dashboard, #progress-wrap, .footnote { padding-left: 16px; padding-right: 16px; }
   .chart-grid, .chart-grid-3, .matchup-grid { grid-template-columns: 1fr; }
   .kpi-strip { grid-template-columns: repeat(2, 1fr); }
-  #replay-board { grid-template-columns: repeat(16, 16px); grid-template-rows: repeat(16, 16px); }
-  .r-cell { width: 16px; height: 16px; }
+  #replay-board { grid-template-columns: repeat(18, 14px); grid-template-rows: repeat(18, 14px); }
+  .r-cell { width: 14px; height: 14px; }
   .r-unit { font-size: 8px; }
   .r-res { width: 6px; height: 6px; }
 }
@@ -531,30 +531,30 @@ const RESOURCES = ['wood','metal','chemicals','herbs','energy'];
 
 const RECIPES = [
   // Weapons (Armoury)
-  { id:'sword',      name:'Sword',      isItem:false, dmg:2, range:1, cost:{wood:1,metal:2},                    room:'armoury', ability:'If this attack defeats an enemy, immediately deal 1 damage to an additional adjacent enemy.' },
-  { id:'bow',        name:'Bow',        isItem:false, dmg:1, range:5, cost:{wood:3,herbs:1},                    room:'armoury', ability:'If attacking an enemy at exactly maximum range (5), this attack deals +1 damage.' },
-  { id:'gun',        name:'Gun',        isItem:false, dmg:2, range:6, minRange:5, cost:{metal:3,chemicals:2,wood:1}, room:'armoury', ability:'Range 5–6 only. Cannot be dodged, blocked, or mitigated by any character abilities.' },
-  { id:'spear',      name:'Spear',      isItem:false, dmg:2, range:2, cost:{wood:3,metal:2},                    room:'armoury', ability:'Can attack two enemies at once if they are standing in a straight line within your range.' },
+  { id:'sword',      name:'Sword',      isItem:false, dmg:2, range:1, cost:{wood:1,metal:2},                    room:'armoury', ability:'If this defeats an enemy, immediately deal 1 damage to an additional adjacent enemy.' },
+  { id:'spear',      name:'Spear',      isItem:false, dmg:2, range:2, cost:{wood:3,metal:2},                    room:'armoury', ability:'Can attack two enemies at once if they are standing in a straight line within range.' },
+  { id:'bow',        name:'Bow',        isItem:false, dmg:1, range:6, cost:{wood:2,metal:1,herbs:1},           room:'armoury', ability:'If attacking an enemy at exactly max range (6 squares), this deals +1 damage.' },
+  { id:'gun',        name:'Gun',        isItem:false, dmg:2, range:6, cost:{metal:3,chemicals:2,wood:1},       room:'armoury', ability:'This weapon cannot be dodged, blocked, or mitigated by abilities.' },
   // Weapons (Lab)
-  { id:'grenade',    name:'Grenade',    isItem:false, dmg:2, range:4, cost:{metal:3,chemicals:2},               room:'lab',     ability:'Deals 2 damage to the target square, and 1 damage to all immediately adjacent squares (including teammates!).' },
-  { id:'equalizer',  name:'Equalizer',  isItem:false, dmg:0, range:3, cost:{metal:3,chemicals:2,energy:2,herbs:1}, room:'lab',  ability:'Compare face values. If the enemy has more health than you, reduce their health to match yours.' },
-  { id:'pusher',     name:'Pusher',     isItem:false, dmg:1, range:5, cost:{metal:3,chemicals:2,energy:2},      room:'lab',     ability:'Target is pushed 2 squares directly away from attacker. Cannot push through walls.' },
+  { id:'pusher',     name:'Pusher',     isItem:false, dmg:1, range:5, cost:{metal:1,chemicals:1,energy:1},      room:'lab',     ability:'Target is pushed 2 squares directly away from the attacker.' },
+  { id:'grenade',    name:'Grenade',    isItem:false, dmg:2, range:4, cost:{chemicals:2,metal:1},               room:'lab',     ability:'Deals 2 damage to target square, and 1 damage to all adjacent squares (including diagonals and teammates!).' },
+  { id:'equalizer',  name:'Equalizer',  isItem:false, dmg:0, range:3, cost:{metal:1,chemicals:1,energy:1,herbs:1}, room:'lab',  ability:'Compare face values. If the enemy has more health, reduce their health to match yours.' },
   // Items (Lab)
-  { id:'bandage',    name:'Bandage',    isItem:true, apCost:1, cost:{herbs:3},                           room:'lab', ability:'Heal 2 HP at any time.' },
-  { id:'smoke_grenade',name:'Smoke Grenade',isItem:true, apCost:0, cost:{chemicals:2,herbs:1,energy:1},  room:'lab', ability:'Play when targeted by an attack to dodge all damage. Instantly move to any free adjacent square.' },
-  { id:'stim_shot',  name:'Stim Shot',  isItem:true, apCost:0, cost:{chemicals:3,herbs:2,energy:1},      room:'lab', ability:'Gain an extra 2 AP this turn.' },
-  { id:'prox_mine',  name:'Prox. Mine', isItem:true, apCost:1, cost:{metal:3,chemicals:3},               room:'lab', ability:'Place on your square. If anyone enters within a 2-square radius, everyone in that radius takes 3 damage.' },
-  { id:'healing_mist',name:'Heal Mist', isItem:true, apCost:1, cost:{chemicals:3,herbs:2},               room:'lab', ability:'Place on your square. Heals anyone (friend or foe) 2 HP per turn. Lasts 3 turns.' },
-  { id:'flashbang',  name:'Flashbang',  isItem:true, apCost:1, cost:{chemicals:2,metal:1,energy:1},      room:'lab', ability:'Target a 3×3 area. Enemies caught cannot make ranged attacks (range > 2) on their next turn.' },
-  { id:'extractor',  name:'Extractor',  isItem:true, apCost:1, cost:{metal:2,energy:1},                  room:'lab', ability:'Place in an extraction zone to automatically collect that zone\'s resource once per turn. Has 1 HP — can be destroyed.' },
+  { id:'bandage',    name:'Bandage',    isItem:true, apCost:1, cost:{herbs:2},                           room:'lab', ability:'Heal 2 HP at any time.' },
+  { id:'smoke_grenade',name:'Smoke Grenade',isItem:true, apCost:0, cost:{chemicals:1,herbs:1,energy:1},  room:'lab', ability:'Play when targeted by an attack to dodge all damage. Instantly move to any free adjacent square.' },
+  { id:'stim_shot',  name:'Stim Shot',  isItem:true, apCost:0, cost:{herbs:2,chemicals:1,energy:1},      room:'lab', ability:'Gain an extra 2 AP this turn.' },
+  { id:'prox_mine',  name:'Prox. Mine', isItem:true, apCost:1, cost:{metal:1,chemicals:2,energy:1},      room:'lab', ability:'Place on your square. If an enemy enters within a 2-square radius, everyone not on your team in that radius takes 3 damage.' },
+  { id:'healing_mist',name:'Heal Mist', isItem:true, apCost:1, cost:{chemicals:1,herbs:2},               room:'lab', ability:'Place on your square. Heals anyone (friend or foe) 2 HP per turn. Lasts 3 turns.' },
+  { id:'flashbang',  name:'Flashbang',  isItem:true, apCost:1, cost:{chemicals:1,metal:1,energy:1},      room:'lab', ability:'Target a 3x3 area. Enemies caught cannot make ranged attacks (range > 2) next turn.' },
+  { id:'extractor',  name:'Extractor',  isItem:true, apCost:1, cost:{metal:1,chemicals:1,energy:1,wood:1}, room:'lab', ability:'Place an extractor of your colour in an extraction zone to collect that zone\'s resource once every turn. Starts with 1 HP.' },
 ];
 
-const BOARDSIZE = 16;
+const BOARDSIZE = 18;
 const EXTRACTION_ZONES = [
   { id:'ez_nw', r1:0,  r2:3,  c1:0,  c2:3,  resource:'wood',      label:'🪵' },
-  { id:'ez_ne', r1:0,  r2:3,  c1:12, c2:15, resource:'metal',     label:'⚙' },
-  { id:'ez_sw', r1:12, r2:15, c1:0,  c2:3,  resource:'herbs',     label:'🌿' },
-  { id:'ez_se', r1:12, r2:15, c1:12, c2:15, resource:'energy',    label:'⚡' },
+  { id:'ez_ne', r1:0,  r2:3,  c1:14, c2:17, resource:'metal',     label:'⚙' },
+  { id:'ez_sw', r1:14, r2:17, c1:0,  c2:3,  resource:'herbs',     label:'🌿' },
+  { id:'ez_se', r1:14, r2:17, c1:14, c2:17, resource:'energy',    label:'⚡' },
 ];
 
 function getExtractionZoneAt(r, c) {
@@ -562,28 +562,24 @@ function getExtractionZoneAt(r, c) {
 }
 
 const CASTLEZONES = {
-  red:   { r1:0, r2:3,  c1:4,  c2:11 },
-  blue:  { r1:4, r2:11, c1:12, c2:15 },
-  green: { r1:12,r2:15, c1:4,  c2:11 },
-  white: { r1:4, r2:11, c1:0,  c2:3  },
+  red:   { r1: 0,  r2: 3,  c1: 4,  c2: 13 },
+  blue:  { r1: 4,  r2: 13, c1: 14, c2: 17 },
+  green: { r1: 14, r2: 17, c1: 4,  c2: 13 },
+  white: { r1: 4,  r2: 13, c1: 0,  c2: 3  },
 };
 
 function getCastleRooms(faction) {
   const m = {
-    red:   { hospital:{r1:0,r2:1,c1:4,c2:7},   prison:{r1:0,r2:1,c1:8,c2:11},  armoury:{r1:2,r2:3,c1:4,c2:7},   lab:{r1:2,r2:3,c1:8,c2:11} },
-    blue:  { hospital:{r1:4,r2:7,c1:12,c2:13},  prison:{r1:4,r2:7,c1:14,c2:15}, armoury:{r1:8,r2:11,c1:12,c2:13},lab:{r1:8,r2:11,c1:14,c2:15}},
-    green: { hospital:{r1:12,r2:13,c1:4,c2:7},  prison:{r1:12,r2:13,c1:8,c2:11},armoury:{r1:14,r2:15,c1:4,c2:7}, lab:{r1:14,r2:15,c1:8,c2:11}},
-    white: { hospital:{r1:4,r2:7,c1:0,c2:1},    prison:{r1:4,r2:7,c1:2,c2:3},   armoury:{r1:8,r2:11,c1:0,c2:1},  lab:{r1:8,r2:11,c1:2,c2:3}  },
+    red:   { hospital:{r1:0,r2:1,c1:4,c2:8},    prison:{r1:0,r2:1,c1:9,c2:13},   armoury:{r1:2,r2:3,c1:4,c2:8},   lab:{r1:2,r2:3,c1:9,c2:13} },
+    blue:  { hospital:{r1:4,r2:8,c1:16,c2:17},  prison:{r1:9,r2:13,c1:16,c2:17}, armoury:{r1:4,r2:8,c1:14,c2:15}, lab:{r1:9,r2:13,c1:14,c2:15}},
+    green: { hospital:{r1:16,r2:17,c1:9,c2:13}, prison:{r1:16,r2:17,c1:4,c2:8},  armoury:{r1:14,r2:15,c1:9,c2:13},lab:{r1:14,r2:15,c1:4,c2:8}},
+    white: { hospital:{r1:9,r2:13,c1:0,c2:1},   prison:{r1:4,r2:8,c1:0,c2:1},    armoury:{r1:9,r2:13,c1:2,c2:3},  lab:{r1:4,r2:8,c1:2,c2:3}  },
   };
   return m[faction];
 }
 
 function isTradeZone(r, c) {
-  const B = BOARDSIZE - 1;
-  return (r <= 3 && c <= 3) ||           // top-left
-         (r <= 3 && c >= B-3) ||          // top-right
-         (r >= B-3 && c <= 3) ||          // bottom-left
-         (r >= B-3 && c >= B-3);          // bottom-right
+  return false; // Trading can be done with anyone anywhere; not tied to board position
 }
 
 function chebyshevDist(r1,c1,r2,c2){ return Math.max(Math.abs(r2-r1),Math.abs(c2-c1)); }
@@ -603,8 +599,25 @@ function getRoomAt(r,c){
   return null;
 }
 function getSpawnPositions(faction,count){
-  const p={red:[{r:3,c:6},{r:3,c:7},{r:3,c:8},{r:3,c:9}],blue:[{r:6,c:12},{r:7,c:12},{r:8,c:12},{r:9,c:12}],green:[{r:12,c:6},{r:12,c:7},{r:12,c:8},{r:12,c:9}],white:[{r:6,c:3},{r:7,c:3},{r:8,c:3},{r:9,c:3}]};
+  const p={
+    red:   [ {r:3,c:7}, {r:3,c:8}, {r:3,c:9}, {r:3,c:10} ],
+    blue:  [ {r:7,c:13}, {r:8,c:13}, {r:9,c:13}, {r:10,c:13} ],
+    green: [ {r:14,c:7}, {r:14,c:8}, {r:14,c:9}, {r:14,c:10} ],
+    white: [ {r:7,c:4}, {r:8,c:4}, {r:9,c:4}, {r:10,c:4} ]
+  };
   return p[faction].slice(0,count);
+}
+
+function findNewSoldierSpawn(faction, isOccupiedFn){
+  const canonical = getSpawnPositions(faction, 4).filter(p => !isOccupiedFn(p.r, p.c));
+  if(canonical.length) return canonical[0];
+  const z = CASTLEZONES[faction];
+  for(let r=z.r1; r<=z.r2; r++){
+    for(let c=z.c1; c<=z.c2; c++){
+      if(!isOccupiedFn(r, c)) return {r, c};
+    }
+  }
+  return null;
 }
 
 // ─── SIMULATION ENGINE ───────────────────────────────────────────────────────
@@ -659,7 +672,7 @@ function simGame(numPlayers, maxRounds, stats, saveHistory = false) {
   }
 
   function spawnResources(){
-    const nmlR1=4,nmlR2=11,nmlC1=4,nmlC2=11;
+    const nmlR1=4,nmlR2=13,nmlC1=4,nmlC2=13;
     const weightedPool = ['wood','wood','wood','metal','metal','metal','chemicals','chemicals','herbs','herbs','energy'];
     let attempts=0;
     while(resources.length<8&&attempts<200){ attempts++;
@@ -771,7 +784,6 @@ function simGame(numPlayers, maxRounds, stats, saveHistory = false) {
       return;
     }
 
-    if(atkPlayer.faction==='red') dmg++;
     if(weapon.id==='bow') { const dist=chebyshevDist(attacker.r,attacker.c,defender.r,defender.c); if(dist===weapon.range) dmg++; }
     if(weapon.id==='equalizer') { if(defender.hp>attacker.hp) defender.hp=attacker.hp; dmg=0; }
     
@@ -807,7 +819,18 @@ function simGame(numPlayers, maxRounds, stats, saveHistory = false) {
     }
 
     if(dmg>0) defender.hp=Math.max(0,defender.hp-dmg);
-    
+
+    // Fire faction: 1 dmg to everyone adjacent to the enemy being attacked
+    if(atkPlayer.faction==='red') {
+      for(let dr=-1; dr<=1; dr++) for(let dc=-1; dc<=1; dc++) {
+        if(dr===0&&dc===0) continue;
+        const ar=defender.r+dr, ac=defender.c+dc;
+        if(ar<0||ar>=BOARDSIZE||ac<0||ac>=BOARDSIZE) continue;
+        const adj = getUnitAt(ar,ac);
+        if(adj && adj.unit.id !== attacker.id) adj.unit.hp = Math.max(0, adj.unit.hp-1);
+      }
+    }
+
     atkPlayer.attackedThisTurn.push(defender.id);
     atkPlayer.ap--;
     stats.weaponUsage[weapon.id]=(stats.weaponUsage[weapon.id]||0)+1;
@@ -917,6 +940,21 @@ function simGame(numPlayers, maxRounds, stats, saveHistory = false) {
           if(existing) existing.count++; else cp.inventory.push({id:recipe.id,count:1});
           stats.craftCount=(stats.craftCount||0)+1;
           continue;
+        }
+      }
+
+      // 3.5. New Soldier (if in Lab, resources available, and under the 10-soldier cap)
+      if(roomInfo && roomInfo.faction===cp.faction && roomInfo.room==='lab' && cp.units.length<10){
+        const nsApCost = cp.faction==='green' ? 1 : 2;
+        if(cp.ap>=nsApCost && RESOURCES.every(r=>(cp.resources[r]||0)>=2)){
+          const spawn = findNewSoldierSpawn(cp.faction, (r,c)=>isOccupied(r,c));
+          if(spawn){
+            RESOURCES.forEach(r=>cp.resources[r]-=2);
+            cp.units.push({id:cp.faction+'_ns_'+cp.units.length+'_'+ui, r:spawn.r, c:spawn.c, hp:6, maxHp:6, prisoner:false, prisonerId:null, surrendered:false, smoke:false, flashbanged:0});
+            cp.ap-=nsApCost;
+            stats.newSoldiers=(stats.newSoldiers||0)+1;
+            continue;
+          }
         }
       }
 
@@ -1308,11 +1346,11 @@ function renderReplayBoard() {
   
   const resColors = { wood:'#8B4513', metal:'#708090', chemicals:'#9932CC', herbs:'#228B22', energy:'#FFD700' };
   
-  for (let r=0; r<16; r++) {
-    for (let c=0; c<16; c++) {
+  for (let r=0; r<BOARDSIZE; r++) {
+    for (let c=0; c<BOARDSIZE; c++) {
       const cell = document.createElement('div');
       cell.className = 'r-cell';
-      
+
       const type = getCellType(r, c);
       if (type === 'nomans') {
         cell.classList.add('nomans');

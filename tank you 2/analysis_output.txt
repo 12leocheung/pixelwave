@@ -1,0 +1,32 @@
+1. ONLINSCREEN DIV WITH 3 LINES BEFORE AND AFTER
+======================================================================
+
+  </div>
+
+  <div id="onlineScreen">
+    <div class="ctl"></div><div class="ctr"></div><div class="cbl"></div><div class="cbr"></div>
+    <h2>ONLINE MODE</h2>
+
+
+2. CLASSSCREEN CLOSURE (3 LINES BEFORE AND AFTER)
+======================================================================
+
+    <button class="menuBtn primary" onclick="confirmClass()">DEPLOY →</button>
+    <button class="menuBtn" onclick="goBackFromClass()" style="font-size:10px;padding:7px 22px;margin-top:4px;">← BACK</button>
+  </div>
+</div>
+
+<script>
+
+
+3. SEARCH RESULTS
+======================================================================
+leaderboardScreen: NOT FOUND
+sandboxScreen: NOT FOUND
+
+All screen divs in file:
+  - deathScreen
+  - winScreen
+  - onlineScreen
+  - lobbyScreen
+  - classScreen

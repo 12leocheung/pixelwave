@@ -1,0 +1,2 @@
+{
+  stone: { name: 'STONE', label: 'STN', desc: 'Standard die. No special effect.', color: '#39ff14' }

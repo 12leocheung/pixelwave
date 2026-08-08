@@ -1,0 +1,94 @@
+DICE MOD ITEMS IN SHOP_CATALOG
+====================================================================================================
+
+1. CLONE.DIE
+   Tab: consumables
+   Rarity: rare
+   Cost: 7
+   Description: Duplicate one of your dice (adds copy to pool).
+   Effect: 
+
+2. STONE DIE (D6)
+   Tab: dice
+   Rarity: common
+   Cost: 5
+   Description: Add a standard stone D6.
+   Effect: +1 D6 · STONE
+
+3. STONE DIE (D8)
+   Tab: dice
+   Rarity: common
+   Cost: 8
+   Description: Add a stone D8.
+   Effect: +1 D8 · STONE
+
+4. STONE DIE (D10)
+   Tab: dice
+   Rarity: common
+   Cost: 11
+   Description: Add a stone D10.
+   Effect: +1 D10 · STONE
+
+5. GOLD DIE
+   Tab: dice
+   Rarity: uncommon
+   Cost: 10
+   Description: Add a Gold D6. Gives +3 flat chips each roll.
+   Effect: +3C always · GOLD
+
+6. FIRE DIE
+   Tab: dice
+   Rarity: uncommon
+   Cost: 10
+   Description: Add a Fire D6. Grants +1.2 Mult when max face is rolled.
+   Effect: +1.2M on max · FIRE
+
+7. CURSED DIE
+   Tab: dice
+   Rarity: uncommon
+   Cost: 9
+   Description: Add a Cursed D6. Rolling 1 gives +6 chips.
+   Effect: +6C on 1 · CURSED
+
+8. WOODEN DIE
+   Tab: dice
+   Rarity: uncommon
+   Cost: 8
+   Description: Add a Wooden D6. Gains +1 max face permanently each round.
+   Effect: Grows · WOODEN
+
+9. GLASS DIE
+   Tab: dice
+   Rarity: rare
+   Cost: 14
+   Description: Add a Glass D6. x2 score if never rerolled. SHATTERS if rerolled.
+   Effect: x2 or shatter · GLASS
+
+10. STEEL DIE
+   Tab: dice
+   Rarity: rare
+   Cost: 13
+   Description: Add a Steel D6. Each held steel die grants +1.2 Mult.
+   Effect: +1.2M held · STEEL
+
+11. BRONZE DIE
+   Tab: dice
+   Rarity: rare
+   Cost: 12
+   Description: Add a Bronze D6. Acts as a wild for hand detection.
+   Effect: WILD · BRONZE
+
+12. CRYSTAL DIE
+   Tab: dice
+   Rarity: rare
+   Cost: 15
+   Description: Add a Crystal D6. Its pip value is counted twice toward chips.
+   Effect: x2 value · CRYSTAL
+
+13. OBSIDIAN DIE
+   Tab: dice
+   Rarity: legendary
+   Cost: 18
+   Description: Add an Obsidian D6. Grants +0.25 Mult per die in your entire pool.
+   Effect: +0.25M/die · OBS
+

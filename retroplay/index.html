@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RetroPlay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@300..700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --font-body:'Inter',sans-serif;--font-mono:'Share Tech Mono',monospace;
+  /* Sketch-inspired colors */
+  --walkman-body:#F4F4F4;
+  --walkman-strip:#888888;
+  --walkman-btn:#FF8C42; --walkman-btn-hover:#FF9D5C; --walkman-btn-active:#E67A32;
+  --walkman-window:#222222;
+  --cassette-body:#4A4A4A; --cassette-tape:#1A1A1A; --cassette-spool:#EEEEEE; --cassette-label:#F0F0F0;
+  
+  --page-bg:#1a1a1a;--color-text:#eee;--color-text-muted:#999;--color-accent:#FF8C42;
+  --s1:.25rem;--s2:.5rem;--s3:.75rem;--s4:1rem;--s6:1.5rem;--s8:2rem;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{-webkit-font-smoothing:antialiased;}
+body{min-height:100dvh;font-family:var(--font-body);background:var(--page-bg);color:var(--color-text);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+
+/* Rotate warning ONLY for the player screen */
+@media(orientation:portrait){
+  #player-screen.active::before {
+    content: "↻ Rotate device to landscape";
+    position: fixed; inset: 0; background: #111; color: #eee;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; z-index: 9999;
+  }
+  #player-screen.active .walkman-wrapper {
+    display: none; /* Hide player so it doesn't leak behind warning */
+  }
+}
+
+.screen{display:none;width:100%;min-height:100dvh;align-items:center;justify-content:center;flex-direction:column;}
+.screen.active{display:flex;}
+
+/* LOGIN */
+#login-screen{background:radial-gradient(ellipse at 50% 30%,#2a1a0a 0%,#111 60%);gap:var(--s8);padding:var(--s4);}
+.login-logo{display:flex;align-items:center;gap:var(--s3);}
+.login-logo svg{width:48px;height:48px;}
+.login-logo h1{font-family:var(--font-mono);font-size:2rem;letter-spacing:.15em;color:#fff;}
+.login-logo span{color:var(--color-accent);}
+.login-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:var(--s8);width:min(420px,92vw);display:flex;flex-direction:column;gap:var(--s6);}
+.login-card h2{font-size:1.25rem;font-weight:500;text-align:center;color:#fff;}
+.login-card>p{color:var(--color-text-muted);font-size:.875rem;text-align:center;}
+.form-group{display:flex;flex-direction:column;gap:var(--s2);}
+.form-group label{font-size:.875rem;color:var(--color-text-muted);}
+.form-group input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:.8rem 1rem;color:#fff;font-size:1rem;outline:none;width:100%;transition:border-color .2s;}
+.form-group input:focus{border-color:var(--color-accent);}
+.btn{border:none;border-radius:8px;padding:.75rem 1.5rem;font-size:1rem;font-weight:600;cursor:pointer;transition:background .2s,transform .1s;width:100%;}
+.btn-primary{background:var(--walkman-btn);color:#111;}.btn-primary:hover{background:var(--walkman-btn-hover);}.btn-primary:active{transform:scale(.98);}
+.btn-ghost{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;}.btn-ghost:hover{background:rgba(255,255,255,.14);}
+.error-msg{color:#ff6b6b;font-size:.8rem;text-align:center;min-height:1.2em;}
+.info-box{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:var(--s3) var(--s4);font-size:.78rem;color:var(--color-text-muted);line-height:1.7;}
+.info-box strong{color:rgba(255,255,255,.7);}
+.info-box code{background:rgba(255,255,255,.07);border-radius:4px;padding:1px 5px;font-family:var(--font-mono);font-size:.85em;color:#ffb86c;}
+
+/* PLAYER - SKETCH DESIGN */
+#player-screen{background:#1a1a1a;position:relative;overflow:hidden;justify-content:center;padding:var(--s4);}
+
+.walkman-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(720px, 96vw);
+}
+
+/* Top Buttons */
+.top-buttons {
+  display: flex;
+  gap: 16px;
+  margin-bottom: -2px; 
+  z-index: 10;
+}
+.top-btn {
+  width: 60px;
+  height: 36px;
+  background: var(--walkman-btn);
+  border: 2px solid #111;
+  border-radius: 4px 4px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: inset 0 3px 6px rgba(255,255,255,0.4), inset -2px -2px 4px rgba(0,0,0,0.1);
+  transition: transform 0.1s, background 0.15s;
+  touch-action: none;
+}
+.top-btn:active {
+  transform: translateY(3px);
+  background: var(--walkman-btn-active);
+}
+.top-btn svg {
+  width: 22px;
+  height: 22px;
+  fill: #111;
+  pointer-events: none;
+}
+
+/* Chassis */
+.walkman-chassis {
+  width: 100%;
+  background: var(--walkman-body);
+  border: 2px solid #111;
+  border-radius: 2px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+  position: relative;
+}
+
+/* Dark Strip at Top - Decorative */
+.top-dark-strip {
+  height: 48px;
+  background: var(--walkman-strip);
+  border-bottom: 2px solid #111;
+  box-shadow: inset 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* Main Body Area */
+.chassis-body {
+  padding: 30px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 30px;
+  height: 280px; 
+}
+
+/* Vertical Side Volume */
+.vol-control-vert {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  height: 100%;
+  background: #E0E0E0;
+  padding: 16px 12px;
+  border-radius: 4px;
+  border: 2px solid #111;
+  box-shadow: inset 0 3px 8px rgba(0,0,0,0.3);
+}
+.vol-control-vert span {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #111;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+.vol-track {
+  width: 8px;
+  flex: 1; 
+  background: #333;
+  border: 1px solid #111;
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+  touch-action: none; 
+}
+.vol-fill {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 70%;
+  background: var(--walkman-btn);
+  border-radius: 0 0 3px 3px;
+}
+.vol-thumb {
+  position: absolute;
+  bottom: 70%;
+  left: 50%;
+  transform: translate(-50%, 50%);
+  width: 20px;
+  height: 12px;
+  background: #eee;
+  border: 2px solid #111;
+  border-radius: 2px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}
+
+/* Cassette Window */
+.cassette-window {
+  flex: 1;
+  height: 100%;
+  background: var(--walkman-window);
+  border: 2px solid #111;
+  border-radius: 4px;
+  box-shadow: inset 0 5px 20px rgba(0,0,0,0.8), 0 2px 0 rgba(255,255,255,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* The Cassette */
+.cassette {
+  width: 90%;
+  max-height: 90%;
+  aspect-ratio: 1.8;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.5s, transform 0.5s;
+}
+.cassette.loaded {
+  opacity: 1;
+  transform: none;
+}
+.cassette-body {
+  position: absolute;
+  inset: 0;
+  background: var(--cassette-body);
+  border: 2px solid #222;
+  border-radius: 4px;
+  box-shadow: inset 0 2px 5px rgba(255,255,255,0.1);
+}
+
+/* Center Label */
+.cassette-label-area {
+  position: absolute;
+  left: 28%;
+  right: 28%;
+  top: 20%;
+  bottom: 20%;
+  background: var(--cassette-label);
+  border: 1px solid #111;
+  border-radius: 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  overflow: hidden;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+}
+.cassette-title {
+  font-family: var(--font-mono);
+  font-size: clamp(8px, 1.5vw, 12px);
+  color: #111;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  text-align: center;
+}
+.cassette-subtitle {
+  font-family: var(--font-mono);
+  font-size: clamp(6px, 1vw, 9px);
+  color: #555;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  text-align: center;
+  margin-top: 2px;
+}
+
+/* Spools */
+.spool-left, .spool-right {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20%;
+  aspect-ratio: 1;
+  background: var(--cassette-spool);
+  border-radius: 50%;
+  border: 2px solid #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.spool-left { left: 5%; }
+.spool-right { right: 5%; }
+
+/* Spool teeth details */
+.spool-inner {
+  width: 60%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 3px dashed #666;
+  background: transparent;
+}
+
+.tape-bridge {
+  position: absolute;
+  bottom: 8%;
+  left: 25%;
+  right: 25%;
+  height: 6%;
+  background: var(--cassette-tape);
+  border: 1px solid #111;
+  border-radius: 1px;
+}
+
+/* Animations - Forwarding/Rewinding now spin slower (5s) than playing (2.5s) */
+.cassette.playing .spool-left, .cassette.playing .spool-right { animation: spin 2.5s linear infinite; }
+.cassette.rewinding .spool-left, .cassette.rewinding .spool-right { animation: spin 5s linear infinite reverse; }
+.cassette.forwarding .spool-left, .cassette.forwarding .spool-right { animation: spin 5s linear infinite; }
+@keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+
+.change-btn { position: absolute; top: var(--s4); right: var(--s4); background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; padding: .4rem .8rem; color: var(--color-text-muted); font-size: .8rem; cursor: pointer; display: flex; align-items: center; gap: .4rem; transition: background .2s, color .2s; }
+.change-btn:hover { background: rgba(255,255,255,.12); color: #fff; }
+
+.toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(20px); background: rgba(30,30,30,.95); border: 1px solid rgba(255,255,255,.12); border-radius: 8px; padding: .6rem 1.2rem; font-size: .85rem; color: #eee; opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none; white-space: nowrap; backdrop-filter: blur(8px); z-index: 200; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#yt-frame-wrap { position: fixed; bottom: 0; right: 0; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
+
+@media (max-width: 500px) {
+  .chassis-body { padding: 20px; gap: 16px; height: 220px; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" class="screen active">
+  <div class="login-logo">
+    <svg viewBox="0 0 48 48" fill="none" aria-label="RetroPlay logo">
+      <rect x="4" y="10" width="40" height="28" rx="6" fill="#FF8C42"/>
+      <rect x="8" y="14" width="32" height="20" rx="3" fill="#1A1A2E"/>
+      <circle cx="18" cy="24" r="5" fill="#2A2040" stroke="#EEEEEE" stroke-width="1.5"/>
+      <circle cx="30" cy="24" r="5" fill="#2A2040" stroke="#EEEEEE" stroke-width="1.5"/>
+      <rect x="22" y="22" width="4" height="4" rx="1" fill="#EEEEEE"/>
+    </svg>
+    <h1>Retro<span>Play</span></h1>
+  </div>
+  <div class="login-card">
+    <h2>Paste a Playlist Link</h2>
+    <p>Drop in a YouTube playlist URL and press Play</p>
+    <div class="form-group">
+      <label for="playlist-url">Playlist URL</label>
+      <input type="url" id="playlist-url" placeholder="https://www.youtube.com/playlist?list=PL..." autocomplete="off" spellcheck="false">
+    </div>
+    <p class="error-msg" id="login-error"></p>
+    <button class="btn btn-primary" onclick="handleLoad()">▶ Load Playlist</button>
+    <div class="info-box">
+      <strong>Supported formats:</strong><br>
+      • <code>youtube.com/playlist?list=PLxxx</code><br>
+      • <code>music.youtube.com/playlist?list=PLxxx</code><br>
+      • Any YouTube URL containing <code>list=</code><br><br>
+      <strong>Note:</strong> Playlist must be <strong>public</strong>. Due to browser autoplay rules, you may need to press the play button once after loading.
+    </div>
+    <button class="btn btn-ghost" onclick="useDemoMode()">Use Demo Mode</button>
+  </div>
+</div>
+
+<!-- PLAYER -->
+<div id="player-screen" class="screen">
+  <button class="change-btn" onclick="showScreen('login-screen')">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/></svg>
+    Change
+  </button>
+  
+  <div class="walkman-wrapper">
+    <!-- Top Hardware Buttons (Hold to Wind) -->
+    <div class="top-buttons">
+      <button class="top-btn" onpointerdown="startRW(event)" onpointerup="stopWinding(event)" onpointerleave="stopWinding(event)" onpointercancel="stopWinding(event)" aria-label="Rewind">
+        <svg viewBox="0 0 24 24"><path d="M11.5 12l8.5 6V6zM3 12l8.5 6V6z"/></svg>
+      </button>
+      <button class="top-btn" id="btn-play" onclick="ctrlPlay()" aria-label="Play/Pause">
+        <svg viewBox="0 0 24 24" id="play-icon"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+      <button class="top-btn" onclick="ctrlStop()" aria-label="Stop">
+        <svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+      </button>
+      <button class="top-btn" onpointerdown="startFF(event)" onpointerup="stopWinding(event)" onpointerleave="stopWinding(event)" onpointercancel="stopWinding(event)" aria-label="Fast Forward">
+        <svg viewBox="0 0 24 24"><path d="M12.5 12L4 6v12zM21 12l-8.5-6v12z"/></svg>
+      </button>
+    </div>
+
+    <!-- Main Player Chassis -->
+    <div class="walkman-chassis">
+      
+      <!-- Top Dark Strip -->
+      <div class="top-dark-strip"></div>
+
+      <!-- Cassette & Volume Area -->
+      <div class="chassis-body">
+        
+        <!-- Left vertical volume slider -->
+        <div class="vol-control-vert">
+          <span>VOL</span>
+          <div class="vol-track" id="volume-track">
+            <div class="vol-fill" id="volume-fill"></div>
+            <div class="vol-thumb" id="volume-thumb"></div>
+          </div>
+        </div>
+
+        <div class="cassette-window">
+          <div class="cassette" id="cassette">
+            <div class="cassette-body"></div>
+            <div class="spool-left"><div class="spool-inner"></div></div>
+            <div class="spool-right"><div class="spool-inner"></div></div>
+            <div class="cassette-label-area">
+              <div class="cassette-title" id="cassette-title">NO TAPE</div>
+              <div class="cassette-subtitle" id="cassette-subtitle">Paste a playlist link</div>
+            </div>
+            <div class="tape-bridge"></div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Hidden YT player (must be visible enough for autoplay to work) -->
+<div id="yt-frame-wrap"><div id="yt-player"></div></div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+// ── STATE ────────────────────────────────────────────────────────
+const st = { mode: null, volume: 70, listId: null, playing: false };
+
+// demo tracks
+const DEMO = [
+  {title:'Night Drive',channel:'Synthmaster',dur:243},
+  {title:'Neon Lights',channel:'RetroWave',dur:198},
+  {title:'City Rain',channel:'Chroma',dur:217},
+  {title:'Electric Pulse',channel:'VapourGrid',dur:265},
+  {title:'Last Train',channel:'Synthmaster',dur:190},
+];
+let demoIdx=0, demoElapsed=0, demoTimer=null;
+
+// Winding & Gap State
+let windTimer = null;
+let isWinding = false;
+let isGap = false;
+let gapTimeout = null;
+
+// ── UTILS ────────────────────────────────────────────────────────
+function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+let toastT; function toast(m,d=3500){const el=document.getElementById('toast');el.textContent=m;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),d);}
+
+// Updates the Play icon to Pause and vice-versa
+function setPlayIcon(playing){ 
+  const pi = document.getElementById('play-icon');
+  if(pi){
+      pi.innerHTML = playing 
+        ? '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>' // Pause
+        : '<path d="M8 5v14l11-7z"/>';                 // Play
+  }
+}
+
+function setCass(s){
+  const c=document.getElementById('cassette');
+  if(c){
+    c.classList.remove('playing','rewinding','forwarding');
+    if(s) c.classList.add(s);
+  }
+}
+
+function setLabel(title,sub){
+  const t = document.getElementById('cassette-title');
+  const s = document.getElementById('cassette-subtitle');
+  if(t) t.textContent=title;
+  if(s) s.textContent=sub||'';
+  const c=document.getElementById('cassette');
+  if(c){
+    c.classList.remove('loaded');
+    setTimeout(()=>c.classList.add('loaded'),50);
+  }
+}
+
+function parseListId(raw){
+  const s=raw.trim();
+  if(/^[A-Za-z0-9_-]{10,}$/.test(s)&&!s.includes('/'))return s;
+  try{ return new URL(s.startsWith('http')?s:'https://'+s).searchParams.get('list')||null; }
+  catch(e){return null;}
+}
+
+// ── LOGIN HANDLER ────────────────────────────────────────────────
+function handleLoad(){
+  const raw = document.getElementById('playlist-url').value.trim();
+  const err = document.getElementById('login-error');
+  err.textContent = '';
+  if(!raw){ err.textContent='Please paste a playlist URL.'; return; }
+  const id = parseListId(raw);
+  if(!id){ err.textContent='Could not find a playlist ID — check the URL.'; return; }
+  st.mode = 'youtube';
+  st.listId = id;
+  showScreen('player-screen');
+  setLabel('YouTube Playlist', 'Loading...');
+  toast('Playlist ready — press Play ▶');
+}
+
+function useDemoMode(){
+  st.mode='demo'; demoIdx=0; demoElapsed=0;
+  showScreen('player-screen');
+  loadDemoTrack(0);
+  toast('Demo mode — press Play ▶');
+}
+
+// ── YOUTUBE ──────────────────────────────────────────────────────
+let ytPlayer=null, ytReady=false, ytLoaded=false;
+
+function onYouTubeIframeAPIReady(){
+  ytPlayer = new YT.Player('yt-player',{
+    width:'320', height:'180',
+    playerVars:{autoplay:0,controls:1,rel:0,modestbranding:1,playsinline:1,origin:location.origin},
+    events:{
+      onReady: ()=>{ ytReady=true; ytPlayer.setVolume(st.volume); },
+      onStateChange: onYTState,
+      onError: e=>toast('YouTube error (code '+e.data+'). Playlist may be private.')
+    }
+  });
+}
+
+function onYTState(e){
+  if(st.mode!=='youtube')return;
+  const S=YT.PlayerState;
+  
+  if(e.data===S.PLAYING){
+    if (isGap) {
+        // Intercept auto-play during our simulated 2-second gap
+        ytPlayer.pauseVideo();
+    } else {
+        st.playing = true; 
+        if(!isWinding) setCass('playing'); 
+        setPlayIcon(true);
+        syncYTMeta();
+    }
+  } else if(e.data===S.PAUSED){
+    if (!isGap) {
+        st.playing = false; 
+        if(!isWinding) setCass(''); 
+        setPlayIcon(false);
+    }
+  } else if(e.data===S.ENDED){
+    // Track naturally finished or fast forwarded to the end
+    isGap = true;
+    setCass(''); setPlayIcon(false);
+    clearTimeout(gapTimeout);
+    
+    // Simulate tape gap before next song
+    gapTimeout = setTimeout(() => {
+        isGap = false;
+        // Resume playing the next song that YT automatically queued
+        ytPlayer.playVideo();
+    }, 2000);
+  }
+}
+
+function syncYTMeta(){
+  if(!ytPlayer||!ytReady)return;
+  try{
+    const d=ytPlayer.getVideoData();
+    if(d&&d.title&&d.title!=='') setLabel(d.title, d.author||'YouTube');
+  }catch(e){}
+}
+
+function ytPlayPlaylist(){
+  if(!ytReady||!ytPlayer){ toast('Player not ready yet, try again in a moment.'); return; }
+  try{
+    if(!ytLoaded){
+      ytPlayer.loadPlaylist({listType:'playlist', list:st.listId, index:0});
+      ytLoaded=true;
+      setTimeout(()=>{ try{ ytPlayer.playVideo(); }catch(e){} }, 800);
+    } else {
+      ytPlayer.playVideo();
+    }
+  }catch(e){ toast('Could not start playlist: '+e.message); }
+}
+
+// ── DEMO ─────────────────────────────────────────────────────────
+function loadDemoTrack(idx){
+  demoIdx=idx; demoElapsed=0;
+  const t=DEMO[idx];
+  setLabel(t.title, t.channel);
+  setPlayIcon(false); setCass('');
+}
+
+function doDemoGap(){
+  isGap = true;
+  st.playing = false;
+  setCass(''); setPlayIcon(false);
+  clearTimeout(gapTimeout);
+  
+  gapTimeout = setTimeout(() => {
+    isGap = false;
+    if(demoIdx < DEMO.length - 1){ 
+      loadDemoTrack(demoIdx + 1); 
+      startDemo(); 
+    } else { 
+      ctrlStop(); 
+    }
+  }, 2000);
+}
+
+function startDemo(){
+  clearInterval(demoTimer);
+  st.playing = true; 
+  if(!isWinding) setCass('playing'); 
+  setPlayIcon(true);
+  
+  demoTimer = setInterval(()=>{
+    if(isGap || isWinding) return; // Winding handles demo time internally
+    const t = DEMO[demoIdx];
+    demoElapsed += 0.25;
+    if(demoElapsed >= t.dur){ 
+       clearInterval(demoTimer);
+       doDemoGap();
+    }
+  }, 250);
+}
+
+// ── CONTROLS ─────────────────────────────────────────────────────
+function ctrlPlay(){
+  if(st.mode==='youtube'){
+    if(!st.playing){ ytPlayPlaylist(); }
+    else{ try{ ytPlayer.pauseVideo(); }catch(e){} }
+    return;
+  }
+  if(st.mode==='demo'){
+    if(st.playing){
+      clearInterval(demoTimer);
+      st.playing=false; setCass(''); setPlayIcon(false);
+    } else {
+      startDemo();
+    }
+  }
+}
+
+function ctrlStop(){
+  if(st.mode==='youtube'&&ytPlayer&&ytReady){ try{ ytPlayer.stopVideo(); ytLoaded=false; }catch(e){} }
+  if(st.mode==='demo'){ clearInterval(demoTimer); demoElapsed=0; }
+  isGap = false;
+  clearTimeout(gapTimeout);
+  st.playing=false; setCass(''); setPlayIcon(false);
+}
+
+// ── FAST FORWARD & REWIND (Hold actions) ──────────────────────────
+function startFF(e) {
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  if (isGap || isWinding) return; // Disable winding between tracks
+  isWinding = 'ff';
+  setCass('forwarding');
+  
+  if (st.mode === 'youtube' && ytPlayer && ytReady) {
+    // Attempt to physically speed up audio where YouTube allows
+    ytPlayer.setPlaybackRate(2.0); 
+  }
+  
+  // Timer checks if we hit the end of the song while FF'ing
+  windTimer = setInterval(() => {
+    if (st.mode === 'youtube' && ytPlayer && ytReady) {
+      let cur = ytPlayer.getCurrentTime() || 0;
+      let dur = ytPlayer.getDuration() || 0;
+      if (dur > 0 && cur + 0.5 >= dur) {
+         // Reached end of track, stop wind & trigger gap!
+         stopWinding();
+         ytPlayer.seekTo(dur - 0.5, true); 
+      }
+    } else if (st.mode === 'demo') {
+      const t = DEMO[demoIdx];
+      demoElapsed += 1; // 4x speed for demo calculation
+      if (demoElapsed >= t.dur) {
+         stopWinding();
+         doDemoGap();
+      }
+    }
+  }, 250);
+}
+
+function startRW(e) {
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  if (isGap || isWinding) return;
+  isWinding = 'rw';
+  setCass('rewinding');
+  
+  // Backwards requires scrub ticking
+  windTimer = setInterval(() => {
+    if (st.mode === 'youtube' && ytPlayer && ytReady) {
+      let cur = ytPlayer.getCurrentTime() || 0;
+      if (cur - 2 <= 0) {
+         ytPlayer.seekTo(0, true);
+      } else {
+         ytPlayer.seekTo(cur - 2, true);
+      }
+    } else if (st.mode === 'demo') {
+      demoElapsed -= 1;
+      if (demoElapsed <= 0) demoElapsed = 0;
+    }
+  }, 250);
+}
+
+function stopWinding(e) {
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  if (!isWinding) return;
+  
+  if (st.mode === 'youtube' && ytPlayer && ytReady) {
+      ytPlayer.setPlaybackRate(1.0); // Restore normal speed
+  }
+  
+  isWinding = false;
+  clearInterval(windTimer);
+  
+  // Restore animation
+  if (st.playing) setCass('playing'); 
+  else setCass('');
+}
+
+// ── VERTICAL VOLUME ────────────────────────────────────────────
+(function(){
+  const track = document.getElementById('volume-track'), 
+        fill = document.getElementById('volume-fill'), 
+        thumb = document.getElementById('volume-thumb');
+  let drag = false;
+  
+  function set(y){ 
+    const r = track.getBoundingClientRect(); 
+    let p = Math.max(0, Math.min(1, 1 - (y - r.top) / r.height)); 
+    st.volume = Math.round(p * 100); 
+    fill.style.height = (p * 100) + '%'; 
+    thumb.style.bottom = 'calc(' + (p * 100) + '% - 6px)'; 
+    if(ytPlayer && ytReady) ytPlayer.setVolume(st.volume); 
+  }
+  
+  track.addEventListener('pointerdown', e=>{
+    drag=true; set(e.clientY); track.setPointerCapture(e.pointerId);
+  });
+  track.addEventListener('pointermove', e=>{
+    if(drag) set(e.clientY);
+  });
+  track.addEventListener('pointerup', e=>{
+    drag=false; track.releasePointerCapture(e.pointerId);
+  });
+  track.addEventListener('pointercancel', e=>{
+    drag=false; track.releasePointerCapture(e.pointerId);
+  });
+})();
+
+// ── KEYBOARD ────────────────────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT')return;
+  if(e.code==='Space'){e.preventDefault();ctrlPlay();}
+  if(e.code==='ArrowLeft')startRW();
+  if(e.code==='ArrowRight')startFF();
+  if(e.code==='Escape')ctrlStop();
+});
+
+document.addEventListener('keyup',e=>{
+  if(e.target.tagName==='INPUT')return;
+  if(e.code==='ArrowLeft' || e.code==='ArrowRight')stopWinding();
+});
+</script>
+</body>
+</html>

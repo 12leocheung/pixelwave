@@ -1,0 +1,94 @@
+ALL DICE MOD ITEMS - EXACT CODE FROM SHOP_CATALOG
+========================================================================================================================
+
+
+========================================================================================================================
+DICE ITEM #1
+========================================================================================================================
+
+{ tab: 'consumables', rarity: 'rare', name: 'CLONE.DIE', id: 'CLONE_DIE', cost: 7, desc: 'Duplicate one of your dice (adds copy to pool).', f: () => addConsumable('CLONE_DIE') }
+
+
+========================================================================================================================
+DICE ITEM #2
+========================================================================================================================
+
+{ tab: 'dice', rarity: 'common', name: 'STONE DIE (D6)', cost: 5, desc: 'Add a standard stone D6.', effect: '+1 D6 · STONE', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'stone')); initBoard(); notify('+1 STONE D6', 'info'); } }
+
+
+========================================================================================================================
+DICE ITEM #3
+========================================================================================================================
+
+{ tab: 'dice', rarity: 'common', name: 'STONE DIE (D8)', cost: 8, desc: 'Add a stone D8.', effect: '+1 D8 · STONE', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6, 7, 8], 'stone')); initBoard(); notify('+1 STONE D8', 'info'); } }
+
+
+========================================================================================================================
+DICE ITEM #4
+========================================================================================================================
+
+{ tab: 'dice', rarity: 'common', name: 'STONE DIE (D10)', cost: 11, desc: 'Add a stone D10.', effect: '+1 D10 · STONE', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 'stone')); initBoard(); notify('+1 STONE D10', 'info'); } }
+
+
+========================================================================================================================
+DICE ITEM #5
+========================================================================================================================
+
+{ tab: 'dice', rarity: 'uncommon', name: 'GOLD DIE', cost: 10, desc: 'Add a Gold D6. Gives +3 flat chips each roll.', effect: '+3C always · GOLD', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'gold')); initBoard(); notify('+1 GOLD DIE', 'gold'); } }
+
+
+========================================================================================================================
+DICE ITEM #6
+========================================================================================================================
+
+{ tab: 'dice', rarity: 'uncommon', name: 'FIRE DIE', cost: 10, desc: 'Add a Fire D6. Grants +1.2 Mult when max face is rolled.', effect: '+1.2M on max · FIRE', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'fire')); initBoard(); notify('+1 FIRE DIE', 'good'); } }
+
+
+========================================================================================================================
+DICE ITEM #7
+========================================================================================================================
+
+{ tab: 'dice', rarity: 'uncommon', name: 'CURSED DIE', cost: 9, desc: 'Add a Cursed D6. Rolling 1 gives +6 chips.', effect: '+6C on 1 · CURSED', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'cursed')); initBoard(); notify('+1 CURSED DIE', 'info'); } }
+
+
+========================================================================================================================
+DICE ITEM #8
+========================================================================================================================
+
+{ tab: 'dice', rarity: 'uncommon', name: 'WOODEN DIE', cost: 8, desc: 'Add a Wooden D6. Gains +1 max face permanently each round.', effect: 'Grows · WOODEN', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'wooden')); initBoard(); notify('+1 WOODEN DIE', 'good'); } }
+
+
+========================================================================================================================
+DICE ITEM #9
+========================================================================================================================
+
+{ tab: 'dice', rarity: 'rare', name: 'GLASS DIE', cost: 14, desc: 'Add a Glass D6. x2 score if never rerolled. SHATTERS if rerolled.', effect: 'x2 or shatter · GLASS', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'glass')); initBoard(); notify('+1 GLASS DIE', 'info'); } }
+
+
+========================================================================================================================
+DICE ITEM #10
+========================================================================================================================
+
+{ tab: 'dice', rarity: 'rare', name: 'STEEL DIE', cost: 13, desc: 'Add a Steel D6. Each held steel die grants +1.2 Mult.', effect: '+1.2M held · STEEL', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'steel')); initBoard(); notify('+1 STEEL DIE', 'info'); } }
+
+
+========================================================================================================================
+DICE ITEM #11
+========================================================================================================================
+
+{ tab: 'dice', rarity: 'rare', name: 'BRONZE DIE', cost: 12, desc: 'Add a Bronze D6. Acts as a wild for hand detection.', effect: 'WILD · BRONZE', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'bronze')); initBoard(); notify('+1 BRONZE DIE', 'gold'); } }
+
+
+========================================================================================================================
+DICE ITEM #12
+========================================================================================================================
+
+{ tab: 'dice', rarity: 'rare', name: 'CRYSTAL DIE', cost: 15, desc: 'Add a Crystal D6. Its pip value is counted twice toward chips.', effect: 'x2 value · CRYSTAL', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'crystal')); initBoard(); notify('+1 CRYSTAL DIE', 'good'); } }
+
+
+========================================================================================================================
+DICE ITEM #13
+========================================================================================================================
+
+{ tab: 'dice', rarity: 'legendary', name: 'OBSIDIAN DIE', cost: 18, desc: 'Add an Obsidian D6. Grants +0.25 Mult per die in your entire pool.', effect: '+0.25M/die · OBS', f: () => { g.dice.push(makeDie([1, 2, 3, 4, 5, 6], 'obsidian')); initBoard(); notify('+1 OBSIDIAN DIE', 'good'); } }
+

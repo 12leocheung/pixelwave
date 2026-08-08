@@ -1,0 +1,13 @@
+# Dependency directories
+node_modules/
+
+# npm
+npm-debug.log*
+
+# Android build outputs (see android/.gitignore for the rest)
+android/build/
+android/app/build/
+android/.gradle/
+android/.idea/
+android/capacitor-cordova-android-plugins/build/
+android/local.properties

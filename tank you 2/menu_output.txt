@@ -1,0 +1,6 @@
+  <div id="menu">
+    <div class="ctl"></div><div class="ctr"></div><div class="cbl"></div><div class="cbr"></div>
+    <h1>TANK ROYALE</h1>
+    <div class="sub">LAST TANK STANDING</div>
+    <div id="rankCard">
+      <div id="rankTierLabel">BRONZE I</div>
