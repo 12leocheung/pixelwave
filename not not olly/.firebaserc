@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "not-not-olly"
-  }
+  },
+  "targets": {
+    "not-not-olly": {
+      "database": {
+        "default": [
+          "not-not-olly-default-rtdb"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
