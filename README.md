@@ -2,7 +2,7 @@
 
 # 🕹 PIXELWAVE ARCADE
 
-**A hand-built retro games hub — 28 original browser games, 15 tools & labs, zero dependencies.**
+**A hand-built retro games hub — 31 original browser games, 18 tools & labs, zero dependencies.**
 
 [![Live Site](https://img.shields.io/badge/▶%20PLAY%20LIVE-pixelwave-ff2bd6?style=for-the-badge&labelColor=0a0014)](https://12leocheung.github.io/pixelwave/)
 [![Ko-fi](https://img.shields.io/badge/☕%20DONATE-Ko--fi-ffe14d?style=for-the-badge&labelColor=0a0014)](https://ko-fi.com/leocheung314159)
@@ -19,13 +19,13 @@
 
 ## 📖 What Is This?
 
-PixelWave Arcade is a solo-developed, hand-built retro games hub containing **28 original browser games** and **15 interactive tools & labs**, all living as individual HTML files in a single repository. No build step, no npm, no bundler — open the file, play the game.
+PixelWave Arcade is a solo-developed, hand-built retro games hub containing **31 original browser games** and **18 interactive tools & labs**, all living as individual HTML files in a single repository. No build step, no npm, no bundler — open the file, play the game.
 
 It's been in continuous development since 2017, with games ranging from multiplayer poker tables to full first-person 3D museums to a pitch-black FPS where you shoot by sound alone.
 
 ---
 
-## 🎮 The Arcade Floor — 28 Games
+## 🎮 The Arcade Floor — 31 Games
 
 | # | Icon | Game | Description |
 |---|------|------|-------------|
@@ -57,10 +57,13 @@ It's been in continuous development since 2017, with games ranging from multipla
 | 26 | 📜 | **Inkbound** | A full text RPG across five hand-written locations, with a real ending. |
 | 27 | ⚔️ | **Deep Descent** | A full roguelike dungeon crawler — procedural floors, loot, leveling, and permadeath. |
 | 28 | 🦴 | **Spine** | A segmented creature puzzle — pick your stance, contract into it, cross terrain that punishes hesitation. |
+| 29 | 🎭 | **Not Not Olly** | A social party game for 3+ players — someone in the room isn't who they say, and everyone else has to catch them. |
+| 30 | 🚀 | **Neon Strike: Nexus Commander** | A neon side-scroller shoot-em-up built with generous hitboxes — blast through waves without pixel-perfect punishment. |
+| 31 | 💥 | **Tank Royale** | A top-down tank battle royale — shells, terrain and a shrinking arena until one tank is left standing. |
 
 ---
 
-## 🛠 Tools & Labs — 15 Experiments
+## 🛠 Tools & Labs — 18 Experiments
 
 Interactive simulators, sandboxes and side experiments that live alongside the arcade:
 
@@ -81,6 +84,9 @@ Interactive simulators, sandboxes and side experiments that live alongside the a
 | 13 | 🐧 | **Linux in a Tab** | A full x86 Linux VM emulated client-side, with a genuine boot sequence and working terminal. |
 | 14 | 📜 | **Rules Terminal** | Collapsible, typewriter-animated rules reference for a tabletop dice/card game system. |
 | 15 | 🔌 | **WireLab Bench** | Drag-and-drop electronics lab — wire batteries, resistors and logic gates, watch signals flow. |
+| 16 | 🐢 | **PO-28 Robot** | Companion control panel for a PO-28-style robot — trigger sounds, patterns and tempo from the browser. |
+| 17 | 🎲 | **Polyhedral Market Uplink** | A CRT-styled storefront cataloging polyhedral dice sets, materials and finishes. |
+| 18 | 📺 | **RetroPlay** | Minimal retro-styled player — drop in a YouTube playlist URL and it starts playing immediately. |
 
 ---
 
@@ -103,13 +109,16 @@ Every donation goes directly toward the time and tooling needed to get a polishe
 pixelwave/
 ├── index.html                   ← The hub — tabs, cards, donation banner
 ├── conways-dungeon/             ← Unity WebGL build (the Steam demo)
-├── <game-name>.html             ← Every arcade game is a single file
-└── <tool-name>.html             ← Every tool is a single file
+├── not not olly/                ← Firebase-hosted multiplayer game
+├── po robot/                    ← Capacitor mobile app (Android + web)
+├── polyhedral/                  ← Firebase-hosted dice catalog site
+├── <game-name>.html             ← Most arcade games are a single file
+└── <tool-name>.html             ← Most tools are a single file
 ```
 
 ### Philosophy
 
-Every file on this site is **self-contained**. No CDN fonts are required at runtime (they're loaded from Google Fonts as a progressive enhancement). No frameworks. No build step. Drop any `.html` file into a browser and it works.
+The vast majority of files on this site are **self-contained single HTML files** — no CDN fonts required at runtime (they're loaded from Google Fonts as a progressive enhancement), no frameworks, no build step. Drop any `.html` file into a browser and it works. A handful of newer additions (Conway's Dungeon, Not Not Olly, PO-28 Robot, Polyhedral) break that mold with a Unity build, Firebase hosting, or a Capacitor-wrapped app, where the extra tooling earns its keep.
 
 ### Tech Stack
 
