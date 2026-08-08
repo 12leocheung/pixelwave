@@ -2,7 +2,7 @@
 
 # 🕹 PIXELWAVE ARCADE
 
-**A hand-built retro games hub — 31 original browser games, 18 tools & labs, zero dependencies.**
+**A hand-built retro games hub — 32 original browser games, 17 tools & labs, zero dependencies.**
 
 [![Live Site](https://img.shields.io/badge/▶%20PLAY%20LIVE-pixelwave-ff2bd6?style=for-the-badge&labelColor=0a0014)](https://12leocheung.github.io/pixelwave/)
 [![Ko-fi](https://img.shields.io/badge/☕%20DONATE-Ko--fi-ffe14d?style=for-the-badge&labelColor=0a0014)](https://ko-fi.com/leocheung314159)
@@ -19,13 +19,13 @@
 
 ## 📖 What Is This?
 
-PixelWave Arcade is a solo-developed, hand-built retro games hub containing **31 original browser games** and **18 interactive tools & labs**, all living as individual HTML files in a single repository. No build step, no npm, no bundler — open the file, play the game.
+PixelWave Arcade is a solo-developed, hand-built retro games hub containing **32 original browser games** and **17 interactive tools & labs**, all living as individual HTML files in a single repository. No build step, no npm, no bundler — open the file, play the game.
 
 It's been in continuous development since 2017, with games ranging from multiplayer poker tables to full first-person 3D museums to a pitch-black FPS where you shoot by sound alone.
 
 ---
 
-## 🎮 The Arcade Floor — 31 Games
+## 🎮 The Arcade Floor — 32 Games
 
 | # | Icon | Game | Description |
 |---|------|------|-------------|
@@ -60,10 +60,11 @@ It's been in continuous development since 2017, with games ranging from multipla
 | 29 | 🎭 | **Not Not Olly** | A social party game for 3+ players — someone in the room isn't who they say, and everyone else has to catch them. |
 | 30 | 🚀 | **Neon Strike: Nexus Commander** | A neon side-scroller shoot-em-up built with generous hitboxes — blast through waves without pixel-perfect punishment. |
 | 31 | 💥 | **Tank Royale** | A top-down tank battle royale — shells, terrain and a shrinking arena until one tank is left standing. |
+| 32 | 🎲 | **Polyhedral** | A roguelike scoring run built entirely from dice — roll for chips and mult, buy jokers and materials between rounds, chase an ever-rising ante. |
 
 ---
 
-## 🛠 Tools & Labs — 18 Experiments
+## 🛠 Tools & Labs — 17 Experiments
 
 Interactive simulators, sandboxes and side experiments that live alongside the arcade:
 
@@ -85,8 +86,7 @@ Interactive simulators, sandboxes and side experiments that live alongside the a
 | 14 | 📜 | **Rules Terminal** | Collapsible, typewriter-animated rules reference for a tabletop dice/card game system. |
 | 15 | 🔌 | **WireLab Bench** | Drag-and-drop electronics lab — wire batteries, resistors and logic gates, watch signals flow. |
 | 16 | 🐢 | **PO-28 Robot** | Companion control panel for a PO-28-style robot — trigger sounds, patterns and tempo from the browser. |
-| 17 | 🎲 | **Polyhedral Market Uplink** | A CRT-styled storefront cataloging polyhedral dice sets, materials and finishes. |
-| 18 | 📺 | **RetroPlay** | Minimal retro-styled player — drop in a YouTube playlist URL and it starts playing immediately. |
+| 17 | 📺 | **RetroPlay** | Minimal retro-styled player — drop in a YouTube playlist URL and it starts playing immediately. |
 
 ---
 
